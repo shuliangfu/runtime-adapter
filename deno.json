@@ -1,0 +1,52 @@
+{
+  "name": "@dreamer/runtime-adapter",
+  "version": "1.0.0-beta.1",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/mod.ts"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "deno.unstable"
+    ]
+  },
+  "nodeModulesDir": "auto",
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "LICENSE.md",
+      "README.md"
+    ],
+    "exclude": [
+      "bun.d.ts",
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/test/**",
+      "**/tests/**",
+      "package.json"
+    ]
+  },
+  "unstable": [
+    "cron"
+  ],
+  "lint": {
+    "include": [
+      "src/"
+    ],
+    "rules": {
+      "tags": [
+        "recommended"
+      ],
+      "exclude": [
+        "no-explicit-any",
+        "no-undef"
+      ]
+    }
+  },
+  "imports": {
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.0-beta.4",
+    "node-cron": "npm:node-cron@3.0.3"
+  }
+}

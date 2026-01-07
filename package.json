@@ -1,0 +1,48 @@
+{
+  "name": "@dreamer/runtime-adapter",
+  "version": "1.0.0-beta.1",
+  "type": "module",
+  "description": "Runtime adapter layer for Deno and Bun, providing unified runtime API abstraction",
+  "main": "./src/mod.ts",
+  "types": "./src/mod.ts",
+  "exports": {
+    ".": {
+      "types": "./src/mod.ts",
+      "import": "./src/mod.ts"
+    }
+  },
+  "files": [
+    "src/**/*.ts",
+    "LICENSE.md",
+    "README.md"
+  ],
+  "keywords": [
+    "runtime",
+    "adapter",
+    "deno",
+    "bun",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "@dreamer/test": "npm:@jsr/dreamer__test@^1.0.0-beta.4",
+    "node-cron": "3.0.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5",
+    "@types/node-cron": "^3.0.11"
+  },
+  "peerDependencies": {
+    "@types/bun": "^1.3.5"
+  },
+  "peerDependenciesMeta": {
+    "@types/bun": {
+      "optional": true
+    }
+  }
+}
