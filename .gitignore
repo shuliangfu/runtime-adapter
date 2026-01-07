@@ -5,6 +5,7 @@ deno.lock
 # Bun 相关
 bun.lock
 bun.lockb
+package.json
 .npmrc
 
 # 依赖
