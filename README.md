@@ -1,53 +1,75 @@
 # @dreamer/runtime-adapter
 
-运行时适配层库，提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境。
+> 运行时适配层库，提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境
 
-## 功能
+[![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-运行时适配层，让其他 @dreamer/* 库可以在不同运行时环境中使用相同的 API。
+---
 
-## 特性
+## 📋 目录
 
-- **运行时自动检测**：自动检测当前运行环境（Deno / Bun）
-- **文件系统 API 适配**：统一的文件读写、目录操作接口
-- **网络 API 适配**：HTTP 服务器、WebSocket、TCP/TLS 连接
-- **环境变量 API 适配**：统一的环境变量操作接口
-- **进程/命令 API 适配**：统一的命令执行接口
-- **终端 API 适配**：TTY 检测、标准输出流
-- **定时任务 API 适配**：Cron 定时任务（统一使用 `node-cron`，支持秒级任务）
+- [功能](#-功能)
+- [特性](#-特性)
+- [设计原则](#-设计原则)
+- [使用场景](#-使用场景)
+- [安装](#-安装)
+- [环境兼容性](#-环境兼容性)
+- [快速开始](#-快速开始)
+- [API 文档](#-api-文档)
+- [测试](#-测试)
+- [注意事项](#-注意事项)
+- [常见问题](#-常见问题)
+- [编辑器配置](#-编辑器配置)
+- [贡献](#-贡献)
+- [许可证](#-许可证)
 
-## 设计原则
+---
 
-**所有 @dreamer/* 库都遵循以下原则**：
+## 🎯 功能
+
+运行时适配层，让其他 `@dreamer/*` 库可以在不同运行时环境中使用相同的 API。
+
+---
+
+## ✨ 特性
+
+| 特性 | 说明 |
+|------|------|
+| 🔍 **运行时自动检测** | 自动检测当前运行环境（Deno / Bun） |
+| 📁 **文件系统 API 适配** | 统一的文件读写、目录操作接口 |
+| 🌐 **网络 API 适配** | HTTP 服务器、WebSocket、TCP/TLS 连接 |
+| 🔐 **环境变量 API 适配** | 统一的环境变量操作接口 |
+| ⚙️ **进程/命令 API 适配** | 统一的命令执行接口 |
+| 💻 **终端 API 适配** | TTY 检测、标准输出流 |
+| ⏰ **定时任务 API 适配** | Cron 定时任务（统一使用 `node-cron`，支持秒级任务） |
+
+---
+
+## 🎨 设计原则
+
+**所有 `@dreamer/*` 库都遵循以下原则**：
 
 - **主包（@dreamer/xxx）**：用于服务端（Bun/Deno 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
 
 这样可以：
-- 明确区分服务端和客户端代码
-- 避免在客户端代码中引入服务端依赖
-- 提供更好的类型安全和代码提示
-- 支持更好的 tree-shaking
+- ✅ 明确区分服务端和客户端代码
+- ✅ 避免在客户端代码中引入服务端依赖
+- ✅ 提供更好的类型安全和代码提示
+- ✅ 支持更好的 tree-shaking
 
-## 使用场景
+---
 
-- 跨运行时库开发（Bun 和 Deno 兼容）
-- 运行时 API 统一抽象
-- 其他 @dreamer/* 库的基础依赖
+## 🚀 使用场景
 
-## 优先级
+- 🔄 跨运行时库开发（Bun 和 Deno 兼容）
+- 🔧 运行时 API 统一抽象
+- 📦 其他 `@dreamer/*` 库的基础依赖
 
-⭐⭐⭐⭐⭐（核心基础库）
+---
 
-## 安装
-
-### npm
-
-```bash
-npm install @dreamer/runtime-adapter
-# 或
-npm install @dreamer/runtime-adapter @types/bun
-```
+## 📦 安装
 
 ### Bun
 
@@ -55,21 +77,27 @@ npm install @dreamer/runtime-adapter @types/bun
 bunx jsr add @dreamer/runtime-adapter
 ```
 
-### JSR (Deno)
+### Deno
 
 ```bash
 deno add jsr:@dreamer/runtime-adapter
 ```
 
-## 环境兼容性
+---
 
-- **Bun 版本**：要求 Bun 1.0 或更高版本 ✅
-- **Deno 版本**：要求 Deno 2.5 或更高版本 ✅
-- **服务端**：✅ 支持（Bun 和 Deno 运行时）
-- **客户端**：❌ 不支持（浏览器环境）
-- **依赖**：`node-cron@3.0.3`（用于定时任务，支持秒级 Cron 表达式）
+## 🌍 环境兼容性
 
-## 使用示例
+| 环境 | 版本要求 | 状态 |
+|------|---------|------|
+| **Bun** | 1.0+ | ✅ 完全支持 |
+| **Deno** | 2.5+ | ✅ 完全支持 |
+| **服务端** | - | ✅ 支持（Bun 和 Deno 运行时） |
+| **客户端** | - | ❌ 不支持（浏览器环境） |
+| **依赖** | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
+
+---
+
+## 🚀 快速开始
 
 ### 运行时检测
 
@@ -113,6 +141,7 @@ import {
   makeTempFile,
   cwd,
   chdir,
+  watchFs,
 } from "jsr:@dreamer/runtime-adapter";
 
 // 读取文件（自动适配 Bun 或 Deno）
@@ -165,6 +194,22 @@ const tempFile = await makeTempFile({ prefix: "temp-", suffix: ".txt" });
 const currentDir = cwd();
 console.log("当前目录:", currentDir);
 await chdir("./subdirectory");
+
+// 文件监控（监听项目所有文件，排除指定目录）
+const watcher = watchFs(".", {
+  recursive: true,
+  filesOnly: true, // 只监听文件，排除目录
+  exclude: [
+    "uploads",        // 排除包含 "uploads" 的路径
+    "runtime",        // 排除包含 "runtime" 的路径
+    /node_modules/,  // 使用正则表达式排除 node_modules
+    /\.git/,          // 排除 .git 目录
+  ],
+});
+
+for await (const event of watcher) {
+  console.log("文件变化:", event.kind, event.paths);
+}
 ```
 
 ### 网络操作
@@ -319,140 +364,206 @@ setTimeout(() => {
 }, 60000);
 ```
 
-## API 文档
+---
 
-### 运行时检测
+## 📚 API 文档
 
-- `detectRuntime()`: 检测当前运行时环境，返回 `"deno" | "bun" | "unknown"`
-- `RUNTIME`: 当前运行时常量（`"deno" | "bun"`）
-- `IS_BUN`: 是否为 Bun 环境
-- `IS_DENO`: 是否为 Deno 环境
-- `type Runtime`: 运行时类型定义
+### 🔍 运行时检测
 
-### 文件系统 API
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `detectRuntime()` | 检测当前运行时环境 | `"deno" \| "bun" \| "unknown"` |
+| `RUNTIME` | 当前运行时常量 | `"deno" \| "bun"` |
+| `IS_BUN` | 是否为 Bun 环境 | `boolean` |
+| `IS_DENO` | 是否为 Deno 环境 | `boolean` |
+| `type Runtime` | 运行时类型定义 | `"deno" \| "bun" \| "unknown"` |
+
+### 📁 文件系统 API
 
 #### 文件读写
 
-- `readFile(path: string)`: 读取文件（二进制），返回 `Promise<Uint8Array>`
-- `readTextFile(path: string)`: 读取文本文件，返回 `Promise<string>`
-- `writeFile(path: string, data: Uint8Array, options?)`: 写入文件（二进制）
-- `writeTextFile(path: string, data: string, options?)`: 写入文本文件
-- `open(path: string, options?)`: 打开文件，返回 `Promise<File>`
-- `create(path: string)`: 创建文件，返回 `Promise<File>`
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `readFile(path: string)` | 读取文件（二进制） | `Promise<Uint8Array>` |
+| `readTextFile(path: string)` | 读取文本文件 | `Promise<string>` |
+| `writeFile(path: string, data: Uint8Array, options?)` | 写入文件（二进制） | `Promise<void>` |
+| `writeTextFile(path: string, data: string, options?)` | 写入文本文件 | `Promise<void>` |
+| `open(path: string, options?)` | 打开文件 | `Promise<File>` |
+| `create(path: string)` | 创建文件 | `Promise<File>` |
 
 #### 目录操作
 
-- `mkdir(path: string, options?)`: 创建目录
-  - `options.recursive`: 是否递归创建（默认 `false`）
-  - `options.mode`: 目录权限（Unix 系统）
-- `remove(path: string, options?)`: 删除文件或目录
-  - `options.recursive`: 是否递归删除（默认 `false`）
-- `readdir(path: string)`: 读取目录内容，返回 `Promise<DirEntry[]>`
-- `stat(path: string)`: 获取文件信息，返回 `Promise<FileInfo>`
+| API | 说明 | 选项 |
+|-----|------|------|
+| `mkdir(path: string, options?)` | 创建目录 | `recursive?: boolean`<br>`mode?: number` |
+| `remove(path: string, options?)` | 删除文件或目录 | `recursive?: boolean` |
+| `readdir(path: string)` | 读取目录内容 | - |
+| `stat(path: string)` | 获取文件信息 | - |
 
 #### 文件操作
 
-- `copyFile(src: string, dest: string)`: 复制文件
-- `rename(oldPath: string, newPath: string)`: 重命名或移动文件/目录
-- `symlink(target: string, path: string, type?: "file" | "dir")`: 创建符号链接
-- `realPath(path: string)`: 获取真实路径（解析符号链接）
-- `chmod(path: string, mode: number)`: 修改文件权限
-- `chown(path: string, uid: number, gid: number)`: 修改文件所有者
+| API | 说明 |
+|-----|------|
+| `copyFile(src: string, dest: string)` | 复制文件 |
+| `rename(oldPath: string, newPath: string)` | 重命名或移动文件/目录 |
+| `symlink(target: string, path: string, type?: "file" \| "dir")` | 创建符号链接 |
+| `realPath(path: string)` | 获取真实路径（解析符号链接） |
+| `chmod(path: string, mode: number)` | 修改文件权限 |
+| `chown(path: string, uid: number, gid: number)` | 修改文件所有者 |
 
 #### 临时文件/目录
 
-- `makeTempDir(options?)`: 创建临时目录
-  - `options.prefix`: 文件名前缀
-  - `options.suffix`: 文件名后缀
-  - `options.dir`: 临时目录的父目录
-- `makeTempFile(options?)`: 创建临时文件
-  - `options.prefix`: 文件名前缀
-  - `options.suffix`: 文件名后缀
-  - `options.dir`: 临时文件的父目录
+| API | 说明 | 选项 |
+|-----|------|------|
+| `makeTempDir(options?)` | 创建临时目录 | `prefix?: string`<br>`suffix?: string`<br>`dir?: string` |
+| `makeTempFile(options?)` | 创建临时文件 | `prefix?: string`<br>`suffix?: string`<br>`dir?: string` |
 
 #### 工作目录
 
-- `cwd()`: 获取当前工作目录，返回 `string`
-- `chdir(path: string)`: 更改当前工作目录
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `cwd()` | 获取当前工作目录 | `string` |
+| `chdir(path: string)` | 更改当前工作目录 | `Promise<void>` |
 
 #### 文件监控
 
-- `watchFs(paths: string | string[], options?)`: 监控文件系统变化
-  - 返回 `FileWatcher` 对象
-  - 注意：Bun 环境下的文件监控功能受限
+| API | 说明 | 选项 |
+|-----|------|------|
+| `watchFs(paths: string \| string[], options?)` | 监控文件系统变化 | `recursive?: boolean` - 是否递归监控<br>`filesOnly?: boolean` - 是否只监听文件<br>`exclude?: (string \| RegExp)[]` - 排除的路径 |
 
-### 网络 API
+**选项说明**：
+- `recursive`: 是否递归监控子目录（默认：`false`）
+- `filesOnly`: 是否只监听文件，排除目录（默认：`false`）
+- `exclude`: 排除的路径规则数组，支持字符串（路径包含该字符串即排除）或正则表达式
+
+**使用示例**：
+```typescript
+import { watchFs } from "jsr:@dreamer/runtime-adapter";
+
+// 监听项目根目录，排除上传目录和 runtime 目录
+const watcher = watchFs(".", {
+  recursive: true,
+  filesOnly: true,
+  exclude: [
+    "uploads",        // 排除包含 "uploads" 的路径
+    "runtime",        // 排除包含 "runtime" 的路径
+    /node_modules/,  // 使用正则表达式排除 node_modules
+    /\.git/,          // 排除 .git 目录
+  ],
+});
+
+for await (const event of watcher) {
+  console.log("文件变化:", event.kind, event.paths);
+}
+```
+
+### 🌐 网络 API
 
 #### HTTP 服务器
 
-- `serve(options: ServeOptions, handler: (req: Request) => Response | Promise<Response>)`: 启动 HTTP 服务器
-  - `options.port`: 端口号（可选，默认随机端口）
-  - `options.hostname`: 主机名（可选，默认 `"0.0.0.0"`）
-  - `options.onListen`: 监听回调函数
-  - 返回 `Promise<ServeHandle>`
-  - `ServeHandle.port`: 服务器端口号
-  - `ServeHandle.close()`: 关闭服务器
+```typescript
+serve(
+  options: ServeOptions,
+  handler: (req: Request) => Response | Promise<Response>
+): Promise<ServeHandle>
+```
+
+**选项：**
+- `port?: number` - 端口号（可选，默认随机端口）
+- `hostname?: string` - 主机名（可选，默认 `"0.0.0.0"`）
+- `onListen?: (params: { hostname: string; port: number }) => void` - 监听回调函数
+
+**返回值：**
+- `ServeHandle.port` - 服务器端口号
+- `ServeHandle.close()` - 关闭服务器
 
 #### WebSocket
 
-- `upgradeWebSocket(request: Request, options?: UpgradeWebSocketOptions)`: 升级 WebSocket 连接
-  - 注意：Bun 环境下的 WebSocket 升级需要在 `serve()` 时配置 `websocket` 处理器
+```typescript
+upgradeWebSocket(
+  request: Request,
+  options?: UpgradeWebSocketOptions
+): UpgradeWebSocketResult
+```
+
+> ⚠️ **注意**：Bun 环境下的 WebSocket 升级需要在 `serve()` 时配置 `websocket` 处理器，不能单独使用。
 
 #### TCP/TLS 连接
 
-- `connect(options: ConnectOptions)`: 建立 TCP 连接
-  - `options.hostname`: 主机名
-  - `options.port`: 端口号
-  - 返回 `Promise<TcpConn>`
-- `startTls(conn: TcpConn, options?: StartTlsOptions)`: 升级 TCP 连接到 TLS
-  - `options.hostname`: TLS 主机名
-  - 返回 `Promise<TcpConn>`
+| API | 说明 | 选项 |
+|-----|------|------|
+| `connect(options: ConnectOptions)` | 建立 TCP 连接 | `hostname: string`<br>`port: number` |
+| `startTls(conn: TcpConn, options?: StartTlsOptions)` | 升级 TCP 连接到 TLS | `hostname?: string` |
 
-### 环境变量 API
+### 🔐 环境变量 API
 
-- `getEnv(key: string)`: 获取环境变量，返回 `string | undefined`
-- `setEnv(key: string, value: string)`: 设置环境变量
-- `deleteEnv(key: string)`: 删除环境变量
-- `getEnvAll()`: 获取所有环境变量，返回 `Record<string, string>`
-- `hasEnv(key: string)`: 检查环境变量是否存在，返回 `boolean`
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `getEnv(key: string)` | 获取环境变量 | `string \| undefined` |
+| `setEnv(key: string, value: string)` | 设置环境变量 | `void` |
+| `deleteEnv(key: string)` | 删除环境变量 | `void` |
+| `getEnvAll()` | 获取所有环境变量 | `Record<string, string>` |
+| `hasEnv(key: string)` | 检查环境变量是否存在 | `boolean` |
 
-### 进程/命令 API
+### ⚙️ 进程/命令 API
 
-- `createCommand(command: string, options?: CommandOptions)`: 创建命令对象
-  - `options.args`: 命令参数数组
-  - `options.cwd`: 工作目录
-  - `options.env`: 环境变量对象
-  - `options.stdin`: 标准输入模式（`"inherit" | "piped" | "null"`）
-  - `options.stdout`: 标准输出模式（`"inherit" | "piped" | "null"`）
-  - `options.stderr`: 标准错误输出模式（`"inherit" | "piped" | "null"`）
-  - 返回 `CommandProcess` 对象
-  - `CommandProcess.output()`: 获取命令输出
-  - `CommandProcess.status()`: 获取命令状态
-  - `CommandProcess.kill(signo?)`: 终止命令
-  - `CommandProcess.pid`: 进程 ID
+```typescript
+createCommand(
+  command: string,
+  options?: CommandOptions
+): CommandProcess
+```
 
-### 终端 API
+**选项：**
+- `args?: string[]` - 命令参数数组
+- `cwd?: string` - 工作目录
+- `env?: Record<string, string>` - 环境变量对象
+- `stdin?: "inherit" \| "piped" \| "null"` - 标准输入模式
+- `stdout?: "inherit" \| "piped" \| "null"` - 标准输出模式
+- `stderr?: "inherit" \| "piped" \| "null"` - 标准错误输出模式
 
-- `isTerminal()`: 检查标准输出是否为终端，返回 `boolean`
-- `isStderrTerminal()`: 检查标准错误输出是否为终端，返回 `boolean`
-- `getStdout()`: 获取标准输出流，返回 `WritableStream<Uint8Array>`
-- `getStderr()`: 获取标准错误输出流，返回 `WritableStream<Uint8Array>`
+**CommandProcess 方法：**
+- `output()` - 获取命令输出
+- `status()` - 获取命令状态
+- `kill(signo?)` - 终止命令
+- `pid` - 进程 ID
 
-### 定时任务 API
+### 💻 终端 API
 
-- `cron(expression: string, handler: () => void | Promise<void>, options?: CronOptions)`: 注册 Cron 定时任务
-  - `expression`: Cron 表达式（支持 6 字段格式，包含秒）
-    - 格式：`秒 分 时 日 月 周`
-    - 示例：`"*/5 * * * * *"` 表示每 5 秒执行一次
-    - 示例：`"0 0 2 * * *"` 表示每天凌晨 2 点执行
-  - `handler`: 任务处理函数（可以是异步函数）
-  - `options.signal`: AbortSignal，用于取消任务
-  - 返回 `Promise<CronHandle>`
-  - `CronHandle.close()`: 关闭定时任务
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `isTerminal()` | 检查标准输出是否为终端 | `boolean` |
+| `isStderrTerminal()` | 检查标准错误输出是否为终端 | `boolean` |
+| `getStdout()` | 获取标准输出流 | `WritableStream<Uint8Array>` |
+| `getStderr()` | 获取标准错误输出流 | `WritableStream<Uint8Array>` |
 
-**注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。
+### ⏰ 定时任务 API
 
-## 测试
+```typescript
+cron(
+  expression: string,
+  handler: () => void | Promise<void>,
+  options?: CronOptions
+): Promise<CronHandle>
+```
+
+**Cron 表达式格式：**
+- 格式：`秒 分 时 日 月 周`（6 字段格式）
+- 示例：`"*/5 * * * * *"` - 每 5 秒执行一次
+- 示例：`"0 * * * * *"` - 每分钟执行
+- 示例：`"0 0 2 * * *"` - 每天凌晨 2 点执行
+
+**选项：**
+- `signal?: AbortSignal` - 用于取消任务
+
+**返回值：**
+- `CronHandle.close()` - 关闭定时任务
+
+> 📌 **注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。
+
+---
+
+## 🧪 测试
 
 ### 运行测试
 
@@ -466,20 +577,23 @@ bun test tests/
 
 ### 测试覆盖
 
-- ✅ 运行时检测测试
-- ✅ 文件系统 API 测试（24 个测试用例）
-- ✅ 网络 API 测试（5 个测试用例）
-- ✅ 环境变量 API 测试（9 个测试用例）
-- ✅ 进程/命令 API 测试（8 个测试用例）
-- ✅ 终端 API 测试（6 个测试用例）
-- ✅ 定时任务 API 测试（4 个测试用例）
-- ✅ 模块导出测试（7 个测试用例）
+| 模块 | 测试用例数 | 状态 |
+|------|-----------|------|
+| 运行时检测 | 7 | ✅ |
+| 文件系统 API | 24 | ✅ |
+| 网络 API | 5 | ✅ |
+| 环境变量 API | 9 | ✅ |
+| 进程/命令 API | 8 | ✅ |
+| 终端 API | 6 | ✅ |
+| 定时任务 API | 4 | ✅ |
+| 模块导出 | 7 | ✅ |
+| **总计** | **70** | ✅ **全部通过** |
 
-**总计：70 个测试用例，全部通过**
+---
 
-## 注意事项
+## ⚠️ 注意事项
 
-1. **文件监控**：Bun 环境下的 `watchFs()` 功能受限，建议使用第三方库（如 `chokidar`）进行文件监控。
+1. **文件监控**：`watchFs()` 在 Deno 和 Bun 环境下都已实现。Bun 环境使用 Node.js 的 `fs.watch` API，功能完整，支持递归监控、文件过滤和路径排除。
 
 2. **WebSocket 升级**：Bun 环境下的 `upgradeWebSocket()` 需要在 `serve()` 时配置 `websocket` 处理器，不能单独使用。
 
@@ -493,26 +607,29 @@ bun test tests/
 
 7. **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all` 标志来授予所有权限。
 
-## 常见问题
+---
+
+## ❓ 常见问题
 
 ### Q: 为什么在 Deno 环境下测试需要 `-A` 标志？
 
-A: Deno 默认是安全的，需要显式授予权限。文件系统操作需要 `--allow-write` 权限，网络操作需要 `--allow-net` 权限，进程操作需要 `--allow-run` 权限。使用 `-A` 可以授予所有权限，方便测试。
+**A:** Deno 默认是安全的，需要显式授予权限。文件系统操作需要 `--allow-write` 权限，网络操作需要 `--allow-net` 权限，进程操作需要 `--allow-run` 权限。使用 `-A` 可以授予所有权限，方便测试。
 
 ### Q: Bun 和 Deno 的测试输出为什么不一样？
 
-A: 这是两个测试框架的差异。Deno 会自动捕获测试中的 `stdout`/`stderr` 输出并显示，而 Bun 默认不显示子进程的输出。这是正常行为，不影响测试结果。
+**A:** 这是两个测试框架的差异。Deno 会自动捕获测试中的 `stdout`/`stderr` 输出并显示，而 Bun 默认不显示子进程的输出。这是正常行为，不影响测试结果。
 
 ### Q: 定时任务支持哪些 Cron 表达式格式？
 
-A: 统一使用 `node-cron`，支持标准的 6 字段格式（秒 分 时 日 月 周），例如：
+**A:** 统一使用 `node-cron`，支持标准的 6 字段格式（秒 分 时 日 月 周），例如：
 - `"*/5 * * * * *"` - 每 5 秒执行
 - `"0 * * * * *"` - 每分钟执行
 - `"0 0 2 * * *"` - 每天凌晨 2 点执行
 
 ### Q: 如何在不同运行时环境下使用不同的实现？
 
-A: 使用运行时检测 API：
+**A:** 使用运行时检测 API：
+
 ```typescript
 import { IS_BUN, IS_DENO } from "jsr:@dreamer/runtime-adapter";
 
@@ -523,20 +640,23 @@ if (IS_BUN) {
 }
 ```
 
-## 编辑器配置
+---
 
-### VSCode
 
-1. 安装 Deno 插件：`denoland.vscode-deno`
-2. 安装 Bun 插件（如果可用）
-3. 配置 `.vscode/settings.json`（已包含在项目中）
-
-详细配置请参考项目根目录的 `.vscode/settings.json`。
-
-## 贡献
+## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
-## 许可证
+---
+
+## 📄 许可证
 
 MIT License
+
+---
+
+<div align="center">
+
+**Made with ❤️ by @dreamer**
+
+</div>

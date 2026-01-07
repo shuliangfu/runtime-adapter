@@ -73,6 +73,7 @@ export {
   stat,
   symlink,
   watchFs,
+  type WatchFsOptions,
   writeFile,
   writeTextFile,
 } from "./file.ts";

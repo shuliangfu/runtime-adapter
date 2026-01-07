@@ -403,6 +403,49 @@ export async function stat(path: string): Promise<FileInfo> {
 }
 
 /**
+ * 文件监控选项
+ */
+export interface WatchFsOptions {
+  /** 是否递归监控子目录（默认：false） */
+  recursive?: boolean;
+  /** 是否只监听文件，排除目录（默认：false） */
+  filesOnly?: boolean;
+  /** 排除的路径（支持字符串或正则表达式，匹配路径中包含这些字符串或匹配正则的路径将被排除） */
+  exclude?: (string | RegExp)[];
+}
+
+/**
+ * 检查路径是否应该被排除
+ * @param path 要检查的路径
+ * @param exclude 排除规则数组
+ * @returns 如果路径应该被排除，返回 true
+ */
+function shouldExcludePath(
+  path: string,
+  exclude?: (string | RegExp)[],
+): boolean {
+  if (!exclude || exclude.length === 0) {
+    return false;
+  }
+
+  for (const rule of exclude) {
+    if (typeof rule === "string") {
+      // 字符串匹配：检查路径中是否包含该字符串
+      if (path.includes(rule)) {
+        return true;
+      }
+    } else if (rule instanceof RegExp) {
+      // 正则表达式匹配
+      if (rule.test(path)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * 监控文件系统变化
  * @param paths 要监控的路径（可以是文件或目录）
  * @param options 监控选项
@@ -410,13 +453,15 @@ export async function stat(path: string): Promise<FileInfo> {
  */
 export function watchFs(
   paths: string | string[],
-  options?: { recursive?: boolean },
+  options?: WatchFsOptions,
 ): FileWatcher {
   if (IS_DENO) {
     const pathArray = Array.isArray(paths) ? paths : [paths];
     const watcher = (globalThis as any).Deno.watchFs(pathArray, {
       recursive: options?.recursive ?? false,
     });
+    const filesOnly = options?.filesOnly ?? false;
+
     // 转换 Deno 的事件类型为统一格式
     return {
       close() {
@@ -424,13 +469,47 @@ export function watchFs(
       },
       async *[Symbol.asyncIterator](): AsyncIterableIterator<FileEvent> {
         for await (const event of watcher) {
+          const filteredPaths: string[] = [];
+
+          for (const path of event.paths) {
+            // 检查是否应该排除该路径
+            if (shouldExcludePath(path, options?.exclude)) {
+              continue;
+            }
+
+            // 如果设置了只监听文件，过滤掉目录事件
+            if (filesOnly) {
+              try {
+                const info = await (globalThis as any).Deno.stat(path);
+                // 只包含文件，排除目录
+                if (info.isFile) {
+                  filteredPaths.push(path);
+                }
+              } catch {
+                // 如果 stat 失败（可能是文件被删除），根据事件类型决定
+                // 对于 remove 事件，保留路径（可能是文件被删除）
+                if (event.kind === "remove") {
+                  filteredPaths.push(path);
+                }
+                // 对于 create/modify 事件，如果 stat 失败，可能是目录，跳过
+              }
+            } else {
+              filteredPaths.push(path);
+            }
+          }
+
+          // 如果过滤后没有路径，跳过该事件
+          if (filteredPaths.length === 0) {
+            continue;
+          }
+
           yield {
             kind: event.kind === "create"
               ? "create"
               : event.kind === "modify"
               ? "modify"
               : "remove",
-            paths: event.paths,
+            paths: filteredPaths,
           };
         }
       },
@@ -438,23 +517,199 @@ export function watchFs(
   }
 
   if (IS_BUN) {
-    // Bun 环境下的文件监控需要使用第三方库
-    // 这里提供一个占位实现
+    // Bun 环境下的文件监控使用 Node.js 的 fs.watch API
+    const pathArray = Array.isArray(paths) ? paths : [paths];
+
+    // 存储所有 watcher 实例，用于关闭
+    const watchers: Array<{ close: () => void }> = [];
+    // 事件队列
+    const eventQueue: FileEvent[] = [];
+    // 事件解析器队列
+    const resolvers: Array<(event: FileEvent) => void> = [];
+    // 是否已关闭
+    let closed = false;
+    // 初始化 Promise，确保 watchers 正确初始化
+    let initPromise: Promise<void> | null = null;
+
+    // 初始化函数
+    const initWatchers = (): Promise<void> => {
+      if (initPromise) {
+        return initPromise;
+      }
+
+      initPromise = (async () => {
+        const { watch } = await import("node:fs");
+        const { resolve } = await import("node:path");
+        const { stat } = await import("node:fs/promises");
+
+        // 为每个路径创建 watcher
+        for (const path of pathArray) {
+          const resolvedPath = resolve(path);
+          let lastEventType: string | null = null;
+          let lastEventTime = 0;
+          const debounceTime = 100; // 防抖时间（毫秒）
+
+          // 检查路径是否存在，以确定初始状态
+          let pathExists = false;
+          try {
+            const info = await stat(resolvedPath);
+            pathExists = info.isFile() || info.isDirectory();
+          } catch {
+            pathExists = false;
+          }
+
+          const watcher = watch(
+            resolvedPath,
+            { recursive: options?.recursive ?? false },
+            async (eventType, filename) => {
+              if (closed) return;
+
+              const now = Date.now();
+              const fullPath = filename
+                ? resolve(resolvedPath, filename)
+                : resolvedPath;
+
+              // 防抖处理：相同事件在短时间内只触发一次
+              if (
+                lastEventType === eventType &&
+                now - lastEventTime < debounceTime
+              ) {
+                return;
+              }
+
+              lastEventType = eventType;
+              lastEventTime = now;
+
+              // 确定事件类型
+              let kind: FileEventType;
+              let isFile = false;
+              try {
+                const currentExists = await stat(fullPath).then(
+                  () => true,
+                  () => false,
+                );
+
+                if (currentExists) {
+                  // 检查是文件还是目录
+                  const info = await stat(fullPath);
+                  isFile = Boolean(info.isFile);
+                }
+
+                if (eventType === "rename") {
+                  // rename 事件可能是创建或删除
+                  if (currentExists && !pathExists) {
+                    kind = "create";
+                  } else if (!currentExists && pathExists) {
+                    kind = "remove";
+                  } else {
+                    // 可能是文件被重命名，当作 modify 处理
+                    kind = "modify";
+                  }
+                  pathExists = currentExists;
+                } else {
+                  // change 事件是修改
+                  kind = "modify";
+                }
+              } catch {
+                // 如果无法确定，使用默认类型
+                kind = eventType === "rename" ? "remove" : "modify";
+                // 对于 remove 事件，无法 stat，假设是文件（保留事件）
+                if (kind === "remove") {
+                  isFile = true;
+                }
+              }
+
+              // 检查是否应该排除该路径
+              if (shouldExcludePath(fullPath, options?.exclude)) {
+                return;
+              }
+
+              // 如果设置了只监听文件，且当前路径是目录，跳过该事件
+              if (options?.filesOnly && !isFile && kind !== "remove") {
+                return;
+              }
+
+              const fileEvent: FileEvent = {
+                kind,
+                paths: [fullPath],
+              };
+
+              // 如果有等待的解析器，立即解析
+              if (resolvers.length > 0) {
+                const resolver = resolvers.shift()!;
+                resolver(fileEvent);
+              } else {
+                // 否则加入队列
+                eventQueue.push(fileEvent);
+              }
+            },
+          );
+
+          watchers.push(watcher);
+
+          // 处理 watcher 错误
+          watcher.on("error", () => {
+            // 错误事件也作为事件处理
+            const errorEvent: FileEvent = {
+              kind: "modify",
+              paths: [resolvedPath],
+            };
+            if (resolvers.length > 0) {
+              const resolver = resolvers.shift()!;
+              resolver(errorEvent);
+            } else {
+              eventQueue.push(errorEvent);
+            }
+          });
+        }
+      })();
+
+      return initPromise;
+    };
+
+    // 立即开始初始化（不等待）
+    initWatchers();
+
     return {
       close() {
-        // 占位实现，实际需要使用第三方库
+        if (closed) return;
+        closed = true;
+        // 关闭所有 watcher
+        for (const watcher of watchers) {
+          watcher.close();
+        }
+        // 解析所有等待的解析器（使用空事件）
+        while (resolvers.length > 0) {
+          const resolver = resolvers.shift()!;
+          resolver({
+            kind: "modify",
+            paths: [],
+          });
+        }
       },
       async *[Symbol.asyncIterator](): AsyncIterableIterator<FileEvent> {
-        // 这是一个占位实现，实际使用中需要使用第三方库如 chokidar
-        // 或者使用 Node.js 的 fs.watch API（但功能受限）
-        // 使用 yield 来满足生成器函数的要求
-        yield {
-          kind: "modify",
-          paths: [],
-        };
-        throw new Error(
-          "Bun 环境下的文件监控需要使用第三方库（如 chokidar）",
-        );
+        // 确保 watchers 已初始化
+        await initWatchers();
+
+        while (!closed) {
+          // 如果队列中有事件，直接返回
+          if (eventQueue.length > 0) {
+            yield eventQueue.shift()!;
+            continue;
+          }
+
+          // 否则等待新事件
+          const event = await new Promise<FileEvent>((resolve) => {
+            resolvers.push(resolve);
+          });
+
+          // 如果已关闭，停止迭代
+          if (closed) {
+            break;
+          }
+
+          yield event;
+        }
       },
     };
   }
