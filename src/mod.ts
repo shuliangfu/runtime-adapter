@@ -109,7 +109,12 @@ export {
   getStderr,
   getStdout,
   isStderrTerminal,
+  isStdinTerminal,
   isTerminal,
+  readStdin,
+  setStdinRaw,
+  writeStderrSync,
+  writeStdoutSync,
 } from "./terminal.ts";
 
 // 导出定时任务 API

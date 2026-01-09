@@ -98,3 +98,146 @@ export function getStderr(): WritableStream<Uint8Array> {
 
   throw new Error("不支持的运行时环境");
 }
+
+/**
+ * 同步写入标准输出
+ * @param data 要写入的数据
+ */
+export function writeStdoutSync(data: Uint8Array): void {
+  if (IS_DENO) {
+    (globalThis as any).Deno.stdout.writeSync(data);
+    return;
+  }
+
+  if (IS_BUN) {
+    const stdout = (globalThis as any).process?.stdout;
+    if (stdout) {
+      // Bun 支持 Buffer，但类型检查器可能不识别
+      const Buffer = (globalThis as any).Buffer;
+      if (Buffer) {
+        stdout.writeSync(Buffer.from(data));
+      } else {
+        // 如果没有 Buffer，使用异步写入（同步写入在 Bun 中可能不可用）
+        stdout.write(data, (err: Error | null) => {
+          if (err) throw err;
+        });
+      }
+    }
+    return;
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 读取标准输入
+ * @param buffer 缓冲区
+ * @returns 读取的字节数或 null（如果到达末尾）
+ */
+export async function readStdin(
+  buffer: Uint8Array,
+): Promise<number | null> {
+  if (IS_DENO) {
+    return await (globalThis as any).Deno.stdin.read(buffer);
+  }
+
+  if (IS_BUN) {
+    const stdin = (globalThis as any).process?.stdin;
+    if (!stdin) {
+      return null;
+    }
+    // Bun 使用 Node.js 兼容的流
+    return new Promise((resolve) => {
+      stdin.once("data", (chunk: any) => {
+        // chunk 可能是 Buffer 或 Uint8Array
+        const data = chunk instanceof Uint8Array
+          ? chunk
+          : new Uint8Array(chunk);
+        const len = Math.min(data.length, buffer.length);
+        buffer.set(data.subarray(0, len));
+        resolve(len);
+      });
+      stdin.once("end", () => {
+        resolve(null);
+      });
+      stdin.once("error", () => {
+        resolve(null);
+      });
+    });
+  }
+
+  return null;
+}
+
+/**
+ * 设置标准输入为原始模式
+ * @param mode 是否启用原始模式
+ * @param options 选项
+ * @returns 是否成功设置
+ */
+export function setStdinRaw(
+  mode: boolean,
+  options?: { cbreak?: boolean },
+): boolean {
+  if (IS_DENO) {
+    const stdin = (globalThis as any).Deno.stdin;
+    if (stdin.setRaw) {
+      stdin.setRaw(mode, options);
+      return true;
+    }
+    return false;
+  }
+
+  if (IS_BUN) {
+    // Bun 可能不支持原始模式
+    return false;
+  }
+
+  return false;
+}
+
+/**
+ * 同步写入标准错误输出
+ * @param data 要写入的数据
+ */
+export function writeStderrSync(data: Uint8Array): void {
+  if (IS_DENO) {
+    (globalThis as any).Deno.stderr.writeSync(data);
+    return;
+  }
+
+  if (IS_BUN) {
+    const stderr = (globalThis as any).process?.stderr;
+    if (stderr) {
+      // Bun 支持 Buffer，但类型检查器可能不识别
+      const Buffer = (globalThis as any).Buffer;
+      if (Buffer) {
+        stderr.writeSync(Buffer.from(data));
+      } else {
+        // 如果没有 Buffer，使用异步写入
+        stderr.write(data, (err: Error | null) => {
+          if (err) throw err;
+        });
+      }
+    }
+    return;
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 检查标准输入是否为终端
+ * @returns 是否为终端
+ */
+export function isStdinTerminal(): boolean {
+  if (IS_DENO) {
+    return (globalThis as any).Deno.stdin.isTerminal();
+  }
+
+  if (IS_BUN) {
+    return (globalThis as any).process?.stdin?.isTTY ?? false;
+  }
+
+  return false;
+}

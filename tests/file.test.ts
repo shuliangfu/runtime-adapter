@@ -25,7 +25,7 @@ import {
 } from "../src/file.ts";
 
 describe("文件系统 API", () => {
-  const TEST_DIR = "./test-temp";
+  const TEST_DIR = "./tests/data";
   const TEST_FILE = `${TEST_DIR}/test.txt`;
   const TEST_CONTENT = "Hello, Runtime Adapter!";
   const TEST_BINARY = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
@@ -539,7 +539,7 @@ describe("文件系统 API", () => {
         chdir(TEST_DIR);
         const newCwd = cwd();
         // 验证工作目录已更改（路径应该包含测试目录名）
-        expect(newCwd).toContain("test-temp");
+        expect(newCwd).toContain("tests/data");
 
         // 改回原目录
         chdir(originalCwd);

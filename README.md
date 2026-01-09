@@ -41,7 +41,7 @@
 | 🌐 **网络 API 适配** | HTTP 服务器、WebSocket、TCP/TLS 连接 |
 | 🔐 **环境变量 API 适配** | 统一的环境变量操作接口 |
 | ⚙️ **进程/命令 API 适配** | 统一的命令执行接口 |
-| 💻 **终端 API 适配** | TTY 检测、标准输出流 |
+| 💻 **终端 API 适配** | TTY 检测、标准输入输出流、同步写入、原始模式 |
 | ⏰ **定时任务 API 适配** | Cron 定时任务（统一使用 `node-cron`，支持秒级任务） |
 
 ---
@@ -296,10 +296,20 @@ console.log("进程状态:", status);
 cmd.kill();
 ```
 
-### 终端检测
+### 终端检测和操作
 
 ```typescript
-import { isTerminal, isStderrTerminal, getStdout, getStderr } from "jsr:@dreamer/runtime-adapter";
+import {
+  isTerminal,
+  isStderrTerminal,
+  isStdinTerminal,
+  getStdout,
+  getStderr,
+  writeStdoutSync,
+  writeStderrSync,
+  readStdin,
+  setStdinRaw,
+} from "jsr:@dreamer/runtime-adapter";
 
 // 检查是否为终端（自动适配 Bun 或 Deno）
 if (isTerminal()) {
@@ -310,17 +320,44 @@ if (isStderrTerminal()) {
   console.log("标准错误输出是终端");
 }
 
-// 获取标准输出流
+if (isStdinTerminal()) {
+  console.log("标准输入是终端");
+}
+
+// 获取标准输出流（异步写入）
 const stdout = getStdout();
 const writer = stdout.getWriter();
 await writer.write(new TextEncoder().encode("Hello\n"));
 writer.releaseLock();
 
-// 获取标准错误输出流
+// 获取标准错误输出流（异步写入）
 const stderr = getStderr();
 const stderrWriter = stderr.getWriter();
 await stderrWriter.write(new TextEncoder().encode("Error message\n"));
 stderrWriter.releaseLock();
+
+// 同步写入标准输出（适用于 ANSI 转义序列等场景）
+const encoder = new TextEncoder();
+writeStdoutSync(encoder.encode("\x1b[32m绿色文本\x1b[0m\n"));
+
+// 同步写入标准错误输出
+writeStderrSync(encoder.encode("错误消息\n"));
+
+// 读取标准输入
+const buffer = new Uint8Array(1024);
+const bytesRead = await readStdin(buffer);
+if (bytesRead !== null) {
+  const input = new TextDecoder().decode(buffer.subarray(0, bytesRead));
+  console.log("用户输入:", input);
+}
+
+// 设置标准输入为原始模式（用于交互式输入，如密码输入）
+const isRaw = setStdinRaw(true, { cbreak: true });
+if (isRaw) {
+  // 原始模式已启用，可以逐字符读取
+  // 使用完毕后恢复
+  setStdinRaw(false);
+}
 ```
 
 ### 定时任务
@@ -534,8 +571,13 @@ createCommand(
 |-----|------|--------|
 | `isTerminal()` | 检查标准输出是否为终端 | `boolean` |
 | `isStderrTerminal()` | 检查标准错误输出是否为终端 | `boolean` |
-| `getStdout()` | 获取标准输出流 | `WritableStream<Uint8Array>` |
-| `getStderr()` | 获取标准错误输出流 | `WritableStream<Uint8Array>` |
+| `isStdinTerminal()` | 检查标准输入是否为终端 | `boolean` |
+| `getStdout()` | 获取标准输出流（异步） | `WritableStream<Uint8Array>` |
+| `getStderr()` | 获取标准错误输出流（异步） | `WritableStream<Uint8Array>` |
+| `writeStdoutSync(data: Uint8Array)` | 同步写入标准输出 | `void` |
+| `writeStderrSync(data: Uint8Array)` | 同步写入标准错误输出 | `void` |
+| `readStdin(buffer: Uint8Array)` | 读取标准输入 | `Promise<number \| null>` |
+| `setStdinRaw(mode: boolean, options?)` | 设置标准输入为原始模式 | `boolean` |
 
 ### ⏰ 定时任务 API
 

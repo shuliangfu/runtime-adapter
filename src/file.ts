@@ -283,10 +283,10 @@ export async function mkdir(
     // Bun 使用 Node.js 兼容的 fs API
     const { mkdir: nodeMkdir } = await import("node:fs/promises");
     try {
-      await nodeMkdir(path, {
-        recursive: options?.recursive,
-        mode: options?.mode,
-      });
+    await nodeMkdir(path, {
+      recursive: options?.recursive,
+      mode: options?.mode,
+    });
     } catch (error: any) {
       // 如果目录已存在且 recursive 为 true，忽略错误
       // Bun 在某些情况下会抛出 EINVAL 错误，即使 recursive: true
