@@ -120,3 +120,6 @@ export {
 // 导出定时任务 API
 export { cron, type CronHandle, type CronOptions } from "./cron.ts";
 // 注意：cron 函数是异步的，返回 Promise<CronHandle>
+
+// 导出路径操作 API
+export { basename, dirname, extname, join, resolve } from "./path.ts";
