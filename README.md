@@ -22,8 +22,14 @@
 | 🌐 **网络 API 适配** | HTTP 服务器、WebSocket、TCP/TLS 连接 |
 | 🔐 **环境变量 API 适配** | 统一的环境变量操作接口 |
 | ⚙️ **进程/命令 API 适配** | 统一的命令执行接口 |
+| 📊 **进程信息 API 适配** | 进程 ID、平台、架构、版本信息 |
+| 🔧 **进程工具 API 适配** | 命令行参数、程序退出 |
+| 📡 **信号处理 API 适配** | 操作系统信号监听和处理 |
 | 💻 **终端 API 适配** | TTY 检测、标准输入输出流、同步写入、原始模式 |
 | ⏰ **定时任务 API 适配** | Cron 定时任务（统一使用 `node-cron`，支持秒级任务） |
+| 🛤️ **路径操作 API 适配** | 路径拼接、解析、规范化、相对路径计算 |
+| 🔐 **文件哈希 API 适配** | 文件和数据哈希计算（SHA-256、SHA-512、SHA-1、MD5） |
+| 📊 **系统信息 API 适配** | 内存、CPU、磁盘使用情况、系统负载、系统信息 |
 
 ---
 
@@ -122,6 +128,11 @@ import {
   makeTempFile,
   cwd,
   chdir,
+  exists,
+  isFile,
+  isDirectory,
+  truncate,
+  walk,
   watchFs,
 } from "jsr:@dreamer/runtime-adapter";
 
@@ -167,6 +178,18 @@ await chmod("./file.txt", 0o755);
 // 修改文件所有者（需要相应权限）
 await chown("./file.txt", 1000, 1000);
 
+// 文件扩展功能
+if (await exists("./file.txt")) {
+  console.log("文件存在");
+}
+if (await isFile("./file.txt")) {
+  console.log("这是一个文件");
+}
+if (await isDirectory("./data")) {
+  console.log("这是一个目录");
+}
+await truncate("./file.txt", 100); // 截断文件到 100 字节
+
 // 创建临时目录和文件
 const tempDir = await makeTempDir({ prefix: "my-app-" });
 const tempFile = await makeTempFile({ prefix: "temp-", suffix: ".txt" });
@@ -175,6 +198,14 @@ const tempFile = await makeTempFile({ prefix: "temp-", suffix: ".txt" });
 const currentDir = cwd();
 console.log("当前目录:", currentDir);
 await chdir("./subdirectory");
+
+// 目录遍历
+for await (const path of walk("./src", {
+  includeDirs: false,
+  match: (p) => p.endsWith(".ts"),
+})) {
+  console.log("找到文件:", path);
+}
 
 // 文件监控（监听项目所有文件，排除指定目录）
 const watcher = watchFs(".", {
@@ -382,6 +413,59 @@ setTimeout(() => {
 }, 60000);
 ```
 
+### 系统信息
+
+```typescript
+import {
+  getMemoryInfo,
+  getCpuUsage,
+  getDiskUsage,
+  getLoadAverage,
+  getSystemInfo,
+  getSystemStatus,
+} from "jsr:@dreamer/runtime-adapter";
+
+// 获取内存信息
+const memory = await getMemoryInfo();
+console.log(`总内存: ${(memory.total / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`已使用: ${(memory.used / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`使用率: ${memory.usagePercent.toFixed(2)}%`);
+
+// 获取 CPU 使用率
+const cpu = await getCpuUsage();
+console.log(`CPU 使用率: ${cpu.usagePercent.toFixed(2)}%`);
+console.log(`用户态: ${cpu.userPercent.toFixed(2)}%`);
+console.log(`系统态: ${cpu.systemPercent.toFixed(2)}%`);
+
+// 获取磁盘使用情况
+const disk = await getDiskUsage("/");
+console.log(`磁盘总空间: ${(disk.total / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`已使用: ${(disk.used / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`使用率: ${disk.usagePercent.toFixed(2)}%`);
+
+// 获取系统负载（Linux/macOS）
+const load = await getLoadAverage();
+if (load) {
+  console.log(`1分钟负载: ${load.load1.toFixed(2)}`);
+  console.log(`5分钟负载: ${load.load5.toFixed(2)}`);
+  console.log(`15分钟负载: ${load.load15.toFixed(2)}`);
+}
+
+// 获取系统信息
+const system = await getSystemInfo();
+console.log(`主机名: ${system.hostname}`);
+console.log(`平台: ${system.platform}`);
+console.log(`架构: ${system.arch}`);
+console.log(`运行时间: ${(system.uptime / 3600).toFixed(2)} 小时`);
+if (system.cpus) {
+  console.log(`CPU 核心数: ${system.cpus}`);
+}
+
+// 获取完整的系统状态
+const status = await getSystemStatus();
+console.log("系统状态:", status);
+```
+
 ---
 
 ## 📚 API 文档
@@ -417,6 +501,7 @@ setTimeout(() => {
 | `remove(path: string, options?)` | 删除文件或目录 | `recursive?: boolean` |
 | `readdir(path: string)` | 读取目录内容 | - |
 | `stat(path: string)` | 获取文件信息 | - |
+| `walk(dir: string, options?)` | 递归遍历目录 | `maxDepth?: number`<br>`includeFiles?: boolean`<br>`includeDirs?: boolean`<br>`match?: (path: string, info: FileInfo) => boolean`<br>`skipSymlinks?: boolean` |
 
 #### 文件操作
 
@@ -428,6 +513,10 @@ setTimeout(() => {
 | `realPath(path: string)` | 获取真实路径（解析符号链接） |
 | `chmod(path: string, mode: number)` | 修改文件权限 |
 | `chown(path: string, uid: number, gid: number)` | 修改文件所有者 |
+| `exists(path: string)` | 检查文件或目录是否存在 |
+| `isFile(path: string)` | 检查路径是否为文件 |
+| `isDirectory(path: string)` | 检查路径是否为目录 |
+| `truncate(path: string, len: number)` | 截断文件 |
 
 #### 临时文件/目录
 
@@ -584,6 +673,163 @@ cron(
 
 > 📌 **注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。
 
+### 📊 进程信息 API
+
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `pid()` | 获取当前进程 ID | `number` |
+| `platform()` | 获取操作系统平台 | `"linux" \| "darwin" \| "windows" \| "unknown"` |
+| `arch()` | 获取 CPU 架构 | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
+| `version()` | 获取运行时版本信息 | `RuntimeVersion` |
+
+**RuntimeVersion 接口：**
+```typescript
+interface RuntimeVersion {
+  runtime: "deno" | "bun";
+  version: string;
+  build?: {
+    target: string;
+    arch: string;
+    os: string;
+    vendor: string;
+  };
+}
+```
+
+### 🔧 进程工具 API
+
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `args()` | 获取命令行参数数组 | `string[]` |
+| `exit(code: number)` | 退出程序 | `never` |
+
+### 📡 信号处理 API
+
+| API | 说明 | 参数 |
+|-----|------|------|
+| `addSignalListener(signal: Signal, handler: () => void)` | 添加信号监听器 | `signal`: `"SIGTERM" \| "SIGINT" \| "SIGUSR1" \| "SIGUSR2" \| "SIGHUP"`<br>`handler`: 信号处理函数 |
+| `removeSignalListener(signal: Signal, handler: () => void)` | 移除信号监听器 | 同上 |
+
+### 🛤️ 路径操作 API
+
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `join(...paths: string[])` | 拼接多个路径片段 | `string` |
+| `dirname(path: string)` | 获取目录名 | `string` |
+| `basename(path: string, ext?: string)` | 获取文件名 | `string` |
+| `extname(path: string)` | 获取扩展名 | `string` |
+| `resolve(...paths: string[])` | 解析路径为绝对路径 | `string` |
+| `relative(from: string, to: string)` | 计算相对路径 | `string` |
+| `normalize(path: string)` | 规范化路径 | `string` |
+| `isAbsolute(path: string)` | 判断是否为绝对路径 | `boolean` |
+| `isRelative(path: string)` | 判断是否为相对路径 | `boolean` |
+
+### 🔐 文件哈希 API
+
+| API | 说明 | 参数 | 返回值 |
+|-----|------|------|--------|
+| `hashFile(path: string, algorithm?: HashAlgorithm)` | 计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
+| `hash(data: Uint8Array \| string, algorithm?: HashAlgorithm)` | 计算数据哈希值 | `data`: 数据（Uint8Array 或字符串）<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
+
+**HashAlgorithm 类型：**
+- `"SHA-256"`（默认）
+- `"SHA-512"`
+- `"SHA-1"`
+- `"MD5"`
+
+**使用示例：**
+```typescript
+import { hashFile, hash } from "jsr:@dreamer/runtime-adapter";
+
+// 计算文件哈希
+const fileHash = await hashFile("./file.txt");
+
+// 计算字符串哈希
+const stringHash = await hash("Hello, World!");
+
+// 使用不同的算法
+const sha512 = await hashFile("./file.txt", "SHA-512");
+```
+
+### 📊 系统信息 API
+
+| API | 说明 | 参数 | 返回值 |
+|-----|------|------|--------|
+| `getMemoryInfo()` | 获取系统内存信息 | 无 | `Promise<MemoryInfo>` |
+| `getCpuUsage(interval?: number)` | 获取 CPU 使用率 | `interval`: 采样间隔（毫秒，默认：100） | `Promise<CpuUsage>` |
+| `getLoadAverage()` | 获取系统负载（Linux/macOS） | 无 | `Promise<LoadAverage \| undefined>` |
+| `getDiskUsage(path?: string)` | 获取磁盘使用情况 | `path`: 路径（默认：当前工作目录） | `Promise<DiskUsage>` |
+| `getSystemInfo()` | 获取系统信息 | 无 | `Promise<SystemInfo>` |
+| `getSystemStatus(cpuInterval?: number, diskPath?: string)` | 获取完整的系统状态 | `cpuInterval`: CPU 采样间隔（默认：100）<br>`diskPath`: 磁盘路径（可选） | `Promise<SystemStatus>` |
+
+**MemoryInfo 接口：**
+```typescript
+interface MemoryInfo {
+  total: number;           // 总内存（字节）
+  available: number;        // 可用内存（字节）
+  used: number;             // 已使用内存（字节）
+  free: number;             // 空闲内存（字节）
+  usagePercent: number;     // 内存使用率（百分比）
+  swapTotal?: number;       // 交换区总量（字节，可选）
+  swapFree?: number;        // 空闲交换区（字节，可选）
+}
+```
+
+**CpuUsage 接口：**
+```typescript
+interface CpuUsage {
+  usagePercent: number;     // 总 CPU 使用率（百分比）
+  userPercent: number;      // 用户态 CPU 使用率（百分比）
+  systemPercent: number;    // 系统态 CPU 使用率（百分比）
+}
+```
+
+**LoadAverage 接口：**
+```typescript
+interface LoadAverage {
+  load1: number;            // 1 分钟平均负载
+  load5: number;            // 5 分钟平均负载
+  load15: number;           // 15 分钟平均负载
+}
+```
+
+**DiskUsage 接口：**
+```typescript
+interface DiskUsage {
+  total: number;            // 总空间（字节）
+  used: number;             // 已使用空间（字节）
+  available: number;        // 可用空间（字节）
+  usagePercent: number;     // 使用率（百分比）
+}
+```
+
+**SystemInfo 接口：**
+```typescript
+interface SystemInfo {
+  hostname: string;         // 主机名
+  platform: string;         // 操作系统平台
+  arch: string;             // CPU 架构
+  uptime: number;           // 系统运行时间（秒）
+  cpus?: number;            // CPU 核心数（可选）
+}
+```
+
+**SystemStatus 接口：**
+```typescript
+interface SystemStatus {
+  system: SystemInfo;       // 系统信息
+  memory: MemoryInfo;       // 内存信息
+  cpu: CpuUsage;            // CPU 使用率
+  loadAverage?: LoadAverage; // 系统负载（可选）
+  disk?: DiskUsage;         // 磁盘使用信息（可选）
+}
+```
+
+> 📌 **注意**：
+> - Windows 平台不支持系统负载，`getLoadAverage()` 返回 `undefined`
+> - Deno 环境使用原生 API，Bun 环境通过系统命令获取
+> - 所有 API 在获取失败时会返回默认值，不会抛出异常
+
 ---
 
 ## 🧪 测试
@@ -598,19 +844,14 @@ deno test -A tests/
 bun test tests/
 ```
 
-### 测试覆盖
+### 测试报告
 
-| 模块 | 测试用例数 | 状态 |
-|------|-----------|------|
-| 运行时检测 | 7 | ✅ |
-| 文件系统 API | 24 | ✅ |
-| 网络 API | 5 | ✅ |
-| 环境变量 API | 9 | ✅ |
-| 进程/命令 API | 8 | ✅ |
-| 终端 API | 6 | ✅ |
-| 定时任务 API | 4 | ✅ |
-| 模块导出 | 7 | ✅ |
-| **总计** | **70** | ✅ **全部通过** |
+详细的测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
+
+测试覆盖包括：
+- ✅ 170 个测试用例全部通过
+- ✅ 16 个功能模块完整测试
+- ✅ Deno 和 Bun 跨运行时兼容性验证
 
 ---
 

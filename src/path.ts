@@ -154,3 +154,186 @@ export function resolve(...paths: string[]): string {
 
   return join(base, ...paths);
 }
+
+/**
+ * 计算从 from 到 to 的相对路径
+ * @param from 起始路径
+ * @param to 目标路径
+ * @returns 相对路径
+ *
+ * @example
+ * ```typescript
+ * import { relative } from "@dreamer/runtime-adapter";
+ * const rel = relative("/path/to/from", "/path/to/to/file.txt");
+ * // => "../to/file.txt"
+ * ```
+ */
+export function relative(from: string, to: string): string {
+  // 规范化路径（移除末尾斜杠，处理多个斜杠）
+  const normalize = (path: string): string[] => {
+    return path.replace(/\/+$/, "").replace(/\/+/g, "/").split("/").filter(
+      Boolean,
+    );
+  };
+
+  const fromParts = normalize(from);
+  const toParts = normalize(to);
+
+  // 找到共同的前缀
+  let commonLength = 0;
+  const minLength = Math.min(fromParts.length, toParts.length);
+  while (
+    commonLength < minLength &&
+    fromParts[commonLength] === toParts[commonLength]
+  ) {
+    commonLength++;
+  }
+
+  // 计算需要向上多少级
+  const upLevels = fromParts.length - commonLength;
+
+  // 构建相对路径
+  const relativeParts: string[] = [];
+
+  // 添加向上级别的路径（..）
+  for (let i = 0; i < upLevels; i++) {
+    relativeParts.push("..");
+  }
+
+  // 添加目标路径的剩余部分
+  relativeParts.push(...toParts.slice(commonLength));
+
+  // 如果没有相对路径，返回 "."
+  if (relativeParts.length === 0) {
+    return ".";
+  }
+
+  return join(...relativeParts);
+}
+
+/**
+ * 规范化路径
+ * 处理 `.` 和 `..` 路径段，规范化多个斜杠
+ * @param path 路径
+ * @returns 规范化后的路径
+ *
+ * @example
+ * ```typescript
+ * import { normalize } from "@dreamer/runtime-adapter";
+ * const path = normalize("/path/to/../from/./file.txt");
+ * // => "/path/from/file.txt"
+ * ```
+ */
+export function normalize(path: string): string {
+  if (path === "" || path === ".") {
+    return ".";
+  }
+
+  // 处理 Windows 路径分隔符（转换为 Unix 风格）
+  let normalized = path.replace(/\\/g, "/");
+
+  // 判断是否为绝对路径
+  const isAbs = normalized.startsWith("/");
+  const isWindowsAbs = /^[A-Za-z]:/.test(normalized);
+
+  // 移除开头的斜杠（稍后恢复）
+  if (isAbs) {
+    normalized = normalized.substring(1);
+  }
+
+  // 处理 Windows 绝对路径（如 C:/path/to/file）
+  let windowsDrive = "";
+  if (isWindowsAbs) {
+    const match = normalized.match(/^([A-Za-z]:)(.*)$/);
+    if (match) {
+      windowsDrive = match[1];
+      normalized = match[2];
+    }
+  }
+
+  // 分割路径段
+  const parts = normalized.split("/").filter((part) => part !== "");
+
+  // 处理 . 和 ..
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === ".") {
+      // 忽略当前目录
+      continue;
+    } else if (part === "..") {
+      // 向上级目录
+      if (resolved.length > 0 && resolved[resolved.length - 1] !== "..") {
+        resolved.pop();
+      } else if (!isAbs && !isWindowsAbs) {
+        // 相对路径中保留 ..
+        resolved.push("..");
+      }
+    } else {
+      resolved.push(part);
+    }
+  }
+
+  // 重新组合路径
+  let result = resolved.join("/");
+
+  // 恢复绝对路径前缀
+  if (isAbs) {
+    result = "/" + result;
+  } else if (isWindowsAbs) {
+    result = windowsDrive + (result ? "/" + result : "");
+  }
+
+  // 处理根目录和空路径
+  if (result === "") {
+    return isAbs || isWindowsAbs ? (isWindowsAbs ? windowsDrive + "/" : "/") : ".";
+  }
+
+  // 规范化多个斜杠
+  result = result.replace(/\/+/g, "/");
+
+  return result;
+}
+
+/**
+ * 判断是否为绝对路径
+ * @param path 路径
+ * @returns 是否为绝对路径
+ *
+ * @example
+ * ```typescript
+ * import { isAbsolute } from "@dreamer/runtime-adapter";
+ * isAbsolute("/path/to/file"); // => true
+ * isAbsolute("C:/path/to/file"); // => true (Windows)
+ * isAbsolute("./file"); // => false
+ * ```
+ */
+export function isAbsolute(path: string): boolean {
+  // Unix 绝对路径
+  if (path.startsWith("/")) {
+    return true;
+  }
+
+  // Windows 绝对路径（如 C:\path 或 C:/path）
+  if (/^[A-Za-z]:[\\/]/.test(path)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * 判断是否为相对路径
+ * @param path 路径
+ * @returns 是否为相对路径
+ *
+ * @example
+ * ```typescript
+ * import { isRelative } from "@dreamer/runtime-adapter";
+ * isRelative("./file"); // => true
+ * isRelative("../file"); // => true
+ * isRelative("/path/to/file"); // => false
+ * ```
+ */
+export function isRelative(path: string): boolean {
+  return !isAbsolute(path);
+}

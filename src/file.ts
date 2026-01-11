@@ -4,6 +4,7 @@
  */
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
+import { join } from "./path.ts";
 
 /**
  * 文件打开选项
@@ -283,10 +284,10 @@ export async function mkdir(
     // Bun 使用 Node.js 兼容的 fs API
     const { mkdir: nodeMkdir } = await import("node:fs/promises");
     try {
-    await nodeMkdir(path, {
-      recursive: options?.recursive,
-      mode: options?.mode,
-    });
+      await nodeMkdir(path, {
+        recursive: options?.recursive,
+        mode: options?.mode,
+      });
     } catch (error: any) {
       // 如果目录已存在且 recursive 为 true，忽略错误
       // Bun 在某些情况下会抛出 EINVAL 错误，即使 recursive: true
@@ -1102,4 +1103,199 @@ export function chdir(path: string): void {
   }
 
   throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 截断文件
+ * @param path 文件路径
+ * @param len 截断后的文件长度（字节）
+ */
+export async function truncate(path: string, len: number): Promise<void> {
+  if (IS_DENO) {
+    await (globalThis as any).Deno.truncate(path, len);
+    return;
+  }
+
+  if (IS_BUN) {
+    const { truncate } = await import("node:fs/promises");
+    await truncate(path, len);
+    return;
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 检查文件或目录是否存在
+ * @param path 文件或目录路径
+ * @returns 如果存在返回 true，否则返回 false
+ *
+ * @example
+ * ```typescript
+ * import { exists } from "@dreamer/runtime-adapter";
+ * if (await exists("./file.txt")) {
+ *   console.log("文件存在");
+ * }
+ * ```
+ */
+export async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 检查路径是否为文件
+ * @param path 文件路径
+ * @returns 如果是文件返回 true，否则返回 false
+ *
+ * @example
+ * ```typescript
+ * import { isFile } from "@dreamer/runtime-adapter";
+ * if (await isFile("./file.txt")) {
+ *   console.log("这是一个文件");
+ * }
+ * ```
+ */
+export async function isFile(path: string): Promise<boolean> {
+  try {
+    const info = await stat(path);
+    return info.isFile;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 检查路径是否为目录
+ * @param path 目录路径
+ * @returns 如果是目录返回 true，否则返回 false
+ *
+ * @example
+ * ```typescript
+ * import { isDirectory } from "@dreamer/runtime-adapter";
+ * if (await isDirectory("./dir")) {
+ *   console.log("这是一个目录");
+ * }
+ * ```
+ */
+export async function isDirectory(path: string): Promise<boolean> {
+  try {
+    const info = await stat(path);
+    return info.isDirectory;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 目录遍历选项
+ */
+export interface WalkOptions {
+  /** 最大深度（默认：Infinity，表示不限制） */
+  maxDepth?: number;
+  /** 是否包含文件（默认：true） */
+  includeFiles?: boolean;
+  /** 是否包含目录（默认：false） */
+  includeDirs?: boolean;
+  /** 路径匹配函数（返回 true 表示包含该路径） */
+  match?: (path: string, info: FileInfo) => boolean;
+  /** 是否跳过符号链接（默认：false） */
+  skipSymlinks?: boolean;
+}
+
+/**
+ * 递归遍历目录
+ * @param dir 起始目录路径
+ * @param options 遍历选项
+ * @returns 异步生成器，生成文件/目录路径
+ *
+ * @example
+ * ```typescript
+ * import { walk } from "@dreamer/runtime-adapter";
+ *
+ * // 遍历所有文件
+ * for await (const path of walk("./src")) {
+ *   console.log(path);
+ * }
+ *
+ * // 只遍历 TypeScript 文件
+ * for await (const path of walk("./src", {
+ *   includeDirs: false,
+ *   match: (p) => p.endsWith(".ts"),
+ * })) {
+ *   console.log(path);
+ * }
+ * ```
+ */
+export async function* walk(
+  dir: string,
+  options: WalkOptions = {},
+): AsyncGenerator<string> {
+  const {
+    maxDepth = Infinity,
+    includeFiles = true,
+    includeDirs = false,
+    match,
+    skipSymlinks = false,
+  } = options;
+
+  yield* walkDirectory(dir, 0);
+
+  async function* walkDirectory(
+    currentDir: string,
+    depth: number,
+  ): AsyncGenerator<string> {
+    // 检查深度限制
+    if (maxDepth !== Infinity && depth >= maxDepth) {
+      return;
+    }
+
+    try {
+      const entries = await readdir(currentDir);
+
+      for (const entry of entries) {
+        const fullPath = join(currentDir, entry.name);
+
+        // 跳过符号链接（如果需要）
+        if (skipSymlinks && entry.isSymlink) {
+          continue;
+        }
+
+        // 获取文件信息用于匹配函数
+        let fileInfo: FileInfo | null = null;
+        try {
+          fileInfo = await stat(fullPath);
+        } catch {
+          // 如果无法获取文件信息，跳过
+          continue;
+        }
+
+        // 处理目录
+        if (entry.isDirectory) {
+          const shouldInclude = !match || match(fullPath, fileInfo);
+          if (includeDirs && shouldInclude) {
+            yield fullPath;
+          }
+          // 递归遍历子目录
+          yield* walkDirectory(fullPath, depth + 1);
+        } else if (entry.isFile) {
+          // 处理文件
+          const shouldInclude = !match || match(fullPath, fileInfo);
+          if (includeFiles && shouldInclude) {
+            yield fullPath;
+          }
+        }
+      }
+    } catch (error) {
+      // 忽略无法访问的目录
+      if (error instanceof Error && error.message.includes("Permission")) {
+        return;
+      }
+      throw error;
+    }
+  }
 }

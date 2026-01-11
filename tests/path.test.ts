@@ -3,7 +3,17 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import { basename, dirname, extname, join, resolve } from "../src/path.ts";
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  isRelative,
+  join,
+  normalize,
+  relative,
+  resolve,
+} from "../src/path.ts";
 
 describe("路径操作 API", () => {
   describe("join", () => {
@@ -216,6 +226,98 @@ describe("路径操作 API", () => {
       expect(dir).toBe("/project/src/components");
       expect(name).toBe("Button");
       expect(ext).toBe(".tsx");
+    });
+  });
+
+  describe("relative", () => {
+    it("应该计算相对路径", () => {
+      expect(relative("/path/to/from", "/path/to/to/file.txt")).toBe(
+        "../to/file.txt",
+      );
+    });
+
+    it("应该处理相同目录", () => {
+      expect(relative("/path/to", "/path/to/file.txt")).toBe("file.txt");
+    });
+
+    it("应该处理相同路径", () => {
+      expect(relative("/path/to/file.txt", "/path/to/file.txt")).toBe(".");
+    });
+
+    it("应该处理向上多级", () => {
+      expect(relative("/path/to/deep/nested", "/path/to/file.txt")).toBe(
+        "../../file.txt",
+      );
+    });
+
+    it("应该处理向下多级", () => {
+      expect(relative("/path/to", "/path/to/deep/nested/file.txt")).toBe(
+        "deep/nested/file.txt",
+      );
+    });
+
+    it("应该处理相对路径", () => {
+      expect(relative("from", "to/file.txt")).toBe("../to/file.txt");
+    });
+
+    it("应该处理根目录", () => {
+      expect(relative("/", "/file.txt")).toBe("file.txt");
+      expect(relative("/path/to", "/")).toBe("../..");
+    });
+  });
+
+  describe("normalize", () => {
+    it("应该规范化路径", () => {
+      expect(normalize("/path/to/../from/./file.txt")).toBe("/path/from/file.txt");
+    });
+
+    it("应该处理多个斜杠", () => {
+      expect(normalize("/path//to///file.txt")).toBe("/path/to/file.txt");
+    });
+
+    it("应该处理当前目录", () => {
+      expect(normalize("./file.txt")).toBe("file.txt");
+      expect(normalize(".")).toBe(".");
+    });
+
+    it("应该处理上级目录", () => {
+      expect(normalize("../file.txt")).toBe("../file.txt");
+      expect(normalize("/path/to/../../file.txt")).toBe("/file.txt");
+    });
+
+    it("应该处理 Windows 路径", () => {
+      expect(normalize("C:\\path\\to\\file.txt")).toBe("C:/path/to/file.txt");
+    });
+  });
+
+  describe("isAbsolute", () => {
+    it("应该识别 Unix 绝对路径", () => {
+      expect(isAbsolute("/path/to/file")).toBe(true);
+      expect(isAbsolute("/")).toBe(true);
+    });
+
+    it("应该识别 Windows 绝对路径", () => {
+      expect(isAbsolute("C:/path/to/file")).toBe(true);
+      expect(isAbsolute("C:\\path\\to\\file")).toBe(true);
+    });
+
+    it("应该识别相对路径", () => {
+      expect(isAbsolute("./file")).toBe(false);
+      expect(isAbsolute("../file")).toBe(false);
+      expect(isAbsolute("file.txt")).toBe(false);
+    });
+  });
+
+  describe("isRelative", () => {
+    it("应该识别相对路径", () => {
+      expect(isRelative("./file")).toBe(true);
+      expect(isRelative("../file")).toBe(true);
+      expect(isRelative("file.txt")).toBe(true);
+    });
+
+    it("应该识别绝对路径", () => {
+      expect(isRelative("/path/to/file")).toBe(false);
+      expect(isRelative("C:/path/to/file")).toBe(false);
     });
   });
 });

@@ -20,6 +20,7 @@ import {
   rename,
   stat,
   symlink,
+  walk,
   writeFile,
   writeTextFile,
 } from "../src/file.ts";
@@ -568,5 +569,53 @@ describe("文件系统 API", () => {
     } catch {
       // 忽略清理错误
     }
+  });
+
+  describe("目录遍历 API", () => {
+    it("应该遍历目录中的所有文件", async () => {
+      const tempDir = await makeTempDir({ prefix: "test-walk-" });
+      try {
+        // 创建测试文件
+        await writeTextFile(`${tempDir}/file1.txt`, "content1");
+        await writeTextFile(`${tempDir}/file2.txt`, "content2");
+        await mkdir(`${tempDir}/subdir`, { recursive: true });
+        await writeTextFile(`${tempDir}/subdir/file3.txt`, "content3");
+
+        const files: string[] = [];
+        for await (const path of walk(tempDir, { includeDirs: false })) {
+          files.push(path);
+        }
+
+        expect(files.length).toBeGreaterThanOrEqual(3);
+        expect(files.some((f) => f.includes("file1.txt"))).toBe(true);
+        expect(files.some((f) => f.includes("file2.txt"))).toBe(true);
+        expect(files.some((f) => f.includes("file3.txt"))).toBe(true);
+      } finally {
+        await remove(tempDir, { recursive: true });
+      }
+    });
+
+    it("应该支持路径匹配", async () => {
+      const tempDir = await makeTempDir({ prefix: "test-walk-" });
+      try {
+        await writeTextFile(`${tempDir}/file1.ts`, "content1");
+        await writeTextFile(`${tempDir}/file2.js`, "content2");
+
+        const files: string[] = [];
+        for await (
+          const path of walk(tempDir, {
+            includeDirs: false,
+            match: (p) => p.endsWith(".ts"),
+          })
+        ) {
+          files.push(path);
+        }
+
+        expect(files.length).toBe(1);
+        expect(files[0]).toContain("file1.ts");
+      } finally {
+        await remove(tempDir, { recursive: true });
+      }
+    });
   });
 });

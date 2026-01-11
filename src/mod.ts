@@ -55,11 +55,14 @@ export {
   create,
   cwd,
   type DirEntry,
+  exists,
   type FileEvent,
   type FileEventType,
   type FileInfo,
   type FileOpenOptions,
   type FileWatcher,
+  isDirectory,
+  isFile,
   makeTempDir,
   makeTempFile,
   mkdir,
@@ -72,6 +75,9 @@ export {
   rename,
   stat,
   symlink,
+  truncate,
+  walk,
+  type WalkOptions,
   watchFs,
   type WatchFsOptions,
   writeFile,
@@ -121,5 +127,58 @@ export {
 export { cron, type CronHandle, type CronOptions } from "./cron.ts";
 // 注意：cron 函数是异步的，返回 Promise<CronHandle>
 
+// 导出进程信息 API
+export {
+  type Arch,
+  arch,
+  pid,
+  type Platform,
+  platform,
+  type RuntimeVersion,
+  version,
+} from "./process-info.ts";
+
+// 导出进程工具 API
+export { args, exit } from "./process-utils.ts";
+
+// 导出信号处理 API
+export {
+  addSignalListener,
+  removeSignalListener,
+  type Signal,
+  type SignalHandler,
+} from "./signal.ts";
+
+// 目录遍历 API 已包含在文件系统 API 中
+
+// 导出文件哈希 API
+export { hash, type HashAlgorithm, hashFile } from "./hash.ts";
+
 // 导出路径操作 API
-export { basename, dirname, extname, join, resolve } from "./path.ts";
+export {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  isRelative,
+  join,
+  normalize,
+  relative,
+  resolve,
+} from "./path.ts";
+
+// 导出系统信息 API
+export {
+  type CpuUsage,
+  type DiskUsage,
+  getCpuUsage,
+  getDiskUsage,
+  getLoadAverage,
+  getMemoryInfo,
+  getSystemInfo,
+  getSystemStatus,
+  type LoadAverage,
+  type MemoryInfo,
+  type SystemInfo,
+  type SystemStatus,
+} from "./system-info.ts";
