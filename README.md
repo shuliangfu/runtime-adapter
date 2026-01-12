@@ -289,6 +289,32 @@ import { serve, connect, startTls, upgradeWebSocket } from "jsr:@dreamer/runtime
 
 // HTTP 服务器（自动适配 Bun 或 Deno）
 const handle = await serve({ port: 3000 }, (req) => {
+  const url = new URL(req.url);
+
+  // WebSocket 升级（自动适配 Bun 或 Deno）
+  if (url.pathname === "/ws") {
+    const { socket, response } = upgradeWebSocket(req, {
+      idleTimeout: 120,
+    });
+
+    // 使用标准的 addEventListener API（Deno 和 Bun 都支持）
+    socket.addEventListener("open", () => {
+      console.log("WebSocket 连接已建立");
+    });
+
+    socket.addEventListener("message", (event) => {
+      console.log("收到消息:", event.data);
+      socket.send(`Echo: ${event.data}`);
+    });
+
+    socket.addEventListener("close", () => {
+      console.log("WebSocket 连接已关闭");
+    });
+
+    // Bun 环境下 response 可能为 undefined（由 Bun 自动处理）
+    return response || new Response("WebSocket upgrade", { status: 101 });
+  }
+
   return new Response("Hello, World!");
 });
 
@@ -296,12 +322,7 @@ const handle = await serve({ port: 3000 }, (req) => {
 console.log("服务器运行在端口:", handle.port);
 
 // 关闭服务器
-handle.close();
-
-// WebSocket 升级（Deno 环境）
-const upgradeResult = upgradeWebSocket(req, {
-  idleTimeout: 120,
-});
+await handle.shutdown();
 
 // TCP 连接
 const conn = await connect({
@@ -763,7 +784,38 @@ upgradeWebSocket(
 ): UpgradeWebSocketResult
 ```
 
-> ⚠️ **注意**：Bun 环境下的 WebSocket 升级需要在 `serve()` 时配置 `websocket` 处理器，不能单独使用。
+**选项：**
+- `protocol?: string` - WebSocket 子协议
+- `idleTimeout?: number` - 空闲超时时间（秒）
+
+**返回值：**
+- `socket: WebSocket` - WebSocket 连接对象（支持标准的 `addEventListener`、`send`、`close` 等方法）
+- `response: Response | undefined` - HTTP 响应对象（Deno 环境返回 Response，Bun 环境返回 undefined，由 Bun 自动处理）
+
+**使用说明：**
+- ✅ **跨运行时兼容**：Deno 和 Bun 环境都支持，使用统一的 API
+- ✅ **统一接口**：使用标准的 `addEventListener` API，无需关心底层实现差异
+- ✅ **自动适配**：Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置 `websocket` 处理器
+- ✅ **事件支持**：支持 `open`、`message`、`close`、`error` 等标准 WebSocket 事件
+
+**示例：**
+```typescript
+import { serve, upgradeWebSocket } from "jsr:@dreamer/runtime-adapter";
+
+const handle = serve({ port: 3000 }, (req) => {
+  const url = new URL(req.url);
+  if (url.pathname === "/ws") {
+    const { socket, response } = upgradeWebSocket(req);
+
+    socket.addEventListener("message", (event) => {
+      socket.send(`Echo: ${event.data}`);
+    });
+
+    return response || new Response("WebSocket upgrade", { status: 101 });
+  }
+  return new Response("Not Found", { status: 404 });
+});
+```
 
 #### TCP/TLS 连接
 
@@ -1044,10 +1096,11 @@ bun test tests/
 详细的测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 
 测试覆盖包括：
-- ✅ 202 个测试用例全部通过
-- ✅ 16 个功能模块完整测试
+- ✅ 207 个测试用例全部通过
+- ✅ 17 个功能模块完整测试
 - ✅ Deno 和 Bun 跨运行时兼容性验证
 - ✅ 同步和异步 API 完整测试
+- ✅ WebSocket API 完整测试
 
 ---
 
@@ -1055,7 +1108,7 @@ bun test tests/
 
 1. **文件监控**：`watchFs()` 在 Deno 和 Bun 环境下都已实现。Bun 环境使用 Node.js 的 `fs.watch` API，功能完整，支持递归监控、文件过滤和路径排除。
 
-2. **WebSocket 升级**：Bun 环境下的 `upgradeWebSocket()` 需要在 `serve()` 时配置 `websocket` 处理器，不能单独使用。
+2. **WebSocket 升级**：`upgradeWebSocket()` 在 Deno 和 Bun 环境下都支持，使用统一的 API。Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置 `websocket` 处理器。返回的 `socket` 对象支持标准的 `addEventListener`、`send`、`close` 等方法。
 
 3. **定时任务**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。
 

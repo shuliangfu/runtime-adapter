@@ -28,6 +28,234 @@ export interface ServeHandle {
 // 这是一个全局存储，用于在 serve() 和 upgradeWebSocket() 之间共享 server 实例
 let bunServerInstance: any = null;
 
+// Bun 环境下，存储待处理的 WebSocket 适配器
+// 当 upgradeWebSocket 被调用时，我们存储适配器，然后在 websocket 处理器中设置实际的 WebSocket
+const pendingBunAdapters = new Map<string, WebSocketAdapter>();
+
+/**
+ * WebSocket 适配器类
+ * 在 Bun 环境下提供 addEventListener API，兼容 Deno 的 WebSocket API
+ */
+class WebSocketAdapter {
+  private _ws: WebSocket | null = null;
+  private listeners: Map<string, Set<(event: any) => void>> = new Map();
+  private pendingOperations: Array<() => void> = [];
+  // 存储所有已创建的适配器（用于 Bun 环境下的查找）
+  public static allAdapters: Set<WebSocketAdapter> = new Set();
+
+  constructor(ws?: WebSocket) {
+    if (ws) {
+      this._ws = ws;
+      this.setupEventHandlers();
+    }
+    // 注册到所有适配器集合中（用于 Bun 环境下的查找）
+    WebSocketAdapter.allAdapters.add(this);
+  }
+
+  /**
+   * 设置实际的 WebSocket（用于 Bun 环境下后续替换）
+   */
+  setWebSocket(ws: WebSocket): void {
+    this._ws = ws;
+    this.setupEventHandlers();
+    // 执行所有待处理的操作
+    for (const op of this.pendingOperations) {
+      op();
+    }
+    this.pendingOperations = [];
+    // 触发 open 事件（如果适配器有监听器）
+    this.emit("open", new Event("open"));
+  }
+
+  /**
+   * 设置事件处理器
+   */
+  private setupEventHandlers(): void {
+    if (!this._ws) return;
+    const ws = this._ws; // 保存引用，避免类型检查错误
+
+    // 在 Bun 环境下，将 onmessage、onclose、onerror 转换为 addEventListener
+    if (IS_BUN) {
+      // 保存原始的 onmessage、onclose、onerror
+      const originalOnMessage = ws.onmessage;
+      const originalOnClose = ws.onclose;
+      const originalOnError = ws.onerror;
+
+      // 设置统一的处理器
+      ws.onmessage = (event: MessageEvent) => {
+        if (originalOnMessage) {
+          originalOnMessage.call(ws, event);
+        }
+        this.emit("message", event);
+      };
+
+      ws.onclose = (event: CloseEvent) => {
+        if (originalOnClose) {
+          originalOnClose.call(ws, event);
+        }
+        this.emit("close", event);
+      };
+
+      ws.onerror = (event: Event) => {
+        if (originalOnError) {
+          originalOnError.call(ws, event);
+        }
+        this.emit("error", event);
+      };
+    }
+  }
+
+  /**
+   * 添加事件监听器（兼容 Deno 和 Bun）
+   */
+  addEventListener(
+    type: string,
+    listener: (event: any) => void,
+  ): void {
+    if (IS_BUN) {
+      // Bun 环境下，使用内部事件系统
+      if (!this.listeners.has(type)) {
+        this.listeners.set(type, new Set());
+      }
+      this.listeners.get(type)!.add(listener);
+    } else {
+      // Deno 环境下，直接使用原生 addEventListener
+      if (this._ws) {
+        this._ws.addEventListener(type, listener);
+      }
+    }
+  }
+
+  /**
+   * 移除事件监听器
+   */
+  removeEventListener(
+    type: string,
+    listener: (event: any) => void,
+  ): void {
+    if (IS_BUN) {
+      const listeners = this.listeners.get(type);
+      if (listeners) {
+        listeners.delete(listener);
+      }
+    } else {
+      if (this._ws) {
+        // 检查是否是占位符 Proxy
+        if (typeof this._ws.removeEventListener === "function") {
+          this._ws.removeEventListener(type, listener);
+        }
+      }
+    }
+  }
+
+  /**
+   * 触发事件（Bun 环境下使用）
+   */
+  private emit(type: string, event: any): void {
+    const listeners = this.listeners.get(type);
+    if (listeners) {
+      for (const listener of listeners) {
+        listener(event);
+      }
+    }
+  }
+
+  /**
+   * 发送消息
+   */
+  send(data: string | ArrayBuffer | Blob): void {
+    if (this._ws) {
+      // 检查 _ws 是否有 send 方法（避免占位符 Proxy 的问题）
+      if (typeof this._ws.send === "function") {
+        this._ws.send(data);
+      } else {
+        // 如果是占位符，将操作加入待处理队列
+        this.pendingOperations.push(() => {
+          if (this._ws && typeof this._ws.send === "function") {
+            this._ws.send(data);
+          }
+        });
+      }
+    } else {
+      // 如果 WebSocket 还未设置，将操作加入待处理队列
+      this.pendingOperations.push(() => {
+        if (this._ws && typeof this._ws.send === "function") {
+          this._ws.send(data);
+        }
+      });
+    }
+  }
+
+  /**
+   * 关闭连接
+   */
+  close(code?: number, reason?: string): void {
+    if (this._ws) {
+      // 检查 _ws 是否有 close 方法（避免占位符 Proxy 的问题）
+      if (typeof this._ws.close === "function") {
+        this._ws.close(code, reason);
+      } else {
+        // 如果是占位符，将操作加入待处理队列
+        this.pendingOperations.push(() => {
+          if (this._ws && typeof this._ws.close === "function") {
+            this._ws.close(code, reason);
+          }
+        });
+      }
+    } else {
+      // 如果 WebSocket 还未设置，将操作加入待处理队列
+      this.pendingOperations.push(() => {
+        if (this._ws && typeof this._ws.close === "function") {
+          this._ws.close(code, reason);
+        }
+      });
+    }
+  }
+
+  /**
+   * 获取 readyState
+   */
+  get readyState(): number {
+    if (this._ws) {
+      // 检查是否是占位符 Proxy（通过检查是否有 send 方法）
+      if (typeof this._ws.send === "function") {
+        return this._ws.readyState;
+      }
+      // 如果是占位符，返回 CONNECTING
+      return WebSocket.CONNECTING;
+    }
+    return WebSocket.CONNECTING;
+  }
+
+  /**
+   * 获取协议
+   */
+  get protocol(): string {
+    if (this._ws) {
+      // 检查是否是占位符 Proxy
+      if (typeof this._ws.send === "function") {
+        return this._ws.protocol;
+      }
+      return "";
+    }
+    return "";
+  }
+
+  /**
+   * 获取 URL
+   */
+  get url(): string {
+    if (this._ws) {
+      // 检查是否是占位符 Proxy
+      if (typeof this._ws.send === "function") {
+        return this._ws.url;
+      }
+      return "";
+    }
+    return "";
+  }
+}
+
 /**
  * WebSocket 升级选项
  */
@@ -40,8 +268,8 @@ export interface UpgradeWebSocketOptions {
  * WebSocket 升级结果
  */
 export interface UpgradeWebSocketResult {
-  socket: WebSocket;
-  response: Response;
+  socket: WebSocket | WebSocketAdapter;
+  response?: Response; // 在 Bun 环境下为 undefined，让 Bun 自动处理响应
 }
 
 /**
@@ -82,8 +310,18 @@ export interface TcpConn {
  * @returns 服务器句柄
  */
 export function serve(
-  options: ServeOptions | ((req: Request) => Response | Promise<Response>),
-  handler?: (req: Request) => Response | Promise<Response>,
+  options:
+    | ServeOptions
+    | ((
+      req: Request,
+    ) =>
+      | Response
+      | Promise<Response>
+      | Promise<Response | undefined>
+      | undefined),
+  handler?: (
+    req: Request,
+  ) => Response | Promise<Response> | Promise<Response | undefined> | undefined,
 ): ServeHandle {
   if (IS_DENO) {
     // Deno.serve 的签名
@@ -152,10 +390,193 @@ export function serve(
           return options(req);
         },
         websocket: {
-          // 空的 websocket 处理器，允许升级
-          message() {},
-          open() {},
-          close() {},
+          // websocket 处理器，用于设置实际的 WebSocket 到适配器
+          message(ws: WebSocket, message: string | Uint8Array) {
+            // 查找对应的适配器并触发消息事件
+            // 从所有适配器中查找（因为可能已从 pendingBunAdapters 中移除）
+            let adapter = Array.from(WebSocketAdapter.allAdapters).find(
+              (a) => (a as any)._ws === ws,
+            );
+            // 如果没找到，尝试从 pendingBunAdapters 中查找（可能 _ws 还未设置）
+            if (!adapter && pendingBunAdapters.size > 0) {
+              // 尝试通过 ws.data.adapterId 查找
+              const wsData = (ws as any).data;
+              if (wsData?.adapterId) {
+                adapter = pendingBunAdapters.get(wsData.adapterId);
+              }
+              // 如果还是没找到，使用第一个适配器
+              if (!adapter) {
+                adapter = Array.from(pendingBunAdapters.values())[0];
+              }
+              // 如果找到适配器但 _ws 还没有设置，现在设置它
+              // 这样可以处理 open 事件没有被触发的情况
+              if (
+                adapter &&
+                (!(adapter as any)._ws ||
+                  typeof (adapter as any)._ws.send !== "function")
+              ) {
+                adapter.setWebSocket(ws);
+                // 从 pending 中移除
+                const wsUrl = ws.url || "";
+                if (wsUrl && pendingBunAdapters.has(wsUrl)) {
+                  pendingBunAdapters.delete(wsUrl);
+                } else if (
+                  wsData?.adapterId && pendingBunAdapters.has(wsData.adapterId)
+                ) {
+                  pendingBunAdapters.delete(wsData.adapterId);
+                } else {
+                  // 删除第一个匹配的适配器
+                  for (const [key, value] of pendingBunAdapters.entries()) {
+                    if (value === adapter) {
+                      pendingBunAdapters.delete(key);
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+            if (adapter) {
+              // 触发 message 事件
+              (adapter as any).emit(
+                "message",
+                new MessageEvent("message", {
+                  data: message,
+                }),
+              );
+            }
+          },
+          open(ws: WebSocket) {
+            // 查找对应的适配器并设置实际的 WebSocket
+            let adapter: WebSocketAdapter | undefined;
+            let matchedKey: string | undefined;
+
+            // 首先尝试通过 ws.data.adapterId 从 pendingBunAdapters 中查找（Bun 的特性）
+            const wsData = (ws as any).data;
+            if (wsData?.adapterId) {
+              adapter = pendingBunAdapters.get(wsData.adapterId);
+              if (adapter) {
+                matchedKey = wsData.adapterId;
+              }
+            }
+
+            // 如果没找到，尝试通过 ws.url 从 pendingBunAdapters 中查找
+            const wsUrl = ws.url || "";
+            if (!adapter && wsUrl) {
+              // 尝试精确匹配
+              adapter = pendingBunAdapters.get(wsUrl);
+              if (adapter) {
+                matchedKey = wsUrl;
+              }
+
+              // 如果没找到，尝试匹配 URL 路径（忽略协议和查询参数）
+              if (!adapter) {
+                try {
+                  const wsUrlObj = new URL(wsUrl);
+                  // 将 ws:// 或 wss:// 转换为 http:// 或 https:// 进行匹配
+                  const httpUrl = wsUrl.replace(/^ws:/, "http:").replace(
+                    /^wss:/,
+                    "https:",
+                  );
+                  adapter = pendingBunAdapters.get(httpUrl);
+                  if (adapter) {
+                    matchedKey = httpUrl;
+                  }
+
+                  // 如果还是没找到，尝试匹配路径
+                  if (!adapter) {
+                    for (const [key, value] of pendingBunAdapters.entries()) {
+                      try {
+                        const keyUrlObj = new URL(key);
+                        if (
+                          wsUrlObj.pathname === keyUrlObj.pathname &&
+                          wsUrlObj.hostname === keyUrlObj.hostname &&
+                          wsUrlObj.port === keyUrlObj.port
+                        ) {
+                          adapter = value;
+                          matchedKey = key;
+                          break;
+                        }
+                      } catch {
+                        // 忽略无效的 URL
+                      }
+                    }
+                  }
+                } catch {
+                  // 忽略无效的 URL
+                }
+              }
+            }
+
+            // 如果没找到，尝试查找第一个还没有设置实际 WebSocket 的适配器
+            if (!adapter && pendingBunAdapters.size > 0) {
+              const adapters = Array.from(pendingBunAdapters.values());
+              adapter = adapters.find(
+                (a) =>
+                  !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+              );
+              // 找到匹配的 key
+              if (adapter) {
+                for (const [key, value] of pendingBunAdapters.entries()) {
+                  if (value === adapter) {
+                    matchedKey = key;
+                    break;
+                  }
+                }
+              }
+            }
+
+            // 如果还是没找到，尝试从所有适配器中查找
+            if (!adapter) {
+              adapter = Array.from(WebSocketAdapter.allAdapters).find(
+                (a) =>
+                  !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+              );
+            }
+
+            if (adapter) {
+              adapter.setWebSocket(ws);
+              // 从 pending 中移除
+              if (matchedKey) {
+                pendingBunAdapters.delete(matchedKey);
+              } else {
+                // 如果没有匹配的 key，删除第一个匹配的适配器
+                for (const [key, value] of pendingBunAdapters.entries()) {
+                  if (value === adapter) {
+                    pendingBunAdapters.delete(key);
+                    break;
+                  }
+                }
+              }
+            }
+          },
+          close(ws: WebSocket, code?: number, reason?: string) {
+            // 查找对应的适配器并触发关闭事件
+            // 从所有适配器中查找（因为可能已从 pendingBunAdapters 中移除）
+            let adapter = Array.from(WebSocketAdapter.allAdapters).find(
+              (a) => (a as any)._ws === ws,
+            );
+            // 如果没找到，尝试从 pendingBunAdapters 中查找
+            if (!adapter) {
+              const wsData = (ws as any).data;
+              if (wsData?.adapterId) {
+                adapter = pendingBunAdapters.get(wsData.adapterId);
+              }
+              // 如果还是没找到，使用第一个适配器
+              if (!adapter && pendingBunAdapters.size > 0) {
+                adapter = Array.from(pendingBunAdapters.values())[0];
+              }
+            }
+            if (adapter) {
+              // 触发 close 事件
+              (adapter as any).emit(
+                "close",
+                new CloseEvent("close", {
+                  code: code || 1000,
+                  reason: reason || "",
+                }),
+              );
+            }
+          },
         },
       });
       bunServerInstance = server;
@@ -178,10 +599,193 @@ export function serve(
         return handler!(req);
       },
       websocket: {
-        // 空的 websocket 处理器，允许升级
-        message() {},
-        open() {},
-        close() {},
+        // websocket 处理器，用于设置实际的 WebSocket 到适配器
+        message(ws: WebSocket, message: string | Uint8Array) {
+          // 查找对应的适配器并触发消息事件
+          // 先尝试通过 _ws 查找（已设置实际 WebSocket 的适配器）
+          let adapter = Array.from(WebSocketAdapter.allAdapters).find(
+            (a) => (a as any)._ws === ws,
+          );
+          // 如果没找到，尝试从 pendingBunAdapters 中查找（可能 _ws 还未设置）
+          if (!adapter && pendingBunAdapters.size > 0) {
+            // 尝试通过 ws.data.adapterId 查找
+            const wsData = (ws as any).data;
+            if (wsData?.adapterId) {
+              adapter = pendingBunAdapters.get(wsData.adapterId);
+            }
+            // 如果还是没找到，使用第一个适配器
+            if (!adapter) {
+              adapter = Array.from(pendingBunAdapters.values())[0];
+            }
+            // 如果找到适配器但 _ws 还没有设置，现在设置它
+            // 这样可以处理 open 事件没有被触发的情况
+            if (
+              adapter &&
+              (!(adapter as any)._ws ||
+                typeof (adapter as any)._ws.send !== "function")
+            ) {
+              adapter.setWebSocket(ws);
+              // 从 pending 中移除
+              const wsUrl = ws.url || "";
+              if (wsUrl && pendingBunAdapters.has(wsUrl)) {
+                pendingBunAdapters.delete(wsUrl);
+              } else if (
+                wsData?.adapterId && pendingBunAdapters.has(wsData.adapterId)
+              ) {
+                pendingBunAdapters.delete(wsData.adapterId);
+              } else {
+                // 删除第一个匹配的适配器
+                for (const [key, value] of pendingBunAdapters.entries()) {
+                  if (value === adapter) {
+                    pendingBunAdapters.delete(key);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          if (adapter) {
+            // 触发 message 事件
+            (adapter as any).emit(
+              "message",
+              new MessageEvent("message", {
+                data: message,
+              }),
+            );
+          }
+        },
+        open(ws: WebSocket) {
+          // 查找对应的适配器并设置实际的 WebSocket
+          let adapter: WebSocketAdapter | undefined;
+          let matchedKey: string | undefined;
+
+          // 首先尝试通过 ws.data.adapterId 从 pendingBunAdapters 中查找（Bun 的特性）
+          const wsData = (ws as any).data;
+          if (wsData?.adapterId) {
+            adapter = pendingBunAdapters.get(wsData.adapterId);
+            if (adapter) {
+              matchedKey = wsData.adapterId;
+            }
+          }
+
+          // 如果没找到，尝试通过 ws.url 从 pendingBunAdapters 中查找
+          const wsUrl = ws.url || "";
+          if (!adapter && wsUrl) {
+            // 尝试精确匹配
+            adapter = pendingBunAdapters.get(wsUrl);
+            if (adapter) {
+              matchedKey = wsUrl;
+            }
+
+            // 如果没找到，尝试匹配 URL 路径（忽略协议和查询参数）
+            if (!adapter) {
+              try {
+                const wsUrlObj = new URL(wsUrl);
+                // 将 ws:// 或 wss:// 转换为 http:// 或 https:// 进行匹配
+                const httpUrl = wsUrl.replace(/^ws:/, "http:").replace(
+                  /^wss:/,
+                  "https:",
+                );
+                adapter = pendingBunAdapters.get(httpUrl);
+                if (adapter) {
+                  matchedKey = httpUrl;
+                }
+
+                // 如果还是没找到，尝试匹配路径
+                if (!adapter) {
+                  for (const [key, value] of pendingBunAdapters.entries()) {
+                    try {
+                      const keyUrlObj = new URL(key);
+                      if (
+                        wsUrlObj.pathname === keyUrlObj.pathname &&
+                        wsUrlObj.hostname === keyUrlObj.hostname &&
+                        wsUrlObj.port === keyUrlObj.port
+                      ) {
+                        adapter = value;
+                        matchedKey = key;
+                        break;
+                      }
+                    } catch {
+                      // 忽略无效的 URL
+                    }
+                  }
+                }
+              } catch {
+                // 忽略无效的 URL
+              }
+            }
+          }
+
+          // 如果没找到，尝试查找第一个还没有设置实际 WebSocket 的适配器
+          if (!adapter && pendingBunAdapters.size > 0) {
+            const adapters = Array.from(pendingBunAdapters.values());
+            adapter = adapters.find(
+              (a) =>
+                !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+            );
+            // 找到匹配的 key
+            if (adapter) {
+              for (const [key, value] of pendingBunAdapters.entries()) {
+                if (value === adapter) {
+                  matchedKey = key;
+                  break;
+                }
+              }
+            }
+          }
+
+          // 如果还是没找到，尝试从所有适配器中查找
+          if (!adapter) {
+            adapter = Array.from(WebSocketAdapter.allAdapters).find(
+              (a) =>
+                !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+            );
+          }
+
+          if (adapter) {
+            adapter.setWebSocket(ws);
+            // 从 pending 中移除
+            if (matchedKey) {
+              pendingBunAdapters.delete(matchedKey);
+            } else {
+              // 如果没有匹配的 key，删除第一个匹配的适配器
+              for (const [key, value] of pendingBunAdapters.entries()) {
+                if (value === adapter) {
+                  pendingBunAdapters.delete(key);
+                  break;
+                }
+              }
+            }
+          }
+        },
+        close(ws: WebSocket, code?: number, reason?: string) {
+          // 查找对应的适配器并触发关闭事件
+          // 从所有适配器中查找（因为可能已从 pendingBunAdapters 中移除）
+          let adapter = Array.from(WebSocketAdapter.allAdapters).find(
+            (a) => (a as any)._ws === ws,
+          );
+          // 如果没找到，尝试从 pendingBunAdapters 中查找
+          if (!adapter) {
+            const wsData = (ws as any).data;
+            if (wsData?.adapterId) {
+              adapter = pendingBunAdapters.get(wsData.adapterId);
+            }
+            // 如果还是没找到，使用第一个适配器
+            if (!adapter && pendingBunAdapters.size > 0) {
+              adapter = Array.from(pendingBunAdapters.values())[0];
+            }
+          }
+          if (adapter) {
+            // 触发 close 事件
+            (adapter as any).emit(
+              "close",
+              new CloseEvent("close", {
+                code: code || 1000,
+                reason: reason || "",
+              }),
+            );
+          }
+        },
       },
     });
     bunServerInstance = server;
@@ -230,7 +834,13 @@ export function upgradeWebSocket(
     }
 
     // 构建升级选项
-    const upgradeOptions: any = {};
+    // 在 Bun 中，可以通过 data 参数传递自定义数据，在 websocket.open 中通过 ws.data 访问
+    const adapterId = request.url; // 使用 URL 作为适配器标识
+    const upgradeOptions: any = {
+      data: {
+        adapterId: adapterId, // 传递适配器 ID，用于在 open 事件中匹配
+      },
+    };
     if (options?.protocol) {
       upgradeOptions.headers = {
         "Sec-WebSocket-Protocol": options.protocol,
@@ -250,14 +860,40 @@ export function upgradeWebSocket(
     // 注意：Bun 的 WebSocket 升级方式与 Deno 不同
     // - Deno: 立即返回 socket 和 response
     // - Bun: 返回 boolean，socket 在 websocket 处理器中可用
-    // 这里返回一个占位符 Response，实际的 socket 需要在 websocket 处理器中获取
-    // 为了兼容 Deno 的 API，我们返回一个空的 Response
+    // 在 Bun 环境下，我们需要创建一个占位符 WebSocket 适配器
+    // 实际的 socket 会在 websocket 处理器中可用，但我们需要先返回一个适配器
+    // 这个适配器会在 websocket 处理器中被替换为真正的 socket
+    const placeholderWs = new Proxy({} as WebSocket, {
+      get(_target, prop) {
+        // 如果访问的是 WebSocket 的标准属性，返回默认值
+        if (prop === "readyState") {
+          return WebSocket.CONNECTING;
+        }
+        if (prop === "protocol" || prop === "url") {
+          return "";
+        }
+        // 如果访问的是方法，返回一个空函数
+        if (typeof prop === "string" && prop.startsWith("on")) {
+          return undefined;
+        }
+        return undefined;
+      },
+    });
+
+    // 创建一个适配器，包装占位符 WebSocket
+    // 注意：在 Bun 环境下，实际的 socket 会在 websocket 处理器中可用
+    // 但我们需要先返回一个适配器，以便 websocket 库可以使用 addEventListener
+    const adapter = new WebSocketAdapter(placeholderWs as WebSocket);
+
+    // 存储适配器，以便在 websocket.open 中设置实际的 WebSocket
+    const url = request.url;
+    pendingBunAdapters.set(url, adapter);
+
+    // 在 Bun 环境下，返回 undefined 作为 response，让 Bun 自动处理 WebSocket 升级响应
+    // 这样 open 事件才能被正确触发
     return {
-      socket: {} as WebSocket, // 占位符，实际 socket 在 websocket 处理器中
-      response: new Response(null, {
-        status: 101,
-        statusText: "Switching Protocols",
-      }),
+      socket: adapter as any as WebSocket, // 返回适配器，但类型为 WebSocket
+      response: undefined, // Bun 会自动处理 101 响应
     };
   }
 

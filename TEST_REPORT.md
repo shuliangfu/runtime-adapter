@@ -13,11 +13,11 @@
 
 ### 总体统计
 
-- **总测试数**: 202
-- **通过**: 202 ✅
+- **总测试数**: 207
+- **通过**: 207 ✅
 - **失败**: 0
 - **通过率**: 100% ✅
-- **测试执行时间**: ~10.92 秒
+- **测试执行时间**: ~20 秒
 
 ### 测试文件统计
 
@@ -27,7 +27,8 @@
 | `file.test.ts` | 26 | ✅ 全部通过 | 异步文件系统 API |
 | `file-sync.test.ts` | 16 | ✅ 全部通过 | **新增** 同步文件系统 API |
 | `file-ext.test.ts` | 4 | ✅ 全部通过 | 文件扩展功能 |
-| `network.test.ts` | 5 | ✅ 全部通过 | 网络 API |
+| `network.test.ts` | 5 | ✅ 全部通过 | 网络 API（HTTP 服务器） |
+| `websocket.test.ts` | 5 | ✅ 全部通过 | **新增** WebSocket API |
 | `env.test.ts` | 9 | ✅ 全部通过 | 环境变量 API |
 | `process.test.ts` | 12 | ✅ 全部通过 | 进程/命令 API（包含同步命令执行） |
 | `process-info.test.ts` | 4 | ✅ 全部通过 | 进程信息 API |
@@ -144,7 +145,25 @@
 
 **测试结果**: 5 个测试全部通过
 
-### 6. 环境变量 API (env.test.ts)
+### 6. WebSocket API (websocket.test.ts) ⭐ 新增
+
+**测试场景**:
+- ✅ `upgradeWebSocket` - WebSocket 升级
+  - 应该升级 WebSocket 连接（Deno）
+  - 应该升级 WebSocket 连接（Bun）
+  - 应该支持 addEventListener API
+  - 应该支持 send 方法
+  - 应该支持 close 方法
+
+**测试结果**: 5 个测试全部通过
+
+**实现特点**:
+- ✅ 跨运行时兼容：Deno 和 Bun 环境都正常工作
+- ✅ 统一 API：提供统一的 `addEventListener` 接口，自动适配 Deno 和 Bun 的差异
+- ✅ WebSocketAdapter：内部使用适配器模式，统一处理 Deno 和 Bun 的 WebSocket API 差异
+- ✅ 自动处理：Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置
+
+### 7. 环境变量 API (env.test.ts)
 
 **测试场景**:
 - ✅ `setEnv` - 设置环境变量
@@ -163,7 +182,7 @@
 
 **测试结果**: 9 个测试全部通过
 
-### 7. 进程/命令 API (process.test.ts)
+### 8. 进程/命令 API (process.test.ts)
 
 **测试场景**:
 - ✅ `createCommand` - 创建命令对象
@@ -188,7 +207,7 @@
 - ✅ Bun: 使用 `child_process.execFileSync()`
 - ✅ 跨运行时兼容：统一的 API 接口
 
-### 8. 进程信息 API (process-info.test.ts)
+### 9. 进程信息 API (process-info.test.ts)
 
 **测试场景**:
 - ✅ `pid` - 获取当前进程 ID
@@ -198,7 +217,7 @@
 
 **测试结果**: 4 个测试全部通过
 
-### 9. 进程工具 API (process-utils.test.ts)
+### 10. 进程工具 API (process-utils.test.ts)
 
 **测试场景**:
 - ✅ `args` - 获取命令行参数数组
@@ -206,7 +225,7 @@
 
 **测试结果**: 2 个测试全部通过
 
-### 10. 信号处理 API (signal.test.ts)
+### 11. 信号处理 API (signal.test.ts)
 
 **测试场景**:
 - ✅ `addSignalListener` - 添加信号监听器
@@ -214,7 +233,7 @@
 
 **测试结果**: 2 个测试全部通过
 
-### 11. 终端 API (terminal.test.ts)
+### 12. 终端 API (terminal.test.ts)
 
 **测试场景**:
 - ✅ `isTerminal` - 检查是否为终端
@@ -254,7 +273,7 @@
 
 **测试结果**: 25 个测试全部通过
 
-### 12. 定时任务 API (cron.test.ts)
+### 13. 定时任务 API (cron.test.ts)
 
 **测试场景**:
 - ✅ `cron` - 创建定时任务
@@ -265,7 +284,7 @@
 
 **测试结果**: 4 个测试全部通过
 
-### 13. 路径操作 API (path.test.ts)
+### 14. 路径操作 API (path.test.ts)
 
 **测试场景**:
 - ✅ `join` - 拼接路径（9 个测试）
@@ -281,7 +300,7 @@
 
 **测试结果**: 63 个测试全部通过
 
-### 14. 文件哈希 API (hash.test.ts)
+### 15. 文件哈希 API (hash.test.ts)
 
 **测试场景**:
 - ✅ `hash` - 异步计算数据的哈希值
@@ -306,7 +325,7 @@
 - ✅ 支持多种算法：MD5, SHA-1, SHA-256, SHA-512
 - ✅ 同步和异步版本：满足不同使用场景
 
-### 15. 系统信息 API (system-info.test.ts)
+### 16. 系统信息 API (system-info.test.ts)
 
 **测试场景**:
 - ✅ `getMemoryInfo` - 异步获取系统内存信息
@@ -346,7 +365,7 @@
   - Bun: 通过系统命令获取（Windows: `wmic`, Linux: `free`, macOS: `sysctl`）
 - ✅ 同步版本：提供同步 API 用于需要阻塞等待的场景
 
-### 16. 模块导出 (mod.test.ts)
+### 17. 模块导出 (mod.test.ts)
 
 **测试场景**:
 - ✅ 导出运行时检测相关 API
@@ -363,7 +382,19 @@
 
 ## 新增功能亮点 ⭐
 
-### 1. 同步文件系统 API
+### 1. WebSocket API 支持
+
+新增了完整的 WebSocket 支持，包括：
+- `upgradeWebSocket` - 统一的 WebSocket 升级接口
+- `WebSocketAdapter` - 内部适配器，统一处理 Deno 和 Bun 的 WebSocket API 差异
+- 支持 `addEventListener`、`send`、`close` 等标准 WebSocket API
+
+**优势**:
+- 跨运行时兼容：Deno 和 Bun 环境都正常工作
+- 统一 API：使用标准的 `addEventListener` 接口，无需关心底层实现
+- 自动适配：Bun 环境下的 WebSocket 升级和事件处理完全自动化
+
+### 2. 同步文件系统 API
 
 新增了完整的同步文件系统 API，包括：
 - `mkdirSync`, `writeTextFileSync`, `readTextFileSync`
@@ -376,21 +407,21 @@
 - 简化了某些同步场景的代码
 - 完全兼容 Deno 和 Bun
 
-### 2. 同步命令执行
+### 3. 同步命令执行
 
 新增 `execCommandSync` 函数：
 - Deno: 使用 `Deno.Command.outputSync()`
 - Bun: 使用 `child_process.execFileSync()`
 - 统一的错误处理和输出格式
 
-### 3. 同步哈希计算
+### 4. 同步哈希计算
 
 新增 `hashSync` 和 `hashFileSync` 函数：
 - 使用 `node:crypto` 模块（Deno 和 Bun 都支持）
 - 支持多种哈希算法
 - 适合需要同步计算的场景
 
-### 4. 同步系统信息
+### 5. 同步系统信息
 
 新增同步版本的系统信息 API：
 - `getMemoryInfoSync`
@@ -481,12 +512,12 @@
 
 ### ✅ 测试通过率: 100%
 
-所有 202 个测试用例全部通过，包括：
+所有 207 个测试用例全部通过，包括：
 
-1. **核心功能**: 运行时检测、文件系统、网络、环境变量、进程管理
+1. **核心功能**: 运行时检测、文件系统、网络、WebSocket、环境变量、进程管理
 2. **扩展功能**: 路径操作、目录遍历、文件哈希、系统信息
 3. **工具功能**: 终端操作、定时任务、信号处理
-4. **新增功能**: 同步文件系统 API、同步命令执行、同步哈希计算、同步系统信息
+4. **新增功能**: WebSocket API、同步文件系统 API、同步命令执行、同步哈希计算、同步系统信息
 
 ### 质量保证
 
@@ -509,5 +540,5 @@
 **测试报告生成时间**: 2026-01-12
 **测试框架**: @dreamer/test@^1.0.0-beta.12
 **测试环境**: Bun 1.3.5, Deno 2.6.4
-**测试总数**: 202
+**测试总数**: 207
 **通过率**: 100% ✅
