@@ -5,6 +5,9 @@
  * 统一使用 node-cron 库（支持秒级任务，6 字段格式）
  */
 
+// 静态导入 node-cron 库
+import * as cronLib from "node-cron";
+
 /**
  * Cron 任务选项
  */
@@ -32,14 +35,13 @@ export interface CronHandle {
  * @param options 任务选项
  * @returns 任务句柄
  */
-export async function cron(
+export function cron(
   cronExpression: string,
   handler: () => void | Promise<void>,
   options?: CronOptions,
-): Promise<CronHandle> {
+): CronHandle {
   // 统一使用 node-cron 库（支持秒级任务）
   // Deno 和 Bun 都使用 npm:node-cron
-  const cronLib = await import("node-cron");
 
   // 创建 AbortController 用于取消任务
   // 如果用户已经提供了 signal，使用它；否则创建新的 AbortController
@@ -58,18 +60,17 @@ export async function cron(
   // 使用 node-cron 创建定时任务
   const task = cronLib.default.schedule(
     cronExpression,
-    async () => {
+    () => {
       // 检查是否已取消
       if (controller.signal.aborted) {
         task.stop();
         return;
       }
 
-      try {
-        await handler();
-      } catch (error) {
+      // 处理异步 handler
+      Promise.resolve(handler()).catch((error) => {
         console.error("Cron 任务执行失败:", error);
-      }
+      });
     },
     cronOptions,
   );

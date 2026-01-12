@@ -5,6 +5,8 @@
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
 import { readFile, readFileSync } from "./file.ts";
+// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
+import * as nodeCrypto from "node:crypto";
 
 /**
  * 哈希算法类型
@@ -135,7 +137,7 @@ export function hashSync(
     }
   } else if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 crypto 模块
-    crypto = require("node:crypto");
+    crypto = nodeCrypto;
   }
 
   if (!crypto || typeof crypto.createHash !== "function") {

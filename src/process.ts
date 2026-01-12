@@ -4,6 +4,8 @@
  */
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
+// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
+import * as nodeChildProcess from "node:child_process";
 
 /**
  * 命令执行选项
@@ -224,14 +226,13 @@ export function execCommandSync(
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 child_process，使用同步 API
     try {
-      const cp = require("child_process");
-      const result = cp.execFileSync(command, args, {
+      const result = nodeChildProcess.execFileSync(command, args, {
         cwd: options?.cwd,
         env: options?.env,
         encoding: "utf-8",
         stdio: "pipe",
       });
-      return typeof result === "string" ? result : result.toString();
+      return typeof result === "string" ? result : String(result);
     } catch (error: any) {
       // 如果是我们抛出的错误，直接抛出
       if (

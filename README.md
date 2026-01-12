@@ -460,20 +460,20 @@ import { cron } from "jsr:@dreamer/runtime-adapter";
 
 // 注册 Cron 任务（自动适配 Bun 或 Deno）
 // 统一使用 node-cron，支持秒级 Cron 表达式
-// 注意：cron 函数是异步的，返回 Promise<CronHandle>
+// 注意：cron 函数是同步的，直接返回 CronHandle
 
 // 每分钟执行一次
-const handle1 = await cron("0 * * * * *", async () => {
+const handle1 = cron("0 * * * * *", async () => {
   console.log("每分钟执行");
 });
 
 // 每 5 秒执行一次（支持秒级）
-const handle2 = await cron("*/5 * * * * *", async () => {
+const handle2 = cron("*/5 * * * * *", async () => {
   console.log("每 5 秒执行");
 });
 
 // 每天凌晨 2 点执行
-const handle3 = await cron("0 0 2 * * *", async () => {
+const handle3 = cron("0 0 2 * * *", async () => {
   console.log("每天凌晨 2 点执行");
 });
 
@@ -484,7 +484,7 @@ handle3.close();
 
 // 使用 AbortSignal 取消任务
 const controller = new AbortController();
-const handle4 = await cron("*/10 * * * * *", async () => {
+const handle4 = cron("*/10 * * * * *", async () => {
   console.log("每 10 秒执行");
 }, { signal: controller.signal });
 
@@ -844,7 +844,7 @@ cron(
   expression: string,
   handler: () => void | Promise<void>,
   options?: CronOptions
-): Promise<CronHandle>
+): CronHandle
 ```
 
 **Cron 表达式格式：**

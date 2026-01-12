@@ -5,6 +5,8 @@
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
 import { createCommand, execCommandSync } from "./process.ts";
+// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
+import * as nodeOs from "node:os";
 
 /**
  * 执行命令并自动关闭流
@@ -538,13 +540,12 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   if (IS_BUN) {
     try {
       const process = (globalThis as any).process;
-      const os = await import("node:os");
 
-      hostname = os.hostname();
+      hostname = nodeOs.hostname();
       platform = process?.platform || "unknown";
       arch = process?.arch || "unknown";
-      uptime = os.uptime();
-      cpus = os.cpus().length;
+      uptime = nodeOs.uptime();
+      cpus = nodeOs.cpus().length;
     } catch {
       // 如果获取失败，使用默认值
     }
@@ -841,13 +842,12 @@ export function getSystemInfoSync(): SystemInfo {
     try {
       const process = (globalThis as any).process;
       // Bun 支持 Node.js 兼容的 os 模块
-      const os = require("os");
       {
-        hostname = os.hostname();
+        hostname = nodeOs.hostname();
         platform = process?.platform || "unknown";
         arch = process?.arch || "unknown";
-        uptime = os.uptime();
-        cpus = os.cpus().length;
+        uptime = nodeOs.uptime();
+        cpus = nodeOs.cpus().length;
       }
     } catch {
       // 如果获取失败，使用默认值

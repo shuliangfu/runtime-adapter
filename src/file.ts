@@ -5,6 +5,12 @@
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
 import { join } from "./path.ts";
+// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
+import * as nodeCrypto from "node:crypto";
+import * as nodeFs from "node:fs";
+import * as nodeFsPromises from "node:fs/promises";
+import * as nodeOs from "node:os";
+import * as nodePath from "node:path";
 
 /**
  * 文件打开选项
@@ -282,9 +288,8 @@ export async function mkdir(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { mkdir: nodeMkdir } = await import("node:fs/promises");
     try {
-      await nodeMkdir(path, {
+      await nodeFsPromises.mkdir(path, {
         recursive: options?.recursive,
         mode: options?.mode,
       });
@@ -294,8 +299,7 @@ export async function mkdir(
       if (error?.code === "EEXIST" || error?.code === "EINVAL") {
         // 检查目录是否真的存在
         try {
-          const { stat } = await import("node:fs/promises");
-          const info = await stat(path);
+          const info = await nodeFsPromises.stat(path);
           if (info.isDirectory()) {
             // 目录已存在，这是正常的
             return;
@@ -329,13 +333,12 @@ export async function remove(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { rm, unlink, stat } = await import("node:fs/promises");
     try {
-      const stats = await stat(path);
+      const stats = await nodeFsPromises.stat(path);
       if (stats.isDirectory()) {
-        await rm(path, { recursive: options?.recursive });
+        await nodeFsPromises.rm(path, { recursive: options?.recursive });
       } else {
-        await unlink(path);
+        await nodeFsPromises.unlink(path);
       }
     } catch (error) {
       if ((error as { code?: string }).code !== "ENOENT") {
@@ -378,8 +381,7 @@ export async function stat(path: string): Promise<FileInfo> {
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { stat: nodeStat } = await import("node:fs/promises");
-    const info = await nodeStat(path);
+    const info = await nodeFsPromises.stat(path);
     return {
       isFile: info.isFile(),
       isDirectory: info.isDirectory(),
@@ -539,13 +541,9 @@ export function watchFs(
       }
 
       initPromise = (async () => {
-        const { watch } = await import("node:fs");
-        const { resolve } = await import("node:path");
-        const { stat } = await import("node:fs/promises");
-
         // 为每个路径创建 watcher
         for (const path of pathArray) {
-          const resolvedPath = resolve(path);
+          const resolvedPath = nodePath.resolve(path);
           let lastEventType: string | null = null;
           let lastEventTime = 0;
           const debounceTime = 100; // 防抖时间（毫秒）
@@ -553,13 +551,13 @@ export function watchFs(
           // 检查路径是否存在，以确定初始状态
           let pathExists = false;
           try {
-            const info = await stat(resolvedPath);
+            const info = await nodeFsPromises.stat(resolvedPath);
             pathExists = info.isFile() || info.isDirectory();
           } catch {
             pathExists = false;
           }
 
-          const watcher = watch(
+          const watcher = nodeFs.watch(
             resolvedPath,
             { recursive: options?.recursive ?? false },
             async (eventType, filename) => {
@@ -567,7 +565,7 @@ export function watchFs(
 
               const now = Date.now();
               const fullPath = filename
-                ? resolve(resolvedPath, filename)
+                ? nodePath.resolve(resolvedPath, filename)
                 : resolvedPath;
 
               // 防抖处理：相同事件在短时间内只触发一次
@@ -585,14 +583,14 @@ export function watchFs(
               let kind: FileEventType;
               let isFile = false;
               try {
-                const currentExists = await stat(fullPath).then(
+                const currentExists = await nodeFsPromises.stat(fullPath).then(
                   () => true,
                   () => false,
                 );
 
                 if (currentExists) {
                   // 检查是文件还是目录
-                  const info = await stat(fullPath);
+                  const info = await nodeFsPromises.stat(fullPath);
                   isFile = Boolean(info.isFile);
                 }
 
@@ -749,15 +747,16 @@ export async function readdir(path: string): Promise<DirEntry[]> {
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { readdir, stat } = await import("node:fs/promises");
     try {
       // 先验证目录存在
-      const dirInfo = await stat(path);
+      const dirInfo = await nodeFsPromises.stat(path);
       if (!dirInfo.isDirectory()) {
         throw new Error(`路径 ${path} 不是目录`);
       }
 
-      const entries = await readdir(path, { withFileTypes: true });
+      const entries = await nodeFsPromises.readdir(path, {
+        withFileTypes: true,
+      });
       return entries.map((entry) => ({
         name: entry.name,
         isFile: entry.isFile(),
@@ -791,8 +790,7 @@ export async function copyFile(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { copyFile } = await import("node:fs/promises");
-    await copyFile(src, dest);
+    await nodeFsPromises.copyFile(src, dest);
     return;
   }
 
@@ -815,16 +813,11 @@ export async function rename(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { rename: nodeRename, mkdir, stat } = await import(
-      "node:fs/promises"
-    );
-    const { dirname } = await import("node:path");
-
     try {
       // 确保目标目录存在
-      const destDir = dirname(newPath);
+      const destDir = nodePath.dirname(newPath);
       try {
-        await mkdir(destDir, { recursive: true });
+        await nodeFsPromises.mkdir(destDir, { recursive: true });
       } catch (error: any) {
         // 如果目录已存在，忽略错误
         if (error?.code !== "EEXIST" && error?.code !== "EINVAL") {
@@ -832,7 +825,7 @@ export async function rename(
         }
         // 验证目录确实存在
         try {
-          const dirInfo = await stat(destDir);
+          const dirInfo = await nodeFsPromises.stat(destDir);
           if (!dirInfo.isDirectory()) {
             throw new Error(`路径 ${destDir} 不是目录`);
           }
@@ -847,7 +840,7 @@ export async function rename(
       let sourceExists = false;
       while (retries > 0 && !sourceExists) {
         try {
-          const sourceInfo = await stat(oldPath);
+          const sourceInfo = await nodeFsPromises.stat(oldPath);
           // 验证确实是文件或目录（FileInfo 接口使用 isFile 和 isDirectory 布尔属性）
           const isFile = Boolean(sourceInfo.isFile);
           const isDirectory = Boolean(sourceInfo.isDirectory);
@@ -872,13 +865,13 @@ export async function rename(
       }
 
       // 执行重命名
-      await nodeRename(oldPath, newPath);
+      await nodeFsPromises.rename(oldPath, newPath);
     } catch (error: any) {
       // 提供更详细的错误信息
       if (error?.code === "ENOENT") {
         throw new Error(
           `重命名失败: 源路径不存在 "${oldPath}" 或目标目录不存在 "${
-            dirname(newPath)
+            nodePath.dirname(newPath)
           }"`,
         );
       }
@@ -914,8 +907,7 @@ export async function symlink(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { symlink } = await import("node:fs/promises");
-    await symlink(target, path, type);
+    await nodeFsPromises.symlink(target, path, type);
     return;
   }
 
@@ -934,8 +926,7 @@ export async function realPath(path: string): Promise<string> {
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { realpath } = await import("node:fs/promises");
-    return await realpath(path);
+    return await nodeFsPromises.realpath(path);
   }
 
   throw new Error("不支持的运行时环境");
@@ -954,8 +945,7 @@ export async function chmod(path: string, mode: number): Promise<void> {
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { chmod } = await import("node:fs/promises");
-    await chmod(path, mode);
+    await nodeFsPromises.chmod(path, mode);
     return;
   }
 
@@ -980,8 +970,7 @@ export async function chown(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { chown } = await import("node:fs/promises");
-    await chown(path, uid, gid);
+    await nodeFsPromises.chown(path, uid, gid);
     return;
   }
 
@@ -1004,16 +993,12 @@ export async function makeTempDir(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { mkdtemp } = await import("node:fs/promises");
-    const { join } = await import("node:path");
-    const os = await import("node:os");
-
-    const tmpDir = options?.dir || os.tmpdir();
+    const tmpDir = options?.dir || nodeOs.tmpdir();
     const prefix = options?.prefix || "tmp-";
     // mkdtemp 需要 XXXXXX 占位符，会被替换为随机字符
-    const template = join(tmpDir, prefix + "XXXXXX");
+    const template = nodePath.join(tmpDir, prefix + "XXXXXX");
 
-    const tempDirPath = await mkdtemp(template);
+    const tempDirPath = await nodeFsPromises.mkdtemp(template);
     return tempDirPath;
   }
 
@@ -1037,21 +1022,16 @@ export async function makeTempFile(
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 fs API
-    const { writeFile } = await import("node:fs/promises");
-    const { join } = await import("node:path");
-    const os = await import("node:os");
-    const { randomBytes } = await import("node:crypto");
-
-    const tmpDir = options?.dir || os.tmpdir();
+    const tmpDir = options?.dir || nodeOs.tmpdir();
     const prefix = options?.prefix || "tmp-";
     const suffix = options?.suffix || "";
 
     // 生成随机文件名
-    const randomStr = randomBytes(6).toString("hex");
-    const tempFile = join(tmpDir, `${prefix}${randomStr}${suffix}`);
+    const randomStr = nodeCrypto.randomBytes(6).toString("hex");
+    const tempFile = nodePath.join(tmpDir, `${prefix}${randomStr}${suffix}`);
 
     // 创建空文件
-    await writeFile(tempFile, "");
+    await nodeFsPromises.writeFile(tempFile, "");
 
     return tempFile;
   }
@@ -1075,8 +1055,7 @@ export function cwd(): string {
       return process.cwd();
     }
     // 如果 process.cwd 不可用，使用 path.resolve
-    const { resolve } = require("node:path");
-    return resolve(".");
+    return nodePath.resolve(".");
   }
 
   throw new Error("不支持的运行时环境");
@@ -1117,8 +1096,7 @@ export async function truncate(path: string, len: number): Promise<void> {
   }
 
   if (IS_BUN) {
-    const { truncate } = await import("node:fs/promises");
-    await truncate(path, len);
+    await nodeFsPromises.truncate(path, len);
     return;
   }
 
@@ -1237,8 +1215,7 @@ export function statSync(path: string): FileInfo {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
-    const info = fs.statSync(path);
+    const info = nodeFs.statSync(path);
     return {
       isFile: info.isFile(),
       isDirectory: info.isDirectory(),
@@ -1290,8 +1267,9 @@ export function readTextFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
-    return fs.readFileSync(path, _encoding);
+    return nodeFs.readFileSync(path, {
+      encoding: _encoding as any,
+    }) as unknown as string;
   }
 
   throw new Error("不支持的运行时环境");
@@ -1343,8 +1321,7 @@ export function readFileSync(path: string): Uint8Array {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
-    return new Uint8Array(fs.readFileSync(path));
+    return new Uint8Array(nodeFs.readFileSync(path));
   }
 
   throw new Error("不支持的运行时环境");
@@ -1385,15 +1362,14 @@ export function readdirSync(path: string): DirEntry[] {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
     try {
       // 先验证目录存在
-      const dirInfo = fs.statSync(path);
+      const dirInfo = nodeFs.statSync(path);
       if (!dirInfo.isDirectory()) {
         throw new Error(`路径 ${path} 不是目录`);
       }
 
-      const entries = fs.readdirSync(path, { withFileTypes: true });
+      const entries = nodeFs.readdirSync(path, { withFileTypes: true });
       return entries.map((entry: any) => ({
         name: entry.name,
         isFile: entry.isFile(),
@@ -1479,8 +1455,7 @@ export function realPathSync(path: string): string {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
-    return fs.realpathSync(path);
+    return nodeFs.realpathSync(path);
   }
 
   throw new Error("不支持的运行时环境");
@@ -1514,9 +1489,8 @@ export function mkdirSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
     try {
-      fs.mkdirSync(path, {
+      nodeFs.mkdirSync(path, {
         recursive: options?.recursive,
         mode: options?.mode,
       });
@@ -1525,7 +1499,7 @@ export function mkdirSync(
       if (error?.code === "EEXIST" || error?.code === "EINVAL") {
         // 检查目录是否真的存在
         try {
-          const info = fs.statSync(path);
+          const info = nodeFs.statSync(path);
           if (info.isDirectory()) {
             // 目录已存在，这是正常的
             return;
@@ -1571,14 +1545,13 @@ export function removeSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
     try {
-      const stats = fs.statSync(path);
+      const stats = nodeFs.statSync(path);
       if (stats.isDirectory()) {
         // 删除目录时，默认使用 recursive: true（如果未指定）
-        fs.rmSync(path, { recursive: options?.recursive !== false });
+        nodeFs.rmSync(path, { recursive: options?.recursive !== false });
       } else {
-        fs.unlinkSync(path);
+        nodeFs.unlinkSync(path);
       }
     } catch (error: any) {
       if (error?.code !== "ENOENT") {
@@ -1623,18 +1596,17 @@ export function writeFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
     // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
     const Buffer = (globalThis as any).Buffer;
     if (Buffer && typeof Buffer.from === "function") {
       const buffer = Buffer.from(data);
-      fs.writeFileSync(path, buffer, {
+      nodeFs.writeFileSync(path, buffer, {
         mode: options?.mode,
         flag: options?.create === false ? "r+" : "w",
       });
     } else {
       // 如果没有 Buffer，直接使用 Uint8Array（Bun 的 fs.writeFileSync 应该支持）
-      fs.writeFileSync(path, data, {
+      nodeFs.writeFileSync(path, data, {
         mode: options?.mode,
         flag: options?.create === false ? "r+" : "w",
       });
@@ -1675,8 +1647,8 @@ export function writeTextFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("node:fs");
-    fs.writeFileSync(path, data, "utf-8", {
+    nodeFs.writeFileSync(path, data, {
+      encoding: "utf-8",
       mode: options?.mode,
       flag: options?.create === false ? "r+" : "w",
     });
