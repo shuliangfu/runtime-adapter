@@ -42,8 +42,13 @@ class WebSocketAdapter {
   private pendingOperations: Array<() => void> = [];
   // 存储所有已创建的适配器（用于 Bun 环境下的查找）
   public static allAdapters: Set<WebSocketAdapter> = new Set();
+  // 唯一标识符（用于调试）
+  private readonly id: string;
 
   constructor(ws?: WebSocket) {
+    this.id = `adapter_${Date.now()}_${
+      Math.random().toString(36).substring(2, 9)
+    }`;
     if (ws) {
       this._ws = ws;
       this.setupEventHandlers();
@@ -613,6 +618,17 @@ export function serve(
             if (wsData?.adapterId) {
               adapter = pendingBunAdapters.get(wsData.adapterId);
             }
+            // 如果还是没找到，尝试通过 ws.url 查找（转换为 http://）
+            if (!adapter) {
+              const wsUrl = ws.url || "";
+              if (wsUrl) {
+                const httpUrl = wsUrl.replace(/^ws:/, "http:").replace(
+                  /^wss:/,
+                  "https:",
+                );
+                adapter = pendingBunAdapters.get(httpUrl);
+              }
+            }
             // 如果还是没找到，使用第一个适配器
             if (!adapter) {
               adapter = Array.from(pendingBunAdapters.values())[0];
@@ -716,22 +732,12 @@ export function serve(
             }
           }
 
-          // 如果没找到，尝试查找第一个还没有设置实际 WebSocket 的适配器
-          if (!adapter && pendingBunAdapters.size > 0) {
-            const adapters = Array.from(pendingBunAdapters.values());
-            adapter = adapters.find(
-              (a) =>
-                !(a as any)._ws || typeof (a as any)._ws.send !== "function",
-            );
-            // 找到匹配的 key
-            if (adapter) {
-              for (const [key, value] of pendingBunAdapters.entries()) {
-                if (value === adapter) {
-                  matchedKey = key;
-                  break;
-                }
-              }
-            }
+          // 如果没找到，不要使用第一个未设置的适配器，因为适配器可能还没有被创建
+          // 等待 fetch 处理器创建适配器后，在 message 处理器中再设置 _ws
+          // 这样可以避免错误的适配器匹配
+          if (!adapter) {
+            // 不设置 _ws，等待 message 处理器中再设置
+            return;
           }
 
           // 如果还是没找到，尝试从所有适配器中查找
@@ -847,6 +853,17 @@ export function upgradeWebSocket(
       };
     }
 
+    // 检查是否已经为这个请求 URL 创建了适配器（避免重复创建）
+    const url = request.url;
+    let adapter = pendingBunAdapters.get(url);
+    if (adapter) {
+      // 如果已经存在，直接返回（避免重复升级）
+      return {
+        socket: adapter as any as WebSocket,
+        response: undefined,
+      };
+    }
+
     // 尝试升级 WebSocket
     // Bun 的 upgrade() 方法返回 boolean，不返回 socket 和 response
     // 升级成功后，Bun 会自动发送 101 Switching Protocols 响应
@@ -883,18 +900,13 @@ export function upgradeWebSocket(
     // 创建一个适配器，包装占位符 WebSocket
     // 注意：在 Bun 环境下，实际的 socket 会在 websocket 处理器中可用
     // 但我们需要先返回一个适配器，以便 websocket 库可以使用 addEventListener
-    const adapter = new WebSocketAdapter(placeholderWs as WebSocket);
+    adapter = new WebSocketAdapter(placeholderWs as WebSocket);
 
     // 存储适配器，以便在 websocket.open 中设置实际的 WebSocket
-    const url = request.url;
     pendingBunAdapters.set(url, adapter);
 
-    // 调试：检查适配器是否正确创建
+    // 检查适配器是否正确创建
     if (typeof adapter.addEventListener !== "function") {
-      console.error("WebSocketAdapter 创建失败：缺少 addEventListener 方法");
-      console.error("适配器类型:", typeof adapter);
-      console.error("适配器属性:", Object.keys(adapter));
-      console.error("适配器原型:", Object.getPrototypeOf(adapter));
       throw new Error("WebSocketAdapter 创建失败：缺少 addEventListener 方法");
     }
 
