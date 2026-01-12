@@ -7,6 +7,14 @@ import { IS_BUN, IS_DENO } from "./detect.ts";
 import { join } from "./path.ts";
 
 /**
+ * 获取 require 函数（用于 Bun 环境）
+ */
+function getRequire(): any {
+  return (typeof require !== "undefined" && require) ||
+    (globalThis as any).require;
+}
+
+/**
  * 文件打开选项
  */
 export interface FileOpenOptions {
@@ -1189,6 +1197,560 @@ export async function isDirectory(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ==================== 同步文件系统 API ====================
+// 注意：这些同步 API 主要用于需要同步操作的场景（如 shouldUseColor 等）
+// 在可能的情况下，优先使用异步 API
+
+/**
+ * 同步获取文件信息
+ * @param path 文件路径
+ * @returns 文件信息
+ * @throws 如果文件不存在或无法访问，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { statSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const info = statSync("./file.txt");
+ *   console.log("文件大小:", info.size);
+ * } catch {
+ *   console.log("文件不存在");
+ * }
+ * ```
+ */
+export function statSync(path: string): FileInfo {
+  if (IS_DENO) {
+    const info = (globalThis as any).Deno.statSync(path);
+    return {
+      isFile: info.isFile,
+      isDirectory: info.isDirectory,
+      isSymlink: info.isSymlink,
+      size: info.size,
+      mtime: info.mtime,
+      atime: info.atime,
+      birthtime: info.birthtime,
+      mode: info.mode ?? null,
+      dev: info.dev ?? null,
+      ino: info.ino ?? null,
+      nlink: info.nlink ?? null,
+      uid: info.uid ?? null,
+      gid: info.gid ?? null,
+      rdev: info.rdev ?? null,
+      blksize: info.blksize ?? null,
+      blocks: info.blocks ?? null,
+    };
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.statSync === "function") {
+        const info = fs.statSync(path);
+        return {
+          isFile: info.isFile(),
+          isDirectory: info.isDirectory(),
+          isSymlink: info.isSymbolicLink(),
+          size: info.size,
+          mtime: info.mtime,
+          atime: info.atime,
+          birthtime: info.birthtime,
+          mode: info.mode,
+          dev: info.dev,
+          ino: info.ino,
+          nlink: info.nlink,
+          uid: info.uid,
+          gid: info.gid,
+          rdev: info.rdev,
+          blksize: info.blksize,
+          blocks: info.blocks,
+        };
+      }
+      throw new Error("Bun 环境中 fs.statSync 不可用");
+    }
+    throw new Error("Bun 环境中 require 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步读取文本文件内容
+ * @param path 文件路径
+ * @param _encoding 编码格式（默认：utf-8，Bun 自动处理）
+ * @returns 文件内容（字符串）
+ * @throws 如果文件不存在或无法读取，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { readTextFileSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const content = readTextFileSync("./file.txt");
+ *   console.log(content);
+ * } catch {
+ *   console.log("文件读取失败");
+ * }
+ * ```
+ */
+export function readTextFileSync(
+  path: string,
+  _encoding = "utf-8",
+): string {
+  if (IS_DENO) {
+    return (globalThis as any).Deno.readTextFileSync(path);
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.readFileSync === "function") {
+        return fs.readFileSync(path, _encoding);
+      }
+    }
+    throw new Error("Bun 环境中 fs.readFileSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步检查文件或目录是否存在
+ * @param path 文件或目录路径
+ * @returns 如果存在返回 true，否则返回 false
+ *
+ * @example
+ * ```typescript
+ * import { existsSync } from "@dreamer/runtime-adapter";
+ * if (existsSync("./file.txt")) {
+ *   console.log("文件存在");
+ * }
+ * ```
+ */
+export function existsSync(path: string): boolean {
+  try {
+    statSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 同步读取文件内容（二进制）
+ * @param path 文件路径
+ * @returns 文件内容（Uint8Array）
+ * @throws 如果文件不存在或无法读取，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { readFileSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const data = readFileSync("./file.bin");
+ *   console.log("文件大小:", data.length);
+ * } catch {
+ *   console.log("文件读取失败");
+ * }
+ * ```
+ */
+export function readFileSync(path: string): Uint8Array {
+  if (IS_DENO) {
+    return (globalThis as any).Deno.readFileSync(path);
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.readFileSync === "function") {
+        return new Uint8Array(fs.readFileSync(path));
+      }
+    }
+    throw new Error("Bun 环境中 fs.readFileSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步读取目录内容
+ * @param path 目录路径
+ * @returns 目录项数组
+ * @throws 如果目录不存在或无法读取，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { readdirSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const entries = readdirSync("./src");
+ *   for (const entry of entries) {
+ *     console.log(entry.name, entry.isFile ? "文件" : "目录");
+ *   }
+ * } catch {
+ *   console.log("目录读取失败");
+ * }
+ * ```
+ */
+export function readdirSync(path: string): DirEntry[] {
+  if (IS_DENO) {
+    const entries: DirEntry[] = [];
+    for (const entry of (globalThis as any).Deno.readDirSync(path)) {
+      entries.push({
+        name: entry.name,
+        isFile: entry.isFile,
+        isDirectory: entry.isDirectory,
+        isSymlink: entry.isSymlink,
+      });
+    }
+    return entries;
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.readdirSync === "function") {
+        try {
+          // 先验证目录存在
+          const dirInfo = fs.statSync(path);
+          if (!dirInfo.isDirectory()) {
+            throw new Error(`路径 ${path} 不是目录`);
+          }
+
+          const entries = fs.readdirSync(path, { withFileTypes: true });
+          return entries.map((entry: any) => ({
+            name: entry.name,
+            isFile: entry.isFile(),
+            isDirectory: entry.isDirectory(),
+            isSymlink: entry.isSymbolicLink(),
+          }));
+        } catch (error: any) {
+          if (error?.code === "ENOENT") {
+            throw new Error(`目录不存在: ${path}`);
+          }
+          throw error;
+        }
+      }
+    }
+    throw new Error("Bun 环境中 fs.readdirSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步检查路径是否为文件
+ * @param path 文件路径
+ * @returns 如果是文件返回 true，否则返回 false
+ *
+ * @example
+ * ```typescript
+ * import { isFileSync } from "@dreamer/runtime-adapter";
+ * if (isFileSync("./file.txt")) {
+ *   console.log("这是一个文件");
+ * }
+ * ```
+ */
+export function isFileSync(path: string): boolean {
+  try {
+    const info = statSync(path);
+    return info.isFile;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 同步检查路径是否为目录
+ * @param path 目录路径
+ * @returns 如果是目录返回 true，否则返回 false
+ *
+ * @example
+ * ```typescript
+ * import { isDirectorySync } from "@dreamer/runtime-adapter";
+ * if (isDirectorySync("./dir")) {
+ *   console.log("这是一个目录");
+ * }
+ * ```
+ */
+export function isDirectorySync(path: string): boolean {
+  try {
+    const info = statSync(path);
+    return info.isDirectory;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 同步解析真实路径
+ * @param path 文件或目录路径
+ * @returns 解析后的真实路径
+ * @throws 如果路径不存在或无法解析，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { realPathSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const realPath = realPathSync("./symlink");
+ *   console.log("真实路径:", realPath);
+ * } catch {
+ *   console.log("路径解析失败");
+ * }
+ * ```
+ */
+export function realPathSync(path: string): string {
+  if (IS_DENO) {
+    return (globalThis as any).Deno.realPathSync(path);
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.realpathSync === "function") {
+        return fs.realpathSync(path);
+      }
+    }
+    throw new Error("Bun 环境中 fs.realpathSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步创建目录
+ * @param path 目录路径
+ * @param options 创建选项
+ * @throws 如果目录创建失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { mkdirSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   mkdirSync("./new-dir", { recursive: true });
+ *   console.log("目录创建成功");
+ * } catch {
+ *   console.log("目录创建失败");
+ * }
+ * ```
+ */
+export function mkdirSync(
+  path: string,
+  options?: { recursive?: boolean; mode?: number },
+): void {
+  if (IS_DENO) {
+    (globalThis as any).Deno.mkdirSync(path, options);
+    return;
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.mkdirSync === "function") {
+        try {
+          fs.mkdirSync(path, {
+            recursive: options?.recursive,
+            mode: options?.mode,
+          });
+        } catch (error: any) {
+          // 如果目录已存在且 recursive 为 true，忽略错误
+          if (error?.code === "EEXIST" || error?.code === "EINVAL") {
+            // 检查目录是否真的存在
+            try {
+              const info = fs.statSync(path);
+              if (info.isDirectory()) {
+                // 目录已存在，这是正常的
+                return;
+              }
+            } catch {
+              // stat 失败，说明目录不存在，重新抛出原始错误
+            }
+          }
+          // 其他错误继续抛出
+          throw error;
+        }
+        return;
+      }
+    }
+    throw new Error("Bun 环境中 fs.mkdirSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步删除文件或目录
+ * @param path 路径
+ * @param options 删除选项
+ * @throws 如果删除失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { removeSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   removeSync("./file.txt");
+ *   console.log("删除成功");
+ * } catch {
+ *   console.log("删除失败");
+ * }
+ * ```
+ */
+export function removeSync(
+  path: string,
+  options?: { recursive?: boolean },
+): void {
+  if (IS_DENO) {
+    (globalThis as any).Deno.removeSync(path, options);
+    return;
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (
+        fs && typeof fs.rmSync === "function" &&
+        typeof fs.unlinkSync === "function"
+      ) {
+        try {
+          const stats = fs.statSync(path);
+          if (stats.isDirectory()) {
+            // 删除目录时，默认使用 recursive: true（如果未指定）
+            fs.rmSync(path, { recursive: options?.recursive !== false });
+          } else {
+            fs.unlinkSync(path);
+          }
+        } catch (error: any) {
+          if (error?.code !== "ENOENT") {
+            throw error;
+          }
+          // ENOENT 表示文件不存在，这是可以接受的
+        }
+        return;
+      }
+      throw new Error("Bun 环境中 fs.rmSync 或 fs.unlinkSync 不可用");
+    }
+    throw new Error("Bun 环境中 require 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步写入文件内容（二进制）
+ * @param path 文件路径
+ * @param data 文件内容
+ * @param options 写入选项
+ * @throws 如果写入失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { writeFileSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const data = new Uint8Array([1, 2, 3, 4]);
+ *   writeFileSync("./file.bin", data);
+ *   console.log("写入成功");
+ * } catch {
+ *   console.log("写入失败");
+ * }
+ * ```
+ */
+export function writeFileSync(
+  path: string,
+  data: Uint8Array,
+  options?: { create?: boolean; mode?: number },
+): void {
+  if (IS_DENO) {
+    (globalThis as any).Deno.writeFileSync(path, data, options);
+    return;
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.writeFileSync === "function") {
+        // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
+        const Buffer = (globalThis as any).Buffer;
+        if (Buffer && typeof Buffer.from === "function") {
+          const buffer = Buffer.from(data);
+          fs.writeFileSync(path, buffer, {
+            mode: options?.mode,
+            flag: options?.create === false ? "r+" : "w",
+          });
+        } else {
+          // 如果没有 Buffer，直接使用 Uint8Array（Bun 的 fs.writeFileSync 应该支持）
+          fs.writeFileSync(path, data, {
+            mode: options?.mode,
+            flag: options?.create === false ? "r+" : "w",
+          });
+        }
+        return;
+      }
+    }
+    throw new Error("Bun 环境中 fs.writeFileSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步写入文本文件内容
+ * @param path 文件路径
+ * @param data 文本内容
+ * @param options 写入选项
+ * @throws 如果写入失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { writeTextFileSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   writeTextFileSync("./file.txt", "Hello, World!");
+ *   console.log("写入成功");
+ * } catch {
+ *   console.log("写入失败");
+ * }
+ * ```
+ */
+export function writeTextFileSync(
+  path: string,
+  data: string,
+  options?: { create?: boolean; mode?: number },
+): void {
+  if (IS_DENO) {
+    (globalThis as any).Deno.writeTextFileSync(path, data, options);
+    return;
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
+    const requireFn = getRequire();
+    if (requireFn) {
+      const fs = requireFn("fs");
+      if (fs && typeof fs.writeFileSync === "function") {
+        fs.writeFileSync(path, data, "utf-8", {
+          mode: options?.mode,
+          flag: options?.create === false ? "r+" : "w",
+        });
+        return;
+      }
+    }
+    throw new Error("Bun 环境中 fs.writeFileSync 不可用");
+  }
+
+  throw new Error("不支持的运行时环境");
 }
 
 /**

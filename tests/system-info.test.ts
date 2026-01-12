@@ -7,8 +7,11 @@ import {
   getCpuUsage,
   getDiskUsage,
   getLoadAverage,
+  getLoadAverageSync,
   getMemoryInfo,
+  getMemoryInfoSync,
   getSystemInfo,
+  getSystemInfoSync,
   getSystemStatus,
 } from "../src/system-info.ts";
 
@@ -129,6 +132,66 @@ describe("系统信息 API", () => {
       if (status.disk) {
         expect(typeof status.disk.total).toBe("number");
       }
+    });
+  });
+
+  describe("getMemoryInfoSync", () => {
+    it("应该同步返回内存信息", () => {
+      const memory = getMemoryInfoSync();
+      expect(typeof memory.total).toBe("number");
+      expect(typeof memory.available).toBe("number");
+      expect(typeof memory.used).toBe("number");
+      expect(typeof memory.free).toBe("number");
+      expect(typeof memory.usagePercent).toBe("number");
+      expect(memory.usagePercent).toBeGreaterThanOrEqual(0);
+      expect(memory.usagePercent).toBeLessThanOrEqual(100);
+    });
+
+    it("应该返回有效的内存使用率", () => {
+      const memory = getMemoryInfoSync();
+      if (memory.total > 0) {
+        expect(memory.used).toBeLessThanOrEqual(memory.total);
+        expect(memory.available).toBeLessThanOrEqual(memory.total);
+        expect(memory.free).toBeLessThanOrEqual(memory.total);
+      }
+    });
+  });
+
+  describe("getLoadAverageSync", () => {
+    it("应该同步返回系统负载或 undefined", () => {
+      const load = getLoadAverageSync();
+      if (load) {
+        expect(typeof load.load1).toBe("number");
+        expect(typeof load.load5).toBe("number");
+        expect(typeof load.load15).toBe("number");
+        expect(load.load1).toBeGreaterThanOrEqual(0);
+        expect(load.load5).toBeGreaterThanOrEqual(0);
+        expect(load.load15).toBeGreaterThanOrEqual(0);
+      }
+      // Windows 上可能返回 undefined，这是正常的
+    });
+  });
+
+  describe("getSystemInfoSync", () => {
+    it("应该同步返回系统信息", () => {
+      const info = getSystemInfoSync();
+      expect(typeof info.hostname).toBe("string");
+      expect(typeof info.platform).toBe("string");
+      expect(typeof info.arch).toBe("string");
+      expect(typeof info.uptime).toBe("number");
+      expect(info.uptime).toBeGreaterThanOrEqual(0);
+      if (info.cpus !== undefined) {
+        expect(typeof info.cpus).toBe("number");
+        expect(info.cpus).toBeGreaterThan(0);
+      }
+    });
+
+    it("应该返回有效的平台信息", () => {
+      const info = getSystemInfoSync();
+      expect(info.hostname).not.toBe("");
+      expect(["linux", "darwin", "windows", "unknown"]).toContain(
+        info.platform,
+      );
     });
   });
 });

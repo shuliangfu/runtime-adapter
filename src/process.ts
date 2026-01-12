@@ -177,3 +177,90 @@ export function createCommand(
 
   throw new Error("不支持的运行时环境");
 }
+
+/**
+ * 同步执行命令并获取输出
+ * @param command 命令名称
+ * @param args 命令参数
+ * @param options 命令选项
+ * @returns 命令输出（字符串）
+ * @throws 如果命令执行失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { execCommandSync } from "@dreamer/runtime-adapter";
+ * try {
+ *   const output = execCommandSync("echo", ["Hello"]);
+ *   console.log(output); // "Hello"
+ * } catch {
+ *   console.log("命令执行失败");
+ * }
+ * ```
+ */
+export function execCommandSync(
+  command: string,
+  args: string[] = [],
+  options?: { cwd?: string; env?: Record<string, string> },
+): string {
+  if (IS_DENO) {
+    // Deno 使用 Command.outputSync()
+    const cmd = new (globalThis as any).Deno.Command(command, {
+      args,
+      cwd: options?.cwd,
+      env: options?.env,
+      stdout: "piped",
+      stderr: "piped",
+    });
+    const output = cmd.outputSync();
+    if (!output.success) {
+      const errorMsg = new TextDecoder().decode(output.stderr);
+      throw new Error(
+        `命令执行失败: ${command} ${args.join(" ")}\n${errorMsg}`,
+      );
+    }
+    return new TextDecoder().decode(output.stdout);
+  }
+
+  if (IS_BUN) {
+    // Bun 支持 Node.js 兼容的 child_process，使用同步 API
+    try {
+      // Bun 中可以直接使用 require（在全局作用域中可用）
+      const childProcess = (typeof require !== "undefined" && require) ||
+        (globalThis as any).require;
+
+      if (!childProcess) {
+        throw new Error("Bun 环境中 require 不可用");
+      }
+
+      const cp = childProcess("child_process");
+      if (cp && typeof cp.execFileSync === "function") {
+        const result = cp.execFileSync(command, args, {
+          cwd: options?.cwd,
+          env: options?.env,
+          encoding: "utf-8",
+          stdio: "pipe",
+        });
+        return typeof result === "string" ? result : result.toString();
+      }
+      throw new Error("Bun 环境中 child_process.execFileSync 不可用");
+    } catch (error: any) {
+      // 如果是我们抛出的错误，直接抛出
+      if (
+        error.message && (
+          error.message.includes("require 不可用") ||
+          error.message.includes("execFileSync 不可用")
+        )
+      ) {
+        throw error;
+      }
+      // 否则是命令执行错误
+      const errorMsg = error?.stderr?.toString() || error?.message ||
+        String(error);
+      throw new Error(
+        `命令执行失败: ${command} ${args.join(" ")}\n${errorMsg}`,
+      );
+    }
+  }
+
+  throw new Error("不支持的运行时环境");
+}

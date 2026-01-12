@@ -4,7 +4,7 @@
  */
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
-import { createCommand } from "./process.ts";
+import { createCommand, execCommandSync } from "./process.ts";
 
 /**
  * 执行命令并自动关闭流
@@ -596,5 +596,269 @@ export async function getSystemStatus(
     cpu,
     loadAverage,
     disk,
+  };
+}
+
+// ==================== 同步系统信息 API ====================
+// 注意：这些同步 API 主要用于需要同步操作的场景
+// 在可能的情况下，优先使用异步 API
+
+/**
+ * 同步获取系统内存信息
+ * @returns 内存信息
+ *
+ * @example
+ * ```typescript
+ * import { getMemoryInfoSync } from "@dreamer/runtime-adapter";
+ * const memory = getMemoryInfoSync();
+ * console.log(`总内存: ${memory.total} 字节`);
+ * console.log(`使用率: ${memory.usagePercent}%`);
+ * ```
+ */
+export function getMemoryInfoSync(): MemoryInfo {
+  if (IS_DENO) {
+    try {
+      const info = (globalThis as any).Deno.systemMemoryInfo();
+      const total = info.total || 0;
+      const available = info.available || 0;
+      const free = info.free || 0;
+      const used = total - available;
+      const usagePercent = total > 0 ? (used / total) * 100 : 0;
+
+      return {
+        total,
+        available,
+        used,
+        free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+        swapTotal: info.swapTotal,
+        swapFree: info.swapFree,
+      };
+    } catch {
+      // 如果 Deno.systemMemoryInfo 不可用，返回默认值
+      return {
+        total: 0,
+        available: 0,
+        used: 0,
+        free: 0,
+        usagePercent: 0,
+      };
+    }
+  }
+
+  if (IS_BUN) {
+    // Bun 需要通过系统命令获取内存信息
+    try {
+      const platform = (globalThis as any).process?.platform;
+      if (platform === "win32") {
+        // Windows: 使用 wmic
+        const text = execCommandSync("wmic", [
+          "OS",
+          "get",
+          "TotalVisibleMemorySize,FreePhysicalMemory",
+          "/format:value",
+        ]);
+
+        const totalMatch = text.match(/TotalVisibleMemorySize=(\d+)/);
+        const freeMatch = text.match(/FreePhysicalMemory=(\d+)/);
+
+        if (totalMatch && freeMatch) {
+          const total = parseInt(totalMatch[1]) * 1024; // KB 转字节
+          const free = parseInt(freeMatch[1]) * 1024;
+          const used = total - free;
+          const usagePercent = total > 0 ? (used / total) * 100 : 0;
+
+          return {
+            total,
+            available: free,
+            used,
+            free,
+            usagePercent: Math.round(usagePercent * 100) / 100,
+          };
+        }
+      } else {
+        // Linux/macOS: 使用 free 命令（Linux）或 sysctl（macOS）
+        if (platform === "darwin") {
+          // macOS: 使用 sysctl
+          const text = execCommandSync("sysctl", ["-n", "hw.memsize"]);
+          const total = parseInt(text.trim());
+
+          // 获取可用内存（需要 vm_stat，这里简化处理）
+          // 实际实现可能需要更复杂的解析
+          return {
+            total,
+            available: 0,
+            used: 0,
+            free: 0,
+            usagePercent: 0,
+          };
+        } else {
+          // Linux: 使用 free 命令
+          const text = execCommandSync("free", ["-b"]);
+          const lines = text.split("\n");
+          const memLine = lines[1];
+          const parts = memLine.split(/\s+/).filter(Boolean);
+
+          if (parts.length >= 4) {
+            const total = parseInt(parts[1]);
+            const used = parseInt(parts[2]);
+            const free = parseInt(parts[3]);
+            const available = parseInt(parts[6] || parts[3]);
+            const usagePercent = total > 0 ? (used / total) * 100 : 0;
+
+            return {
+              total,
+              available,
+              used,
+              free,
+              usagePercent: Math.round(usagePercent * 100) / 100,
+            };
+          }
+        }
+      }
+    } catch {
+      // 如果获取失败，返回默认值
+    }
+  }
+
+  return {
+    total: 0,
+    available: 0,
+    used: 0,
+    free: 0,
+    usagePercent: 0,
+  };
+}
+
+/**
+ * 同步获取系统负载（Linux/macOS）
+ * @returns 系统负载信息，Windows 返回 undefined
+ *
+ * @example
+ * ```typescript
+ * import { getLoadAverageSync } from "@dreamer/runtime-adapter";
+ * const load = getLoadAverageSync();
+ * if (load) {
+ *   console.log(`1分钟负载: ${load.load1}`);
+ * }
+ * ```
+ */
+export function getLoadAverageSync(): LoadAverage | undefined {
+  if (IS_DENO) {
+    try {
+      const loadavg = (globalThis as any).Deno.loadavg();
+      if (Array.isArray(loadavg) && loadavg.length >= 3) {
+        return {
+          load1: loadavg[0],
+          load5: loadavg[1],
+          load15: loadavg[2],
+        };
+      }
+    } catch {
+      // loadavg 在 Windows 上不可用
+      return undefined;
+    }
+  }
+
+  if (IS_BUN) {
+    // Bun 需要通过系统命令获取负载信息
+    try {
+      const platform = (globalThis as any).process?.platform;
+      if (platform !== "win32") {
+        // Linux/macOS: 使用 uptime 命令
+        const text = execCommandSync("uptime");
+
+        // 解析 uptime 输出: "load average: 0.50, 0.75, 1.00"
+        const match = text.match(
+          /load average:\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)/,
+        );
+        if (match) {
+          return {
+            load1: parseFloat(match[1]),
+            load5: parseFloat(match[2]),
+            load15: parseFloat(match[3]),
+          };
+        }
+      }
+    } catch {
+      // 如果获取失败，返回 undefined
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * 同步获取系统信息
+ * @returns 系统信息
+ *
+ * @example
+ * ```typescript
+ * import { getSystemInfoSync } from "@dreamer/runtime-adapter";
+ * const info = getSystemInfoSync();
+ * console.log(`主机名: ${info.hostname}`);
+ * console.log(`运行时间: ${info.uptime} 秒`);
+ * ```
+ */
+export function getSystemInfoSync(): SystemInfo {
+  let hostname = "unknown";
+  let platform = "unknown";
+  let arch = "unknown";
+  let uptime = 0;
+  let cpus: number | undefined;
+
+  if (IS_DENO) {
+    try {
+      hostname = (globalThis as any).Deno.hostname();
+      platform = (globalThis as any).Deno.build?.os || "unknown";
+      arch = (globalThis as any).Deno.build?.arch || "unknown";
+      uptime = (globalThis as any).Deno.osUptime() || 0;
+
+      // Deno 可能没有直接获取 CPU 核心数的 API
+      // 可以通过系统命令获取（同步）
+      try {
+        const text = platform === "windows"
+          ? execCommandSync("wmic", [
+            "cpu",
+            "get",
+            "NumberOfCores",
+            "/format:value",
+          ])
+          : execCommandSync("nproc");
+        const cores = parseInt(text.match(/\d+/)?.[0] || "0");
+        if (cores > 0) {
+          cpus = cores;
+        }
+      } catch {
+        // 忽略错误
+      }
+    } catch {
+      // 如果获取失败，使用默认值
+    }
+  }
+
+  if (IS_BUN) {
+    try {
+      const process = (globalThis as any).process;
+      // Bun 支持 Node.js 兼容的 os 模块
+      const os = (globalThis as any).require?.("os");
+      if (os) {
+        hostname = os.hostname();
+        platform = process?.platform || "unknown";
+        arch = process?.arch || "unknown";
+        uptime = os.uptime();
+        cpus = os.cpus().length;
+      }
+    } catch {
+      // 如果获取失败，使用默认值
+    }
+  }
+
+  return {
+    hostname,
+    platform,
+    arch,
+    uptime,
+    cpus,
   };
 }

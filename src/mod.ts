@@ -56,24 +56,34 @@ export {
   cwd,
   type DirEntry,
   exists,
+  existsSync,
   type FileEvent,
   type FileEventType,
   type FileInfo,
   type FileOpenOptions,
   type FileWatcher,
   isDirectory,
+  isDirectorySync,
   isFile,
+  isFileSync,
   makeTempDir,
   makeTempFile,
   mkdir,
+  mkdirSync,
   open,
   readdir,
+  readdirSync,
   readFile,
+  readFileSync,
   readTextFile,
+  readTextFileSync,
   realPath,
+  realPathSync,
   remove,
+  removeSync,
   rename,
   stat,
+  statSync,
   symlink,
   truncate,
   walk,
@@ -81,7 +91,9 @@ export {
   watchFs,
   type WatchFsOptions,
   writeFile,
+  writeFileSync,
   writeTextFile,
+  writeTextFileSync,
 } from "./file.ts";
 
 // 导出网络 API
@@ -108,6 +120,7 @@ export {
   type CommandOutput,
   type CommandProcess,
   createCommand,
+  execCommandSync,
 } from "./process.ts";
 
 // 导出终端 API
@@ -152,7 +165,13 @@ export {
 // 目录遍历 API 已包含在文件系统 API 中
 
 // 导出文件哈希 API
-export { hash, type HashAlgorithm, hashFile } from "./hash.ts";
+export {
+  hash,
+  type HashAlgorithm,
+  hashFile,
+  hashFileSync,
+  hashSync,
+} from "./hash.ts";
 
 // 导出路径操作 API
 export {
@@ -174,8 +193,11 @@ export {
   getCpuUsage,
   getDiskUsage,
   getLoadAverage,
+  getLoadAverageSync,
   getMemoryInfo,
+  getMemoryInfoSync,
   getSystemInfo,
+  getSystemInfoSync,
   getSystemStatus,
   type LoadAverage,
   type MemoryInfo,

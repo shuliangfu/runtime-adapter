@@ -18,18 +18,18 @@
 | 特性 | 说明 |
 |------|------|
 | 🔍 **运行时自动检测** | 自动检测当前运行环境（Deno / Bun） |
-| 📁 **文件系统 API 适配** | 统一的文件读写、目录操作接口 |
+| 📁 **文件系统 API 适配** | 统一的文件读写、目录操作接口（支持同步和异步） |
 | 🌐 **网络 API 适配** | HTTP 服务器、WebSocket、TCP/TLS 连接 |
 | 🔐 **环境变量 API 适配** | 统一的环境变量操作接口 |
-| ⚙️ **进程/命令 API 适配** | 统一的命令执行接口 |
+| ⚙️ **进程/命令 API 适配** | 统一的命令执行接口（支持同步和异步） |
 | 📊 **进程信息 API 适配** | 进程 ID、平台、架构、版本信息 |
 | 🔧 **进程工具 API 适配** | 命令行参数、程序退出 |
 | 📡 **信号处理 API 适配** | 操作系统信号监听和处理 |
 | 💻 **终端 API 适配** | TTY 检测、标准输入输出流、同步写入、原始模式 |
 | ⏰ **定时任务 API 适配** | Cron 定时任务（统一使用 `node-cron`，支持秒级任务） |
 | 🛤️ **路径操作 API 适配** | 路径拼接、解析、规范化、相对路径计算 |
-| 🔐 **文件哈希 API 适配** | 文件和数据哈希计算（SHA-256、SHA-512、SHA-1、MD5） |
-| 📊 **系统信息 API 适配** | 内存、CPU、磁盘使用情况、系统负载、系统信息 |
+| 🔐 **文件哈希 API 适配** | 文件和数据哈希计算（支持同步和异步，SHA-256、SHA-512、SHA-1、MD5） |
+| 📊 **系统信息 API 适配** | 内存、CPU、磁盘使用情况、系统负载、系统信息（支持同步和异步） |
 
 ---
 
@@ -107,6 +107,8 @@ console.log("当前运行时:", RUNTIME);
 ```
 
 ### 文件系统操作
+
+#### 异步 API
 
 ```typescript
 import {
@@ -224,6 +226,62 @@ for await (const event of watcher) {
 }
 ```
 
+#### 同步 API ⭐ 新增
+
+```typescript
+import {
+  readFileSync,
+  writeFileSync,
+  readTextFileSync,
+  writeTextFileSync,
+  mkdirSync,
+  removeSync,
+  statSync,
+  readdirSync,
+  existsSync,
+  isFileSync,
+  isDirectorySync,
+  realPathSync,
+} from "jsr:@dreamer/runtime-adapter";
+
+// 同步读取文件
+const data = readFileSync("./file.txt");
+const text = readTextFileSync("./file.txt");
+
+// 同步写入文件
+writeFileSync("./output.txt", new Uint8Array([1, 2, 3]));
+writeTextFileSync("./output.txt", "Hello, World!");
+
+// 同步目录操作
+mkdirSync("./data", { recursive: true });
+removeSync("./data", { recursive: true });
+
+// 同步获取文件信息
+const info = statSync("./file.txt");
+console.log("文件大小:", info.size);
+
+// 同步读取目录内容
+const entries = readdirSync("./data");
+for (const entry of entries) {
+  console.log(`${entry.name} - ${entry.isFile ? "文件" : "目录"}`);
+}
+
+// 同步检查文件/目录
+if (existsSync("./file.txt")) {
+  console.log("文件存在");
+}
+if (isFileSync("./file.txt")) {
+  console.log("这是一个文件");
+}
+if (isDirectorySync("./data")) {
+  console.log("这是一个目录");
+}
+
+// 同步获取真实路径
+const realPath = realPathSync("./link.txt");
+console.log("真实路径:", realPath);
+```
+
 ### 网络操作
 
 ```typescript
@@ -282,6 +340,8 @@ deleteEnv("DEBUG");
 
 ### 命令执行
 
+#### 异步执行
+
 ```typescript
 import { createCommand } from "jsr:@dreamer/runtime-adapter";
 
@@ -306,6 +366,27 @@ console.log("进程状态:", status);
 
 // 取消进程
 cmd.kill();
+```
+
+#### 同步执行 ⭐ 新增
+
+```typescript
+import { execCommandSync } from "jsr:@dreamer/runtime-adapter";
+
+// 同步执行命令并获取输出
+try {
+  const output = execCommandSync("echo", ["Hello, World!"]);
+  console.log("输出:", output.trim());
+} catch (error) {
+  console.error("命令执行失败:", error);
+}
+
+// 支持工作目录和环境变量
+const result = execCommandSync("pwd", [], {
+  cwd: "./src",
+  env: { CUSTOM_VAR: "value" },
+});
+console.log("工作目录:", result.trim());
 ```
 
 ### 终端检测和操作
@@ -413,7 +494,49 @@ setTimeout(() => {
 }, 60000);
 ```
 
+### 文件哈希
+
+#### 异步 API
+
+```typescript
+import { hash, hashFile } from "jsr:@dreamer/runtime-adapter";
+
+// 计算文件哈希
+const fileHash = await hashFile("./file.txt");
+console.log("文件哈希:", fileHash);
+
+// 计算字符串哈希
+const stringHash = await hash("Hello, World!");
+console.log("字符串哈希:", stringHash);
+
+// 使用不同的算法
+const sha512 = await hashFile("./file.txt", "SHA-512");
+const md5 = await hash("Hello, World!", "MD5");
+```
+
+#### 同步 API ⭐ 新增
+
+```typescript
+import { hashSync, hashFileSync } from "jsr:@dreamer/runtime-adapter";
+
+// 同步计算文件哈希
+const fileHash = hashFileSync("./file.txt");
+console.log("文件哈希:", fileHash);
+
+// 同步计算字符串哈希
+const stringHash = hashSync("Hello, World!");
+console.log("字符串哈希:", stringHash);
+
+// 使用不同的算法
+const sha512 = hashFileSync("./file.txt", "SHA-512");
+const md5 = hashSync("Hello, World!", "MD5");
+```
+
+> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用 Node.js 兼容模式，Bun 原生支持。
+
 ### 系统信息
+
+#### 异步 API
 
 ```typescript
 import {
@@ -466,6 +589,31 @@ const status = await getSystemStatus();
 console.log("系统状态:", status);
 ```
 
+#### 同步 API ⭐ 新增
+
+```typescript
+import {
+  getMemoryInfoSync,
+  getLoadAverageSync,
+  getSystemInfoSync,
+} from "jsr:@dreamer/runtime-adapter";
+
+// 同步获取内存信息
+const memory = getMemoryInfoSync();
+console.log(`总内存: ${(memory.total / 1024 / 1024 / 1024).toFixed(2)} GB`);
+
+// 同步获取系统负载
+const load = getLoadAverageSync();
+if (load) {
+  console.log(`1分钟负载: ${load.load1.toFixed(2)}`);
+}
+
+// 同步获取系统信息
+const system = getSystemInfoSync();
+console.log(`主机名: ${system.hostname}`);
+console.log(`平台: ${system.platform}`);
+```
+
 ---
 
 ## 📚 API 文档
@@ -482,7 +630,7 @@ console.log("系统状态:", status);
 
 ### 📁 文件系统 API
 
-#### 文件读写
+#### 异步文件读写
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
@@ -493,7 +641,16 @@ console.log("系统状态:", status);
 | `open(path: string, options?)` | 打开文件 | `Promise<File>` |
 | `create(path: string)` | 创建文件 | `Promise<File>` |
 
-#### 目录操作
+#### 同步文件读写 ⭐ 新增
+
+| API | 说明 | 返回值 |
+|-----|------|--------|
+| `readFileSync(path: string)` | 同步读取文件（二进制） | `Uint8Array` |
+| `readTextFileSync(path: string)` | 同步读取文本文件 | `string` |
+| `writeFileSync(path: string, data: Uint8Array, options?)` | 同步写入文件（二进制） | `void` |
+| `writeTextFileSync(path: string, data: string, options?)` | 同步写入文本文件 | `void` |
+
+#### 异步目录操作
 
 | API | 说明 | 选项 |
 |-----|------|------|
@@ -502,6 +659,19 @@ console.log("系统状态:", status);
 | `readdir(path: string)` | 读取目录内容 | - |
 | `stat(path: string)` | 获取文件信息 | - |
 | `walk(dir: string, options?)` | 递归遍历目录 | `maxDepth?: number`<br>`includeFiles?: boolean`<br>`includeDirs?: boolean`<br>`match?: (path: string, info: FileInfo) => boolean`<br>`skipSymlinks?: boolean` |
+
+#### 同步目录操作 ⭐ 新增
+
+| API | 说明 | 选项 |
+|-----|------|------|
+| `mkdirSync(path: string, options?)` | 同步创建目录 | `recursive?: boolean`<br>`mode?: number` |
+| `removeSync(path: string, options?)` | 同步删除文件或目录 | `recursive?: boolean` |
+| `readdirSync(path: string)` | 同步读取目录内容 | - |
+| `statSync(path: string)` | 同步获取文件信息 | - |
+| `existsSync(path: string)` | 同步检查文件或目录是否存在 | - |
+| `isFileSync(path: string)` | 同步检查路径是否为文件 | - |
+| `isDirectorySync(path: string)` | 同步检查路径是否为目录 | - |
+| `realPathSync(path: string)` | 同步获取真实路径（解析符号链接） | - |
 
 #### 文件操作
 
@@ -614,6 +784,8 @@ upgradeWebSocket(
 
 ### ⚙️ 进程/命令 API
 
+#### 异步执行
+
 ```typescript
 createCommand(
   command: string,
@@ -634,6 +806,22 @@ createCommand(
 - `status()` - 获取命令状态
 - `kill(signo?)` - 终止命令
 - `pid` - 进程 ID
+
+#### 同步执行 ⭐ 新增
+
+```typescript
+execCommandSync(
+  command: string,
+  args?: string[],
+  options?: { cwd?: string; env?: Record<string, string> }
+): string
+```
+
+**说明：**
+- 同步执行命令并返回输出
+- 如果命令执行失败，会抛出错误
+- Deno 使用 `Deno.Command.outputSync()`
+- Bun 使用 `child_process.execFileSync()`
 
 ### 💻 终端 API
 
@@ -726,10 +914,19 @@ interface RuntimeVersion {
 
 ### 🔐 文件哈希 API
 
+#### 异步 API
+
 | API | 说明 | 参数 | 返回值 |
 |-----|------|------|--------|
 | `hashFile(path: string, algorithm?: HashAlgorithm)` | 计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
 | `hash(data: Uint8Array \| string, algorithm?: HashAlgorithm)` | 计算数据哈希值 | `data`: 数据（Uint8Array 或字符串）<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
+
+#### 同步 API ⭐ 新增
+
+| API | 说明 | 参数 | 返回值 |
+|-----|------|------|--------|
+| `hashFileSync(path: string, algorithm?: HashAlgorithm)` | 同步计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `string` |
+| `hashSync(data: Uint8Array \| string, algorithm?: HashAlgorithm)` | 同步计算数据哈希值 | `data`: 数据（Uint8Array 或字符串）<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `string` |
 
 **HashAlgorithm 类型：**
 - `"SHA-256"`（默认）
@@ -737,21 +934,11 @@ interface RuntimeVersion {
 - `"SHA-1"`
 - `"MD5"`
 
-**使用示例：**
-```typescript
-import { hashFile, hash } from "jsr:@dreamer/runtime-adapter";
-
-// 计算文件哈希
-const fileHash = await hashFile("./file.txt");
-
-// 计算字符串哈希
-const stringHash = await hash("Hello, World!");
-
-// 使用不同的算法
-const sha512 = await hashFile("./file.txt", "SHA-512");
-```
+> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用 Node.js 兼容模式，Bun 原生支持。
 
 ### 📊 系统信息 API
+
+#### 异步 API
 
 | API | 说明 | 参数 | 返回值 |
 |-----|------|------|--------|
@@ -761,6 +948,14 @@ const sha512 = await hashFile("./file.txt", "SHA-512");
 | `getDiskUsage(path?: string)` | 获取磁盘使用情况 | `path`: 路径（默认：当前工作目录） | `Promise<DiskUsage>` |
 | `getSystemInfo()` | 获取系统信息 | 无 | `Promise<SystemInfo>` |
 | `getSystemStatus(cpuInterval?: number, diskPath?: string)` | 获取完整的系统状态 | `cpuInterval`: CPU 采样间隔（默认：100）<br>`diskPath`: 磁盘路径（可选） | `Promise<SystemStatus>` |
+
+#### 同步 API ⭐ 新增
+
+| API | 说明 | 参数 | 返回值 |
+|-----|------|------|--------|
+| `getMemoryInfoSync()` | 同步获取系统内存信息 | 无 | `MemoryInfo` |
+| `getLoadAverageSync()` | 同步获取系统负载（Linux/macOS） | 无 | `LoadAverage \| undefined` |
+| `getSystemInfoSync()` | 同步获取系统信息 | 无 | `SystemInfo` |
 
 **MemoryInfo 接口：**
 ```typescript
@@ -826,7 +1021,7 @@ interface SystemStatus {
 ```
 
 > 📌 **注意**：
-> - Windows 平台不支持系统负载，`getLoadAverage()` 返回 `undefined`
+> - Windows 平台不支持系统负载，`getLoadAverage()` 和 `getLoadAverageSync()` 返回 `undefined`
 > - Deno 环境使用原生 API，Bun 环境通过系统命令获取
 > - 所有 API 在获取失败时会返回默认值，不会抛出异常
 
@@ -849,9 +1044,10 @@ bun test tests/
 详细的测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 
 测试覆盖包括：
-- ✅ 170 个测试用例全部通过
+- ✅ 202 个测试用例全部通过
 - ✅ 16 个功能模块完整测试
 - ✅ Deno 和 Bun 跨运行时兼容性验证
+- ✅ 同步和异步 API 完整测试
 
 ---
 
@@ -867,7 +1063,7 @@ bun test tests/
 
 5. **设计理念**：本库提供统一的 API 抽象层，在 Deno 和 Bun 环境下自动适配到对应的原生 API。
 
-6. **文件系统同步**：在 Bun 环境下，某些文件系统操作可能存在同步延迟，代码中已包含重试机制来处理这种情况。
+6. **同步 API**：新增的同步 API（文件系统、命令执行、哈希计算、系统信息）适合在需要阻塞等待的场景使用。Deno 使用原生同步 API，Bun 使用 Node.js 兼容的同步 API。
 
 7. **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all` 标志来授予所有权限。
 
@@ -904,8 +1100,18 @@ if (IS_BUN) {
 }
 ```
 
----
+### Q: 同步 API 和异步 API 有什么区别？
 
+**A:**
+- **异步 API**：使用 `async/await`，不会阻塞执行，适合大多数场景
+- **同步 API**：会阻塞执行直到操作完成，适合需要立即获取结果的场景（如 CLI 工具中的文件检查）
+
+同步 API 在以下场景特别有用：
+- CLI 工具中需要立即检查文件是否存在
+- 需要同步计算哈希值
+- 需要同步执行命令并获取输出
+
+---
 
 ## 🤝 贡献
 

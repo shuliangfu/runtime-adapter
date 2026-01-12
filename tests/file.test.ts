@@ -450,10 +450,15 @@ describe("文件系统 API", () => {
 
   describe("makeTempDir", () => {
     it("应该创建临时目录", async () => {
-      const tempDir = await makeTempDir();
+      await mkdir(TEST_DIR, { recursive: true });
+      const tempDir = await makeTempDir({ dir: TEST_DIR });
       expect(tempDir).toBeTruthy();
       expect(typeof tempDir).toBe("string");
       expect(tempDir.length).toBeGreaterThan(0);
+      // 路径可能包含 ./ 前缀或没有，统一处理
+      const normalizedTestDir = TEST_DIR.replace(/^\.\//, "");
+      const normalizedTempDir = tempDir.replace(/^\.\//, "");
+      expect(normalizedTempDir).toContain(normalizedTestDir);
 
       // 验证目录存在
       const info = await stat(tempDir);
@@ -476,8 +481,13 @@ describe("文件系统 API", () => {
     });
 
     it("应该使用指定的前缀创建临时目录", async () => {
-      const tempDir = await makeTempDir({ prefix: "test-" });
+      await mkdir(TEST_DIR, { recursive: true });
+      const tempDir = await makeTempDir({ prefix: "test-", dir: TEST_DIR });
       expect(tempDir).toContain("test-");
+      // 路径可能包含 ./ 前缀或没有，统一处理
+      const normalizedTestDir = TEST_DIR.replace(/^\.\//, "");
+      const normalizedTempDir = tempDir.replace(/^\.\//, "");
+      expect(normalizedTempDir).toContain(normalizedTestDir);
 
       // 清理（使用递归删除）
       try {
@@ -498,8 +508,13 @@ describe("文件系统 API", () => {
 
   describe("makeTempFile", () => {
     it("应该创建临时文件", async () => {
-      const tempFile = await makeTempFile();
+      await mkdir(TEST_DIR, { recursive: true });
+      const tempFile = await makeTempFile({ dir: TEST_DIR });
       expect(tempFile).toBeTruthy();
+      // 路径可能包含 ./ 前缀或没有，统一处理
+      const normalizedTestDir = TEST_DIR.replace(/^\.\//, "");
+      const normalizedTempFile = tempFile.replace(/^\.\//, "");
+      expect(normalizedTempFile).toContain(normalizedTestDir);
 
       // 验证文件存在
       const info = await stat(tempFile);
@@ -510,9 +525,18 @@ describe("文件系统 API", () => {
     });
 
     it("应该使用指定的前缀和后缀创建临时文件", async () => {
-      const tempFile = await makeTempFile({ prefix: "test-", suffix: ".txt" });
+      await mkdir(TEST_DIR, { recursive: true });
+      const tempFile = await makeTempFile({
+        prefix: "test-",
+        suffix: ".txt",
+        dir: TEST_DIR,
+      });
       expect(tempFile).toContain("test-");
       expect(tempFile).toContain(".txt");
+      // 路径可能包含 ./ 前缀或没有，统一处理
+      const normalizedTestDir = TEST_DIR.replace(/^\.\//, "");
+      const normalizedTempFile = tempFile.replace(/^\.\//, "");
+      expect(normalizedTempFile).toContain(normalizedTestDir);
 
       // 清理
       await remove(tempFile);
@@ -573,7 +597,11 @@ describe("文件系统 API", () => {
 
   describe("目录遍历 API", () => {
     it("应该遍历目录中的所有文件", async () => {
-      const tempDir = await makeTempDir({ prefix: "test-walk-" });
+      await mkdir(TEST_DIR, { recursive: true });
+      const tempDir = await makeTempDir({
+        prefix: "test-walk-",
+        dir: TEST_DIR,
+      });
       try {
         // 创建测试文件
         await writeTextFile(`${tempDir}/file1.txt`, "content1");
@@ -596,7 +624,11 @@ describe("文件系统 API", () => {
     });
 
     it("应该支持路径匹配", async () => {
-      const tempDir = await makeTempDir({ prefix: "test-walk-" });
+      await mkdir(TEST_DIR, { recursive: true });
+      const tempDir = await makeTempDir({
+        prefix: "test-walk-",
+        dir: TEST_DIR,
+      });
       try {
         await writeTextFile(`${tempDir}/file1.ts`, "content1");
         await writeTextFile(`${tempDir}/file2.js`, "content2");

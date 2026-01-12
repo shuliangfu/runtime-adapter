@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import { createCommand, type CommandProcess } from "../src/process.ts";
+import { createCommand, execCommandSync } from "../src/process.ts";
 
 describe("进程/命令 API", () => {
   describe("createCommand", () => {
@@ -84,6 +84,33 @@ describe("进程/命令 API", () => {
       const status = await proc.status();
       // 进程被取消，可能成功或失败，取决于时机
       expect(typeof status.success).toBe("boolean");
+    });
+  });
+
+  describe("execCommandSync", () => {
+    it("应该同步执行命令并返回输出", () => {
+      const output = execCommandSync("echo", ["hello"]);
+      expect(typeof output).toBe("string");
+      expect(output.trim()).toBe("hello");
+    });
+
+    it("应该支持多个参数", () => {
+      const output = execCommandSync("echo", ["hello", "world"]);
+      expect(typeof output).toBe("string");
+      expect(output).toContain("hello");
+      expect(output).toContain("world");
+    });
+
+    it("应该在命令失败时抛出错误", () => {
+      expect(() => {
+        execCommandSync("nonexistent-command-12345", []);
+      }).toThrow();
+    });
+
+    it("应该支持工作目录", () => {
+      const output = execCommandSync("pwd", [], { cwd: "." });
+      expect(typeof output).toBe("string");
+      expect(output.trim().length).toBeGreaterThan(0);
     });
   });
 });
