@@ -112,16 +112,11 @@ export function writeStdoutSync(data: Uint8Array): void {
   if (IS_BUN) {
     const stdout = (globalThis as any).process?.stdout;
     if (stdout) {
-      // Bun 支持 Buffer，但类型检查器可能不识别
-      const Buffer = (globalThis as any).Buffer;
-      if (Buffer) {
-        stdout.writeSync(Buffer.from(data));
-      } else {
-        // 如果没有 Buffer，使用异步写入（同步写入在 Bun 中可能不可用）
-        stdout.write(data, (err: Error | null) => {
-          if (err) throw err;
-        });
-      }
+      const fs = require("fs");
+      // 使用文件描述符 1（标准输出）或 stdout.fd
+      const fd = stdout.fd !== undefined ? stdout.fd : 1;
+      fs.writeSync(fd, data, 0, data.length);
+      return;
     }
     return;
   }
@@ -209,16 +204,11 @@ export function writeStderrSync(data: Uint8Array): void {
   if (IS_BUN) {
     const stderr = (globalThis as any).process?.stderr;
     if (stderr) {
-      // Bun 支持 Buffer，但类型检查器可能不识别
-      const Buffer = (globalThis as any).Buffer;
-      if (Buffer) {
-        stderr.writeSync(Buffer.from(data));
-      } else {
-        // 如果没有 Buffer，使用异步写入
-        stderr.write(data, (err: Error | null) => {
-          if (err) throw err;
-        });
-      }
+      const fs = require("fs");
+      // 使用文件描述符 2（标准错误输出）或 stderr.fd
+      const fd = stderr.fd !== undefined ? stderr.fd : 2;
+      fs.writeSync(fd, data, 0, data.length);
+      return;
     }
     return;
   }

@@ -224,25 +224,14 @@ export function execCommandSync(
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 child_process，使用同步 API
     try {
-      // Bun 中可以直接使用 require（在全局作用域中可用）
-      const childProcess = (typeof require !== "undefined" && require) ||
-        (globalThis as any).require;
-
-      if (!childProcess) {
-        throw new Error("Bun 环境中 require 不可用");
-      }
-
-      const cp = childProcess("child_process");
-      if (cp && typeof cp.execFileSync === "function") {
-        const result = cp.execFileSync(command, args, {
-          cwd: options?.cwd,
-          env: options?.env,
-          encoding: "utf-8",
-          stdio: "pipe",
-        });
-        return typeof result === "string" ? result : result.toString();
-      }
-      throw new Error("Bun 环境中 child_process.execFileSync 不可用");
+      const cp = require("child_process");
+      const result = cp.execFileSync(command, args, {
+        cwd: options?.cwd,
+        env: options?.env,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+      return typeof result === "string" ? result : result.toString();
     } catch (error: any) {
       // 如果是我们抛出的错误，直接抛出
       if (

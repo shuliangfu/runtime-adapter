@@ -127,20 +127,15 @@ export function hashSync(
   // 获取 Node.js 兼容的 crypto 模块
   let crypto: any = null;
 
-  // 获取 require 函数
-  const requireFn = (typeof require !== "undefined" && require) ||
-    (globalThis as any).require;
-
   if (IS_DENO) {
-    // Deno 支持 node:crypto
+    // Deno 中需要通过 globalThis.require 获取
+    const requireFn = (globalThis as any).require;
     if (requireFn) {
-      crypto = requireFn("node:crypto") || requireFn("crypto");
+      crypto = requireFn("node:crypto");
     }
   } else if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 crypto 模块
-    if (requireFn) {
-      crypto = requireFn("crypto") || requireFn("node:crypto");
-    }
+    crypto = require("node:crypto");
   }
 
   if (!crypto || typeof crypto.createHash !== "function") {

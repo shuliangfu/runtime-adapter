@@ -841,8 +841,8 @@ export function getSystemInfoSync(): SystemInfo {
     try {
       const process = (globalThis as any).process;
       // Bun 支持 Node.js 兼容的 os 模块
-      const os = (globalThis as any).require?.("os");
-      if (os) {
+      const os = require("os");
+      {
         hostname = os.hostname();
         platform = process?.platform || "unknown";
         arch = process?.arch || "unknown";

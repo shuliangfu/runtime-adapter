@@ -7,14 +7,6 @@ import { IS_BUN, IS_DENO } from "./detect.ts";
 import { join } from "./path.ts";
 
 /**
- * 获取 require 函数（用于 Bun 环境）
- */
-function getRequire(): any {
-  return (typeof require !== "undefined" && require) ||
-    (globalThis as any).require;
-}
-
-/**
  * 文件打开选项
  */
 export interface FileOpenOptions {
@@ -1245,33 +1237,26 @@ export function statSync(path: string): FileInfo {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.statSync === "function") {
-        const info = fs.statSync(path);
-        return {
-          isFile: info.isFile(),
-          isDirectory: info.isDirectory(),
-          isSymlink: info.isSymbolicLink(),
-          size: info.size,
-          mtime: info.mtime,
-          atime: info.atime,
-          birthtime: info.birthtime,
-          mode: info.mode,
-          dev: info.dev,
-          ino: info.ino,
-          nlink: info.nlink,
-          uid: info.uid,
-          gid: info.gid,
-          rdev: info.rdev,
-          blksize: info.blksize,
-          blocks: info.blocks,
-        };
-      }
-      throw new Error("Bun 环境中 fs.statSync 不可用");
-    }
-    throw new Error("Bun 环境中 require 不可用");
+    const fs = require("fs");
+    const info = fs.statSync(path);
+    return {
+      isFile: info.isFile(),
+      isDirectory: info.isDirectory(),
+      isSymlink: info.isSymbolicLink(),
+      size: info.size,
+      mtime: info.mtime,
+      atime: info.atime,
+      birthtime: info.birthtime,
+      mode: info.mode,
+      dev: info.dev,
+      ino: info.ino,
+      nlink: info.nlink,
+      uid: info.uid,
+      gid: info.gid,
+      rdev: info.rdev,
+      blksize: info.blksize,
+      blocks: info.blocks,
+    };
   }
 
   throw new Error("不支持的运行时环境");
@@ -1305,14 +1290,8 @@ export function readTextFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.readFileSync === "function") {
-        return fs.readFileSync(path, _encoding);
-      }
-    }
-    throw new Error("Bun 环境中 fs.readFileSync 不可用");
+    const fs = require("fs");
+    return fs.readFileSync(path, _encoding);
   }
 
   throw new Error("不支持的运行时环境");
@@ -1364,14 +1343,8 @@ export function readFileSync(path: string): Uint8Array {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.readFileSync === "function") {
-        return new Uint8Array(fs.readFileSync(path));
-      }
-    }
-    throw new Error("Bun 环境中 fs.readFileSync 不可用");
+    const fs = require("fs");
+    return new Uint8Array(fs.readFileSync(path));
   }
 
   throw new Error("不支持的运行时环境");
@@ -1412,33 +1385,27 @@ export function readdirSync(path: string): DirEntry[] {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.readdirSync === "function") {
-        try {
-          // 先验证目录存在
-          const dirInfo = fs.statSync(path);
-          if (!dirInfo.isDirectory()) {
-            throw new Error(`路径 ${path} 不是目录`);
-          }
-
-          const entries = fs.readdirSync(path, { withFileTypes: true });
-          return entries.map((entry: any) => ({
-            name: entry.name,
-            isFile: entry.isFile(),
-            isDirectory: entry.isDirectory(),
-            isSymlink: entry.isSymbolicLink(),
-          }));
-        } catch (error: any) {
-          if (error?.code === "ENOENT") {
-            throw new Error(`目录不存在: ${path}`);
-          }
-          throw error;
-        }
+    const fs = require("fs");
+    try {
+      // 先验证目录存在
+      const dirInfo = fs.statSync(path);
+      if (!dirInfo.isDirectory()) {
+        throw new Error(`路径 ${path} 不是目录`);
       }
+
+      const entries = fs.readdirSync(path, { withFileTypes: true });
+      return entries.map((entry: any) => ({
+        name: entry.name,
+        isFile: entry.isFile(),
+        isDirectory: entry.isDirectory(),
+        isSymlink: entry.isSymbolicLink(),
+      }));
+    } catch (error: any) {
+      if (error?.code === "ENOENT") {
+        throw new Error(`目录不存在: ${path}`);
+      }
+      throw error;
     }
-    throw new Error("Bun 环境中 fs.readdirSync 不可用");
   }
 
   throw new Error("不支持的运行时环境");
@@ -1512,14 +1479,8 @@ export function realPathSync(path: string): string {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.realpathSync === "function") {
-        return fs.realpathSync(path);
-      }
-    }
-    throw new Error("Bun 环境中 fs.realpathSync 不可用");
+    const fs = require("fs");
+    return fs.realpathSync(path);
   }
 
   throw new Error("不支持的运行时环境");
@@ -1553,36 +1514,30 @@ export function mkdirSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.mkdirSync === "function") {
+    const fs = require("fs");
+    try {
+      fs.mkdirSync(path, {
+        recursive: options?.recursive,
+        mode: options?.mode,
+      });
+    } catch (error: any) {
+      // 如果目录已存在且 recursive 为 true，忽略错误
+      if (error?.code === "EEXIST" || error?.code === "EINVAL") {
+        // 检查目录是否真的存在
         try {
-          fs.mkdirSync(path, {
-            recursive: options?.recursive,
-            mode: options?.mode,
-          });
-        } catch (error: any) {
-          // 如果目录已存在且 recursive 为 true，忽略错误
-          if (error?.code === "EEXIST" || error?.code === "EINVAL") {
-            // 检查目录是否真的存在
-            try {
-              const info = fs.statSync(path);
-              if (info.isDirectory()) {
-                // 目录已存在，这是正常的
-                return;
-              }
-            } catch {
-              // stat 失败，说明目录不存在，重新抛出原始错误
-            }
+          const info = fs.statSync(path);
+          if (info.isDirectory()) {
+            // 目录已存在，这是正常的
+            return;
           }
-          // 其他错误继续抛出
-          throw error;
+        } catch {
+          // stat 失败，说明目录不存在，重新抛出原始错误
         }
-        return;
       }
+      // 其他错误继续抛出
+      throw error;
     }
-    throw new Error("Bun 环境中 fs.mkdirSync 不可用");
+    return;
   }
 
   throw new Error("不支持的运行时环境");
@@ -1616,32 +1571,22 @@ export function removeSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (
-        fs && typeof fs.rmSync === "function" &&
-        typeof fs.unlinkSync === "function"
-      ) {
-        try {
-          const stats = fs.statSync(path);
-          if (stats.isDirectory()) {
-            // 删除目录时，默认使用 recursive: true（如果未指定）
-            fs.rmSync(path, { recursive: options?.recursive !== false });
-          } else {
-            fs.unlinkSync(path);
-          }
-        } catch (error: any) {
-          if (error?.code !== "ENOENT") {
-            throw error;
-          }
-          // ENOENT 表示文件不存在，这是可以接受的
-        }
-        return;
+    const fs = require("fs");
+    try {
+      const stats = fs.statSync(path);
+      if (stats.isDirectory()) {
+        // 删除目录时，默认使用 recursive: true（如果未指定）
+        fs.rmSync(path, { recursive: options?.recursive !== false });
+      } else {
+        fs.unlinkSync(path);
       }
-      throw new Error("Bun 环境中 fs.rmSync 或 fs.unlinkSync 不可用");
+    } catch (error: any) {
+      if (error?.code !== "ENOENT") {
+        throw error;
+      }
+      // ENOENT 表示文件不存在，这是可以接受的
     }
-    throw new Error("Bun 环境中 require 不可用");
+    return;
   }
 
   throw new Error("不支持的运行时环境");
@@ -1678,29 +1623,23 @@ export function writeFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.writeFileSync === "function") {
-        // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
-        const Buffer = (globalThis as any).Buffer;
-        if (Buffer && typeof Buffer.from === "function") {
-          const buffer = Buffer.from(data);
-          fs.writeFileSync(path, buffer, {
-            mode: options?.mode,
-            flag: options?.create === false ? "r+" : "w",
-          });
-        } else {
-          // 如果没有 Buffer，直接使用 Uint8Array（Bun 的 fs.writeFileSync 应该支持）
-          fs.writeFileSync(path, data, {
-            mode: options?.mode,
-            flag: options?.create === false ? "r+" : "w",
-          });
-        }
-        return;
-      }
+    const fs = require("fs");
+    // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
+    const Buffer = (globalThis as any).Buffer;
+    if (Buffer && typeof Buffer.from === "function") {
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(path, buffer, {
+        mode: options?.mode,
+        flag: options?.create === false ? "r+" : "w",
+      });
+    } else {
+      // 如果没有 Buffer，直接使用 Uint8Array（Bun 的 fs.writeFileSync 应该支持）
+      fs.writeFileSync(path, data, {
+        mode: options?.mode,
+        flag: options?.create === false ? "r+" : "w",
+      });
     }
-    throw new Error("Bun 环境中 fs.writeFileSync 不可用");
+    return;
   }
 
   throw new Error("不支持的运行时环境");
@@ -1736,18 +1675,12 @@ export function writeTextFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const requireFn = getRequire();
-    if (requireFn) {
-      const fs = requireFn("fs");
-      if (fs && typeof fs.writeFileSync === "function") {
-        fs.writeFileSync(path, data, "utf-8", {
-          mode: options?.mode,
-          flag: options?.create === false ? "r+" : "w",
-        });
-        return;
-      }
-    }
-    throw new Error("Bun 环境中 fs.writeFileSync 不可用");
+    const fs = require("fs");
+    fs.writeFileSync(path, data, "utf-8", {
+      mode: options?.mode,
+      flag: options?.create === false ? "r+" : "w",
+    });
+    return;
   }
 
   throw new Error("不支持的运行时环境");
