@@ -42,7 +42,7 @@ describe("进程/命令 API", () => {
       } catch {
         // 忽略清理错误
       }
-    });
+    }, { sanitizeResources: true });
 
     it("应该支持环境变量", async () => {
       const proc = createCommand("echo", {
@@ -72,7 +72,7 @@ describe("进程/命令 API", () => {
       const output = await proc.output();
       expect(output.success).toBe(true);
       expect(output.stdout).toBeTruthy();
-    });
+    }, { sanitizeResources: true });
 
     it("应该可以取消进程", async () => {
       // 根据系统不同，sleep 命令可能不同

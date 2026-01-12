@@ -112,7 +112,7 @@ export function writeStdoutSync(data: Uint8Array): void {
   if (IS_BUN) {
     const stdout = (globalThis as any).process?.stdout;
     if (stdout) {
-      const fs = require("fs");
+      const fs = require("node:fs");
       // 使用文件描述符 1（标准输出）或 stdout.fd
       const fd = stdout.fd !== undefined ? stdout.fd : 1;
       fs.writeSync(fd, data, 0, data.length);
@@ -204,7 +204,7 @@ export function writeStderrSync(data: Uint8Array): void {
   if (IS_BUN) {
     const stderr = (globalThis as any).process?.stderr;
     if (stderr) {
-      const fs = require("fs");
+      const fs = require("node:fs");
       // 使用文件描述符 2（标准错误输出）或 stderr.fd
       const fd = stderr.fd !== undefined ? stderr.fd : 2;
       fs.writeSync(fd, data, 0, data.length);

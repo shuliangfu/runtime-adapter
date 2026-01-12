@@ -1237,7 +1237,7 @@ export function statSync(path: string): FileInfo {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     const info = fs.statSync(path);
     return {
       isFile: info.isFile(),
@@ -1290,7 +1290,7 @@ export function readTextFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     return fs.readFileSync(path, _encoding);
   }
 
@@ -1343,7 +1343,7 @@ export function readFileSync(path: string): Uint8Array {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     return new Uint8Array(fs.readFileSync(path));
   }
 
@@ -1385,7 +1385,7 @@ export function readdirSync(path: string): DirEntry[] {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     try {
       // 先验证目录存在
       const dirInfo = fs.statSync(path);
@@ -1479,7 +1479,7 @@ export function realPathSync(path: string): string {
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     return fs.realpathSync(path);
   }
 
@@ -1514,7 +1514,7 @@ export function mkdirSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     try {
       fs.mkdirSync(path, {
         recursive: options?.recursive,
@@ -1571,7 +1571,7 @@ export function removeSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     try {
       const stats = fs.statSync(path);
       if (stats.isDirectory()) {
@@ -1623,7 +1623,7 @@ export function writeFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
     const Buffer = (globalThis as any).Buffer;
     if (Buffer && typeof Buffer.from === "function") {
@@ -1675,7 +1675,7 @@ export function writeTextFileSync(
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const fs = require("fs");
+    const fs = require("node:fs");
     fs.writeFileSync(path, data, "utf-8", {
       mode: options?.mode,
       flag: options?.create === false ? "r+" : "w",
