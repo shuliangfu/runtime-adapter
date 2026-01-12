@@ -889,8 +889,18 @@ export function upgradeWebSocket(
     const url = request.url;
     pendingBunAdapters.set(url, adapter);
 
+    // 调试：检查适配器是否正确创建
+    if (typeof adapter.addEventListener !== "function") {
+      console.error("WebSocketAdapter 创建失败：缺少 addEventListener 方法");
+      console.error("适配器类型:", typeof adapter);
+      console.error("适配器属性:", Object.keys(adapter));
+      console.error("适配器原型:", Object.getPrototypeOf(adapter));
+      throw new Error("WebSocketAdapter 创建失败：缺少 addEventListener 方法");
+    }
+
     // 在 Bun 环境下，返回 undefined 作为 response，让 Bun 自动处理 WebSocket 升级响应
     // 这样 open 事件才能被正确触发
+    // 注意：直接返回 adapter，不要进行类型断言，让 TypeScript 处理类型
     return {
       socket: adapter as any as WebSocket, // 返回适配器，但类型为 WebSocket
       response: undefined, // Bun 会自动处理 101 响应

@@ -560,5 +560,90 @@ describe("WebSocket API", () => {
       sanitizeOps: false,
       sanitizeResources: false,
     });
+
+    it("应该返回正确的 WebSocketAdapter 类型（Bun）", async () => {
+      if (!IS_BUN) {
+        console.log("跳过 Bun 特定测试");
+        return;
+      }
+
+      const testPort = getAvailablePort();
+      let serverHandle: any = null;
+
+      try {
+        serverHandle = serve(
+          { port: testPort },
+          async (request: Request) => {
+            const url = new URL(request.url);
+            if (url.pathname === "/ws") {
+              try {
+                const { socket, response } = upgradeWebSocket(request);
+
+                // 验证 socket 不是空对象
+                expect(socket).toBeDefined();
+                expect(socket).not.toEqual({});
+                expect(typeof socket).toBe("object");
+
+                // 验证 socket 有 addEventListener 方法
+                expect(typeof (socket as any).addEventListener).toBe(
+                  "function",
+                );
+                expect(typeof (socket as any).send).toBe("function");
+                expect(typeof (socket as any).close).toBe("function");
+                expect(typeof (socket as any).readyState).toBe("number");
+
+                // 验证可以调用 addEventListener
+                let testCalled = false;
+                (socket as any).addEventListener("message", () => {
+                  testCalled = true;
+                });
+                expect(typeof (socket as any).addEventListener).toBe(
+                  "function",
+                );
+
+                // 验证对象属性（应该不是空对象）
+                const keys = Object.keys(socket);
+                const prototypeKeys = Object.getOwnPropertyNames(
+                  Object.getPrototypeOf(socket),
+                );
+                expect(keys.length + prototypeKeys.length).toBeGreaterThan(0);
+
+                if (response === undefined) {
+                  return undefined;
+                }
+                return response;
+              } catch (error) {
+                console.error("WebSocket 升级失败:", error);
+                return new Response("WebSocket upgrade failed", {
+                  status: 500,
+                });
+              }
+            }
+            return new Response("Not Found", { status: 404 });
+          },
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        ws.close();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } finally {
+        if (serverHandle) {
+          try {
+            await Promise.race([
+              serverHandle.shutdown(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("shutdown timeout")), 2000)
+              ),
+            ]);
+          } catch (error) { /* ignore */ }
+        }
+      }
+    }, {
+      sanitizeOps: false,
+      sanitizeResources: false,
+    });
   });
 });
