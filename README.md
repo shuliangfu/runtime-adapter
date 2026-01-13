@@ -326,13 +326,13 @@ await handle.shutdown();
 
 // TCP 连接
 const conn = await connect({
-  hostname: "example.com",
+  host: "example.com",
   port: 80,
 });
 
 // TLS 连接
 const tlsConn = await startTls(conn, {
-  hostname: "example.com",
+  host: "example.com",
 });
 ```
 
@@ -768,8 +768,8 @@ serve(
 
 **选项：**
 - `port?: number` - 端口号（可选，默认随机端口）
-- `hostname?: string` - 主机名（可选，默认 `"0.0.0.0"`）
-- `onListen?: (params: { hostname: string; port: number }) => void` - 监听回调函数
+- `host?: string` - 主机名（可选，默认 `"0.0.0.0"`）
+- `onListen?: (params: { host: string; port: number }) => void` - 监听回调函数
 
 **返回值：**
 - `ServeHandle.port` - 服务器端口号
@@ -821,8 +821,8 @@ const handle = serve({ port: 3000 }, (req) => {
 
 | API | 说明 | 选项 |
 |-----|------|------|
-| `connect(options: ConnectOptions)` | 建立 TCP 连接 | `hostname: string`<br>`port: number` |
-| `startTls(conn: TcpConn, options?: StartTlsOptions)` | 升级 TCP 连接到 TLS | `hostname?: string` |
+| `connect(options: ConnectOptions)` | 建立 TCP 连接 | `host: string`<br>`port: number` |
+| `startTls(conn: TcpConn, options?: StartTlsOptions)` | 升级 TCP 连接到 TLS | `host?: string` |
 
 ### 🔐 环境变量 API
 

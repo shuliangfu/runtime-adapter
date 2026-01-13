@@ -10,8 +10,8 @@ import { IS_BUN, IS_DENO } from "./detect.ts";
  */
 export interface ServeOptions {
   port?: number;
-  hostname?: string;
-  onListen?: (params: { hostname: string; port: number }) => void;
+  host?: string;
+  onListen?: (params: { host: string; port: number }) => void;
 }
 
 /**
@@ -281,7 +281,7 @@ export interface UpgradeWebSocketResult {
  * TCP 连接选项
  */
 export interface ConnectOptions {
-  hostname: string;
+  host: string;
   port: number;
   transport?: "tcp";
 }
@@ -290,7 +290,7 @@ export interface ConnectOptions {
  * TLS 连接选项
  */
 export interface StartTlsOptions {
-  hostname?: string;
+  host?: string;
   caCerts?: string[];
   alpnProtocols?: string[];
 }
@@ -299,8 +299,8 @@ export interface StartTlsOptions {
  * TCP 连接句柄
  */
 export interface TcpConn {
-  readonly localAddr: { hostname: string; port: number; transport: string };
-  readonly remoteAddr: { hostname: string; port: number; transport: string };
+  readonly localAddr: { host: string; port: number; transport: string };
+  readonly remoteAddr: { host: string; port: number; transport: string };
   readonly rid?: number; // 可选，Bun 可能没有
   readonly readable: ReadableStream<Uint8Array>;
   readonly writable: WritableStream<Uint8Array>;
@@ -346,12 +346,15 @@ export function serve(
 
     // 包装 onListen 回调来捕获 port
     const originalOnListen = serveOptions.onListen;
+    // Deno.serve 使用 hostname，需要转换
     const newOptions = {
       ...serveOptions,
+      hostname: serveOptions.host, // 转换为 hostname 传递给 Deno.serve
       onListen: (params: { hostname: string; port: number }) => {
         port = params.port;
         if (originalOnListen) {
-          originalOnListen(params);
+          // 转换 hostname 为 host
+          originalOnListen({ host: params.hostname, port: params.port });
         }
       },
     };
@@ -597,7 +600,7 @@ export function serve(
 
     const server = BunServe({
       port: options.port ?? 3000,
-      hostname: options.hostname ?? "0.0.0.0",
+      hostname: options.host ?? "0.0.0.0", // Bun.serve 使用 hostname，需要转换
       fetch: (req: Request, server: any) => {
         // 保存 server 实例以便 upgradeWebSocket 使用
         bunServerInstance = server;
@@ -797,8 +800,9 @@ export function serve(
     bunServerInstance = server;
 
     if (options.onListen) {
+      // 转换 hostname 为 host
       options.onListen({
-        hostname: server.hostname || options.hostname || "0.0.0.0",
+        host: server.hostname || options.host || "0.0.0.0",
         port: server.port || options.port || 3000,
       });
     }
@@ -929,7 +933,12 @@ export function upgradeWebSocket(
  */
 export async function connect(options: ConnectOptions): Promise<TcpConn> {
   if (IS_DENO) {
-    return await (globalThis as any).Deno.connect(options);
+    // Deno.connect 使用 hostname，需要转换
+    return await (globalThis as any).Deno.connect({
+      hostname: options.host,
+      port: options.port,
+      transport: options.transport,
+    });
   }
 
   if (IS_BUN) {
@@ -970,8 +979,9 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
         },
       });
 
+      // Bun.connect 使用 hostname，需要转换
       (globalThis as any).Bun.connect({
-        hostname: options.hostname,
+        hostname: options.host,
         port: options.port,
         socket: {
           open(sock: any) {
@@ -979,12 +989,12 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
             // 连接成功，解析 Promise
             resolve({
               localAddr: {
-                hostname: sock.localAddress || "0.0.0.0",
+                host: sock.localAddress || "0.0.0.0",
                 port: sock.localPort || 0,
                 transport: "tcp",
               },
               remoteAddr: {
-                hostname: sock.remoteAddress || options.hostname,
+                host: sock.remoteAddress || options.host,
                 port: sock.remotePort || options.port,
                 transport: "tcp",
               },
@@ -1044,9 +1054,17 @@ export async function startTls(
     // Deno.startTls 需要 Deno.TcpConn 类型
     // 我们需要将我们的 TcpConn 转换为 Deno.TcpConn
     // 由于类型不兼容，这里需要类型断言
+    // Deno.startTls 的 options 使用 hostname，需要转换
+    const tlsOptions = options
+      ? {
+        hostname: options.host,
+        caCerts: options.caCerts,
+        alpnProtocols: options.alpnProtocols,
+      }
+      : undefined;
     return (await (globalThis as any).Deno.startTls(
       conn as any,
-      options,
+      tlsOptions,
     )) as TcpConn;
   }
 
@@ -1099,8 +1117,9 @@ export async function startTls(
     }
 
     return new Promise((resolve, reject) => {
+      // Bun.connect 使用 hostname，需要转换
       (globalThis as any).Bun.connect({
-        hostname: conn.remoteAddr.hostname,
+        hostname: conn.remoteAddr.host,
         port: conn.remoteAddr.port,
         tls: tlsOptions,
         socket: {
@@ -1108,12 +1127,12 @@ export async function startTls(
             socket = sock;
             resolve({
               localAddr: {
-                hostname: sock.localAddress || "0.0.0.0",
+                host: sock.localAddress || "0.0.0.0",
                 port: sock.localPort || 0,
                 transport: "tcp",
               },
               remoteAddr: {
-                hostname: sock.remoteAddress || conn.remoteAddr.hostname,
+                host: sock.remoteAddress || conn.remoteAddr.host,
                 port: sock.remotePort || conn.remoteAddr.port,
                 transport: "tcp",
               },

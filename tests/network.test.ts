@@ -86,7 +86,7 @@ describe("网络 API", () => {
 
     it("应该支持自定义主机名", async () => {
       const handle = await serve(
-        { hostname: "127.0.0.1", port: 0 },
+        { host: "127.0.0.1", port: 0 },
         () => new Response("OK"),
       );
       expect(handle).toBeTruthy();
