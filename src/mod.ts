@@ -16,8 +16,8 @@
  * - 定时任务 API 适配
  *
  * 环境兼容性：
- * - ✅ Deno 2.5+
- * - ✅ Bun 1.0+
+ * - ✅ Deno 2.6+
+ * - ✅ Bun 1.3.5
  *
  * @example
  * ```typescript
