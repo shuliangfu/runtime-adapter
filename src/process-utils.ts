@@ -3,7 +3,8 @@
  * 提供统一的进程工具接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getDeno, getProcess } from "./utils.ts";
 
 /**
  * 获取命令行参数
@@ -18,11 +19,13 @@ import { IS_BUN, IS_DENO } from "./detect.ts";
  * ```
  */
 export function args(): string[] {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.args;
+  const deno = getDeno();
+  if (deno) {
+    return deno.args;
   }
   if (IS_BUN) {
-    return (globalThis as any).process?.argv?.slice(2) || [];
+    const process = getProcess();
+    return process?.argv?.slice(2) || [];
   }
   return [];
 }
@@ -42,11 +45,15 @@ export function args(): string[] {
  * ```
  */
 export function exit(code: number): never {
-  if (IS_DENO) {
-    (globalThis as any).Deno.exit(code);
+  const deno = getDeno();
+  if (deno) {
+    deno.exit(code);
   }
   if (IS_BUN) {
-    (globalThis as any).process?.exit(code);
+    const process = getProcess();
+    if (process?.exit) {
+      process.exit(code);
+    }
   }
   throw new Error("不支持的运行时环境");
 }

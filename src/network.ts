@@ -3,7 +3,9 @@
  * 提供统一的网络操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import type { BunServer, BunSocket, BunWebSocket } from "./types.ts";
+import { getBun, getDeno } from "./utils.ts";
 
 /**
  * HTTP 服务器选项
@@ -26,7 +28,7 @@ export interface ServeHandle {
 
 // Bun 环境下，存储 server 实例以便 upgradeWebSocket 使用
 // 这是一个全局存储，用于在 serve() 和 upgradeWebSocket() 之间共享 server 实例
-let bunServerInstance: any = null;
+let bunServerInstance: BunServer | null = null;
 
 // Bun 环境下，存储待处理的 WebSocket 适配器
 // 当 upgradeWebSocket 被调用时，我们存储适配器，然后在 websocket 处理器中设置实际的 WebSocket
@@ -36,9 +38,15 @@ const pendingBunAdapters = new Map<string, WebSocketAdapter>();
  * WebSocket 适配器类
  * 在 Bun 环境下提供 addEventListener API，兼容 Deno 的 WebSocket API
  */
+/**
+ * WebSocket 事件类型
+ */
+type WebSocketEvent = MessageEvent | CloseEvent | Event;
+
 class WebSocketAdapter {
   private _ws: WebSocket | null = null;
-  private listeners: Map<string, Set<(event: any) => void>> = new Map();
+  private listeners: Map<string, Set<(event: WebSocketEvent) => void>> =
+    new Map();
   private pendingOperations: Array<() => void> = [];
   // 存储所有已创建的适配器（用于 Bun 环境下的查找）
   public static allAdapters: Set<WebSocketAdapter> = new Set();
@@ -115,7 +123,7 @@ class WebSocketAdapter {
    */
   addEventListener(
     type: string,
-    listener: (event: any) => void,
+    listener: (event: WebSocketEvent) => void,
   ): void {
     if (IS_BUN) {
       // Bun 环境下，使用内部事件系统
@@ -136,7 +144,7 @@ class WebSocketAdapter {
    */
   removeEventListener(
     type: string,
-    listener: (event: any) => void,
+    listener: (event: WebSocketEvent) => void,
   ): void {
     if (IS_BUN) {
       const listeners = this.listeners.get(type);
@@ -155,8 +163,9 @@ class WebSocketAdapter {
 
   /**
    * 触发事件（Bun 环境下使用）
+   * @internal 内部方法，用于触发事件
    */
-  private emit(type: string, event: any): void {
+  emit(type: string, event: WebSocketEvent): void {
     const listeners = this.listeners.get(type);
     if (listeners) {
       for (const listener of listeners) {
@@ -215,6 +224,20 @@ class WebSocketAdapter {
         }
       });
     }
+  }
+
+  /**
+   * 获取内部的 WebSocket 实例（用于查找匹配）
+   */
+  getWebSocket(): WebSocket | null {
+    return this._ws;
+  }
+
+  /**
+   * 检查 WebSocket 是否已设置且可用
+   */
+  isWebSocketReady(): boolean {
+    return this._ws !== null && typeof this._ws.send === "function";
   }
 
   /**
@@ -291,7 +314,7 @@ export interface ConnectOptions {
  */
 export interface StartTlsOptions {
   host?: string;
-  caCerts?: string[];
+  caCerts?: Uint8Array[];
   alpnProtocols?: string[];
 }
 
@@ -328,15 +351,18 @@ export function serve(
     req: Request,
   ) => Response | Promise<Response> | Promise<Response | undefined> | undefined,
 ): ServeHandle {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     // Deno.serve 的签名
     if (typeof options === "function") {
-      const handle = (globalThis as any).Deno.serve(options);
+      const handle = deno.serve(
+        options as (req: Request) => Response | Promise<Response>,
+      );
       // Deno.serve 返回的 handle 可能没有 port 属性，需要从 onListen 回调中获取
       // 但为了兼容性，我们尝试从 handle 中获取
       return {
         ...handle,
-        port: (handle as any).port as number | undefined,
+        port: handle.port as number | undefined,
       };
     }
 
@@ -359,11 +385,18 @@ export function serve(
       },
     };
 
-    const handle = (globalThis as any).Deno.serve(newOptions, handler!);
+    const handle = deno.serve(newOptions, async (req: Request) => {
+      const result = await handler!(req);
+      // 确保返回 Response，而不是 undefined
+      if (result === undefined) {
+        return new Response(null, { status: 404 });
+      }
+      return result;
+    });
 
     // 如果 handle 已经有 port，直接使用
-    if ((handle as any).port !== undefined) {
-      port = (handle as any).port;
+    if (handle.port !== undefined) {
+      port = handle.port;
     }
 
     // 返回一个包装的 handle，确保 port 属性可用
@@ -376,7 +409,7 @@ export function serve(
           return port;
         }
         // 否则尝试从 handle 获取（某些情况下可能立即可用）
-        const handlePort = (handle as any).port;
+        const handlePort = handle.port;
         if (handlePort !== undefined) {
           port = handlePort;
           return port;
@@ -387,28 +420,33 @@ export function serve(
     };
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     // Bun.serve 的签名不同
-    const BunServe = (globalThis as any).Bun.serve;
     if (typeof options === "function") {
-      const server = BunServe({
-        fetch: (req: Request, server: any) => {
+      const server = bun.serve({
+        fetch: async (req: Request, server: BunServer) => {
           // 保存 server 实例以便 upgradeWebSocket 使用
           bunServerInstance = server;
-          return options(req);
+          const result = await options(req);
+          // 确保返回 Response，而不是 undefined
+          if (result === undefined) {
+            return new Response(null, { status: 404 });
+          }
+          return result;
         },
         websocket: {
           // websocket 处理器，用于设置实际的 WebSocket 到适配器
-          message(ws: WebSocket, message: string | Uint8Array) {
+          message(ws: BunWebSocket, message: string | Uint8Array) {
             // 查找对应的适配器并触发消息事件
             // 从所有适配器中查找（因为可能已从 pendingBunAdapters 中移除）
             let adapter = Array.from(WebSocketAdapter.allAdapters).find(
-              (a) => (a as any)._ws === ws,
+              (a) => a.getWebSocket() === ws,
             );
             // 如果没找到，尝试从 pendingBunAdapters 中查找（可能 _ws 还未设置）
             if (!adapter && pendingBunAdapters.size > 0) {
               // 尝试通过 ws.data.adapterId 查找
-              const wsData = (ws as any).data;
+              const wsData = ws.data;
               if (wsData?.adapterId) {
                 adapter = pendingBunAdapters.get(wsData.adapterId);
               }
@@ -418,11 +456,7 @@ export function serve(
               }
               // 如果找到适配器但 _ws 还没有设置，现在设置它
               // 这样可以处理 open 事件没有被触发的情况
-              if (
-                adapter &&
-                (!(adapter as any)._ws ||
-                  typeof (adapter as any)._ws.send !== "function")
-              ) {
+              if (adapter && !adapter.isWebSocketReady()) {
                 adapter.setWebSocket(ws);
                 // 从 pending 中移除
                 const wsUrl = ws.url || "";
@@ -445,7 +479,7 @@ export function serve(
             }
             if (adapter) {
               // 触发 message 事件
-              (adapter as any).emit(
+              adapter.emit(
                 "message",
                 new MessageEvent("message", {
                   data: message,
@@ -453,13 +487,13 @@ export function serve(
               );
             }
           },
-          open(ws: WebSocket) {
+          open(ws: BunWebSocket) {
             // 查找对应的适配器并设置实际的 WebSocket
             let adapter: WebSocketAdapter | undefined;
             let matchedKey: string | undefined;
 
             // 首先尝试通过 ws.data.adapterId 从 pendingBunAdapters 中查找（Bun 的特性）
-            const wsData = (ws as any).data;
+            const wsData = ws.data;
             if (wsData?.adapterId) {
               adapter = pendingBunAdapters.get(wsData.adapterId);
               if (adapter) {
@@ -519,8 +553,7 @@ export function serve(
             if (!adapter && pendingBunAdapters.size > 0) {
               const adapters = Array.from(pendingBunAdapters.values());
               adapter = adapters.find(
-                (a) =>
-                  !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+                (a) => !a.isWebSocketReady(),
               );
               // 找到匹配的 key
               if (adapter) {
@@ -536,8 +569,7 @@ export function serve(
             // 如果还是没找到，尝试从所有适配器中查找
             if (!adapter) {
               adapter = Array.from(WebSocketAdapter.allAdapters).find(
-                (a) =>
-                  !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+                (a) => !a.isWebSocketReady(),
               );
             }
 
@@ -557,15 +589,15 @@ export function serve(
               }
             }
           },
-          close(ws: WebSocket, code?: number, reason?: string) {
+          close(ws: BunWebSocket, code?: number, reason?: string) {
             // 查找对应的适配器并触发关闭事件
             // 从所有适配器中查找（因为可能已从 pendingBunAdapters 中移除）
             let adapter = Array.from(WebSocketAdapter.allAdapters).find(
-              (a) => (a as any)._ws === ws,
+              (a) => a.getWebSocket() === ws,
             );
             // 如果没找到，尝试从 pendingBunAdapters 中查找
             if (!adapter) {
-              const wsData = (ws as any).data;
+              const wsData = ws.data;
               if (wsData?.adapterId) {
                 adapter = pendingBunAdapters.get(wsData.adapterId);
               }
@@ -576,7 +608,7 @@ export function serve(
             }
             if (adapter) {
               // 触发 close 事件
-              (adapter as any).emit(
+              adapter.emit(
                 "close",
                 new CloseEvent("close", {
                   code: code || 1000,
@@ -598,26 +630,31 @@ export function serve(
       };
     }
 
-    const server = BunServe({
+    const server = bun.serve({
       port: options.port ?? 3000,
       hostname: options.host ?? "0.0.0.0", // Bun.serve 使用 hostname，需要转换
-      fetch: (req: Request, server: any) => {
+      fetch: async (req: Request, server: BunServer) => {
         // 保存 server 实例以便 upgradeWebSocket 使用
         bunServerInstance = server;
-        return handler!(req);
+        const result = await handler!(req);
+        // 确保返回 Response，而不是 undefined
+        if (result === undefined) {
+          return new Response(null, { status: 404 });
+        }
+        return result;
       },
       websocket: {
         // websocket 处理器，用于设置实际的 WebSocket 到适配器
-        message(ws: WebSocket, message: string | Uint8Array) {
+        message(ws: BunWebSocket, message: string | Uint8Array) {
           // 查找对应的适配器并触发消息事件
           // 先尝试通过 _ws 查找（已设置实际 WebSocket 的适配器）
           let adapter = Array.from(WebSocketAdapter.allAdapters).find(
-            (a) => (a as any)._ws === ws,
+            (a) => a.getWebSocket() === ws,
           );
           // 如果没找到，尝试从 pendingBunAdapters 中查找（可能 _ws 还未设置）
           if (!adapter && pendingBunAdapters.size > 0) {
             // 尝试通过 ws.data.adapterId 查找
-            const wsData = (ws as any).data;
+            const wsData = ws.data;
             if (wsData?.adapterId) {
               adapter = pendingBunAdapters.get(wsData.adapterId);
             }
@@ -638,11 +675,7 @@ export function serve(
             }
             // 如果找到适配器但 _ws 还没有设置，现在设置它
             // 这样可以处理 open 事件没有被触发的情况
-            if (
-              adapter &&
-              (!(adapter as any)._ws ||
-                typeof (adapter as any)._ws.send !== "function")
-            ) {
+            if (adapter && !adapter.isWebSocketReady()) {
               adapter.setWebSocket(ws);
               // 从 pending 中移除
               const wsUrl = ws.url || "";
@@ -665,7 +698,7 @@ export function serve(
           }
           if (adapter) {
             // 触发 message 事件
-            (adapter as any).emit(
+            adapter.emit(
               "message",
               new MessageEvent("message", {
                 data: message,
@@ -673,13 +706,13 @@ export function serve(
             );
           }
         },
-        open(ws: WebSocket) {
+        open(ws: BunWebSocket) {
           // 查找对应的适配器并设置实际的 WebSocket
           let adapter: WebSocketAdapter | undefined;
           let matchedKey: string | undefined;
 
           // 首先尝试通过 ws.data.adapterId 从 pendingBunAdapters 中查找（Bun 的特性）
-          const wsData = (ws as any).data;
+          const wsData = ws.data;
           if (wsData?.adapterId) {
             adapter = pendingBunAdapters.get(wsData.adapterId);
             if (adapter) {
@@ -746,8 +779,7 @@ export function serve(
           // 如果还是没找到，尝试从所有适配器中查找
           if (!adapter) {
             adapter = Array.from(WebSocketAdapter.allAdapters).find(
-              (a) =>
-                !(a as any)._ws || typeof (a as any)._ws.send !== "function",
+              (a) => !a.isWebSocketReady(),
             );
           }
 
@@ -767,15 +799,15 @@ export function serve(
             }
           }
         },
-        close(ws: WebSocket, code?: number, reason?: string) {
+        close(ws: BunWebSocket, code?: number, reason?: string) {
           // 查找对应的适配器并触发关闭事件
           // 从所有适配器中查找（因为可能已从 pendingBunAdapters 中移除）
           let adapter = Array.from(WebSocketAdapter.allAdapters).find(
-            (a) => (a as any)._ws === ws,
+            (a) => a.getWebSocket() === ws,
           );
           // 如果没找到，尝试从 pendingBunAdapters 中查找
           if (!adapter) {
-            const wsData = (ws as any).data;
+            const wsData = ws.data;
             if (wsData?.adapterId) {
               adapter = pendingBunAdapters.get(wsData.adapterId);
             }
@@ -786,7 +818,7 @@ export function serve(
           }
           if (adapter) {
             // 触发 close 事件
-            (adapter as any).emit(
+            adapter.emit(
               "close",
               new CloseEvent("close", {
                 code: code || 1000,
@@ -830,8 +862,9 @@ export function upgradeWebSocket(
   request: Request,
   options?: UpgradeWebSocketOptions,
 ): UpgradeWebSocketResult {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.upgradeWebSocket(request, options);
+  const deno = getDeno();
+  if (deno) {
+    return deno.upgradeWebSocket(request, options);
   }
 
   if (IS_BUN) {
@@ -846,7 +879,10 @@ export function upgradeWebSocket(
     // 构建升级选项
     // 在 Bun 中，可以通过 data 参数传递自定义数据，在 websocket.open 中通过 ws.data 访问
     const adapterId = request.url; // 使用 URL 作为适配器标识
-    const upgradeOptions: any = {
+    const upgradeOptions: {
+      data: { adapterId: string };
+      headers?: Record<string, string>;
+    } = {
       data: {
         adapterId: adapterId, // 传递适配器 ID，用于在 open 事件中匹配
       },
@@ -863,7 +899,7 @@ export function upgradeWebSocket(
     if (adapter) {
       // 如果已经存在，直接返回（避免重复升级）
       return {
-        socket: adapter as any as WebSocket,
+        socket: adapter as unknown as WebSocket,
         response: undefined,
       };
     }
@@ -918,7 +954,7 @@ export function upgradeWebSocket(
     // 这样 open 事件才能被正确触发
     // 注意：直接返回 adapter，不要进行类型断言，让 TypeScript 处理类型
     return {
-      socket: adapter as any as WebSocket, // 返回适配器，但类型为 WebSocket
+      socket: adapter as unknown as WebSocket, // 返回适配器，但类型为 WebSocket
       response: undefined, // Bun 会自动处理 101 响应
     };
   }
@@ -932,22 +968,24 @@ export function upgradeWebSocket(
  * @returns TCP 连接句柄
  */
 export async function connect(options: ConnectOptions): Promise<TcpConn> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     // Deno.connect 使用 hostname，需要转换
-    return await (globalThis as any).Deno.connect({
+    return await deno.connect({
       hostname: options.host,
       port: options.port,
       transport: options.transport,
     });
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     return new Promise<TcpConn>((resolve, reject) => {
       // 创建 ReadableStream 和 WritableStream 的控制器
       let readableController:
         | ReadableStreamDefaultController<Uint8Array>
         | null = null;
-      let socket: any = null;
+      let socket: BunSocket | null = null;
 
       const readable = new ReadableStream({
         start(controller) {
@@ -957,83 +995,95 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
 
       const writable = new WritableStream({
         write(chunk) {
-          if (socket) {
+          if (socket && typeof socket.write === "function") {
             const written = socket.write(chunk);
             // Bun.write 是同步的，但可能返回 -1 表示需要等待
             if (written === -1) {
               // 等待 drain 事件
               return new Promise<void>((resolveDrain) => {
                 const drainHandler = () => {
-                  socket.off("drain", drainHandler);
+                  if (socket && typeof socket.off === "function") {
+                    socket.off("drain", drainHandler);
+                  }
                   resolveDrain();
                 };
-                socket.on("drain", drainHandler);
+                if (socket && typeof socket.on === "function") {
+                  socket.on("drain", drainHandler);
+                }
               });
             }
           }
         },
         close() {
-          if (socket) {
+          if (socket && typeof socket.end === "function") {
             socket.end();
           }
         },
       });
 
       // Bun.connect 使用 hostname，需要转换
-      (globalThis as any).Bun.connect({
-        hostname: options.host,
-        port: options.port,
-        socket: {
-          open(sock: any) {
-            socket = sock;
-            // 连接成功，解析 Promise
-            resolve({
-              localAddr: {
-                host: sock.localAddress || "0.0.0.0",
-                port: sock.localPort || 0,
-                transport: "tcp",
-              },
-              remoteAddr: {
-                host: sock.remoteAddress || options.host,
-                port: sock.remotePort || options.port,
-                transport: "tcp",
-              },
-              rid: (sock as any).fd || 0,
-              readable,
-              writable,
-              close() {
-                sock.terminate();
-              },
-              closeWrite() {
-                sock.end();
-              },
-            });
+      try {
+        bun.connect({
+          hostname: options.host,
+          port: options.port,
+          socket: {
+            open(sock: BunSocket) {
+              socket = sock;
+              // 连接成功，解析 Promise
+              resolve({
+                localAddr: {
+                  host: sock.localAddress || "0.0.0.0",
+                  port: sock.localPort || 0,
+                  transport: "tcp",
+                },
+                remoteAddr: {
+                  host: sock.remoteAddress || options.host,
+                  port: sock.remotePort || options.port,
+                  transport: "tcp",
+                },
+                rid: sock.fd || 0,
+                readable,
+                writable,
+                close() {
+                  if (typeof sock.terminate === "function") {
+                    sock.terminate();
+                  }
+                },
+                closeWrite() {
+                  if (typeof sock.end === "function") {
+                    sock.end();
+                  }
+                },
+              });
+            },
+            data(_sock: BunSocket, data: Uint8Array) {
+              // 将数据推送到 ReadableStream
+              if (readableController) {
+                readableController.enqueue(data);
+              }
+            },
+            close(_sock: BunSocket) {
+              // 关闭 ReadableStream
+              if (readableController) {
+                readableController.close();
+              }
+            },
+            error(_sock: BunSocket, error: Error) {
+              // 错误处理
+              if (readableController) {
+                readableController.error(error);
+              }
+              reject(error);
+            },
+            connectError(_sock: BunSocket, error: Error) {
+              // 连接错误
+              reject(error);
+            },
           },
-          data(_sock: any, data: Uint8Array) {
-            // 将数据推送到 ReadableStream
-            if (readableController) {
-              readableController.enqueue(data);
-            }
-          },
-          close(_sock: any) {
-            // 关闭 ReadableStream
-            if (readableController) {
-              readableController.close();
-            }
-          },
-          error(_sock: any, error: Error) {
-            // 错误处理
-            if (readableController) {
-              readableController.error(error);
-            }
-            reject(error);
-          },
-          connectError(_sock: any, error: Error) {
-            // 连接错误
-            reject(error);
-          },
-        },
-      }).catch(reject);
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -1050,7 +1100,8 @@ export async function startTls(
   conn: TcpConn,
   options?: StartTlsOptions,
 ): Promise<TcpConn> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     // Deno.startTls 需要 Deno.TcpConn 类型
     // 我们需要将我们的 TcpConn 转换为 Deno.TcpConn
     // 由于类型不兼容，这里需要类型断言
@@ -1058,17 +1109,18 @@ export async function startTls(
     const tlsOptions = options
       ? {
         hostname: options.host,
-        caCerts: options.caCerts,
+        caCerts: options.caCerts, // caCerts 已经是 Uint8Array[]
         alpnProtocols: options.alpnProtocols,
       }
       : undefined;
-    return (await (globalThis as any).Deno.startTls(
-      conn as any,
+    return (await deno.startTls(
+      conn as unknown as Parameters<typeof deno.startTls>[0],
       tlsOptions,
     )) as TcpConn;
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     // Bun 不支持升级现有连接，需要关闭原连接并创建新的 TLS 连接
     // 使用 Bun.connect 直接创建 TLS 连接
 
@@ -1078,7 +1130,7 @@ export async function startTls(
     // 创建 ReadableStream 和 WritableStream 的控制器
     let readableController: ReadableStreamDefaultController<Uint8Array> | null =
       null;
-    let socket: any = null;
+    let socket: BunSocket | null = null;
 
     const readable = new ReadableStream({
       start(controller) {
@@ -1088,86 +1140,95 @@ export async function startTls(
 
     const writable = new WritableStream({
       write(chunk) {
-        if (socket) {
+        if (socket && typeof socket.write === "function") {
           const written = socket.write(chunk);
           if (written === -1) {
             return new Promise<void>((resolveDrain) => {
               const drainHandler = () => {
-                socket.off("drain", drainHandler);
+                if (socket && typeof socket.off === "function") {
+                  socket.off("drain", drainHandler);
+                }
                 resolveDrain();
               };
-              socket.on("drain", drainHandler);
+              if (socket && typeof socket.on === "function") {
+                socket.on("drain", drainHandler);
+              }
             });
           }
         }
       },
       close() {
-        if (socket) {
+        if (socket && typeof socket.end === "function") {
           socket.end();
         }
       },
     });
 
     // 构建 TLS 选项
-    const tlsOptions: any = options?.caCerts
-      ? { rejectUnauthorized: false }
-      : true;
-    if (options?.alpnProtocols) {
-      tlsOptions.alpnProtocols = options.alpnProtocols;
-    }
+    const tlsOptions: { ca?: Uint8Array[] } | undefined = options?.caCerts
+      ? { ca: options.caCerts }
+      : undefined;
 
     return new Promise((resolve, reject) => {
       // Bun.connect 使用 hostname，需要转换
-      (globalThis as any).Bun.connect({
-        hostname: conn.remoteAddr.host,
-        port: conn.remoteAddr.port,
-        tls: tlsOptions,
-        socket: {
-          open(sock: any) {
-            socket = sock;
-            resolve({
-              localAddr: {
-                host: sock.localAddress || "0.0.0.0",
-                port: sock.localPort || 0,
-                transport: "tcp",
-              },
-              remoteAddr: {
-                host: sock.remoteAddress || conn.remoteAddr.host,
-                port: sock.remotePort || conn.remoteAddr.port,
-                transport: "tcp",
-              },
-              rid: (sock as any).fd || 0,
-              readable,
-              writable,
-              close() {
-                sock.terminate();
-              },
-              closeWrite() {
-                sock.end();
-              },
-            });
+      try {
+        bun.connect({
+          hostname: conn.remoteAddr.host,
+          port: conn.remoteAddr.port,
+          tls: tlsOptions,
+          socket: {
+            open(sock: BunSocket) {
+              socket = sock;
+              resolve({
+                localAddr: {
+                  host: sock.localAddress || "0.0.0.0",
+                  port: sock.localPort || 0,
+                  transport: "tcp",
+                },
+                remoteAddr: {
+                  host: sock.remoteAddress || conn.remoteAddr.host,
+                  port: sock.remotePort || conn.remoteAddr.port,
+                  transport: "tcp",
+                },
+                rid: sock.fd || 0,
+                readable,
+                writable,
+                close() {
+                  if (typeof sock.terminate === "function") {
+                    sock.terminate();
+                  }
+                },
+                closeWrite() {
+                  if (typeof sock.end === "function") {
+                    sock.end();
+                  }
+                },
+              });
+            },
+            data(_sock: BunSocket, data: Uint8Array) {
+              if (readableController) {
+                readableController.enqueue(data);
+              }
+            },
+            close(_sock: BunSocket) {
+              if (readableController) {
+                readableController.close();
+              }
+            },
+            error(_sock: BunSocket, error: Error) {
+              if (readableController) {
+                readableController.error(error);
+              }
+              reject(error);
+            },
+            connectError(_sock: BunSocket, error: Error) {
+              reject(error);
+            },
           },
-          data(_sock: any, data: Uint8Array) {
-            if (readableController) {
-              readableController.enqueue(data);
-            }
-          },
-          close(_sock: any) {
-            if (readableController) {
-              readableController.close();
-            }
-          },
-          error(_sock: any, error: Error) {
-            if (readableController) {
-              readableController.error(error);
-            }
-            reject(error);
-          },
-          connectError(_sock: any, error: Error) {
-            reject(error);
-          },
-        },
-      });
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 

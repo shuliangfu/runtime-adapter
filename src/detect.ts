@@ -14,17 +14,19 @@ export type Runtime = "deno" | "bun" | "unknown";
  */
 export function detectRuntime(): Runtime {
   // 检测 Deno（需要检查是否是真实的 Deno，而不是 polyfill）
+  const deno =
+    (globalThis as unknown as { Deno?: { version?: { deno?: string } } }).Deno;
   if (
-    typeof (globalThis as any).Deno !== "undefined" &&
-    (globalThis as any).Deno.version &&
-    (globalThis as any).Deno.version.deno !== "polyfill"
+    typeof deno !== "undefined" &&
+    deno.version &&
+    deno.version.deno !== "polyfill"
   ) {
     return "deno";
   }
 
   // 检测 Bun
-  // 使用 globalThis 访问，避免类型检查错误
-  if (typeof globalThis !== "undefined" && (globalThis as any).Bun) {
+  const bun = (globalThis as unknown as { Bun?: unknown }).Bun;
+  if (typeof globalThis !== "undefined" && bun) {
     return "bun";
   }
 

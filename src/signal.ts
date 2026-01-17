@@ -3,7 +3,8 @@
  * 提供统一的信号处理接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getDeno, getProcess } from "./utils.ts";
 
 /**
  * 信号类型
@@ -35,10 +36,14 @@ export function addSignalListener(
   signal: Signal,
   handler: SignalHandler,
 ): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.addSignalListener(signal, handler);
+  const deno = getDeno();
+  if (deno) {
+    deno.addSignalListener(signal, handler);
   } else if (IS_BUN) {
-    (globalThis as any).process?.on(signal, handler);
+    const process = getProcess();
+    if (process?.on) {
+      process.on(signal, handler);
+    }
   }
 }
 
@@ -64,9 +69,13 @@ export function removeSignalListener(
   signal: Signal,
   handler: SignalHandler,
 ): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.removeSignalListener(signal, handler);
+  const deno = getDeno();
+  if (deno) {
+    deno.removeSignalListener(signal, handler);
   } else if (IS_BUN) {
-    (globalThis as any).process?.off(signal, handler);
+    const process = getProcess();
+    if (process?.off) {
+      process.off(signal, handler);
+    }
   }
 }

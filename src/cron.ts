@@ -16,16 +16,43 @@ export interface CronOptions {
   timezone?: string;
   /** 信号控制器（用于取消任务） */
   signal?: AbortSignal;
+  /** 自定义错误处理函数（可选） */
+  onError?: (error: unknown) => void;
 }
 
 /**
  * Cron 任务句柄
+ *
+ * @example
+ * ```typescript
+ * const handle = cron("*\/5 * * * * *", () => {
+ *   console.log("每 5 秒执行");
+ * });
+ *
+ * // 关闭任务（两种方式等价）
+ * handle.close();
+ * // 或
+ * handle.stop();
+ *
+ * // 检查任务是否已关闭
+ * if (handle.isClosed) {
+ *   console.log("任务已关闭");
+ * }
+ * ```
  */
 export interface CronHandle {
   /** 取消任务 */
   close(): void;
-  /** AbortController，用于控制任务取消 */
+  /**
+   * 停止任务（close 的别名）
+   *
+   * @see close
+   */
+  stop(): void;
+  /** AbortController 的信号，用于控制任务取消 */
   signal: AbortSignal;
+  /** 任务是否已关闭（只读） */
+  readonly isClosed: boolean;
 }
 
 /**
@@ -51,8 +78,14 @@ export function cron(
       : new AbortController()) // 如果传入的是 AbortSignal，创建新的 controller
     : new AbortController();
 
+  // node-cron 的选项类型
+  interface NodeCronOptions {
+    scheduled?: boolean;
+    timezone?: string;
+  }
+
   // 配置时区（如果提供）
-  const cronOptions: any = {
+  const cronOptions: NodeCronOptions = {
     scheduled: true,
     timezone: options?.timezone || "UTC",
   };
@@ -69,19 +102,39 @@ export function cron(
 
       // 处理异步 handler
       Promise.resolve(handler()).catch((error) => {
-        console.error("Cron 任务执行失败:", error);
+        // 使用自定义错误处理函数（如果提供），否则使用默认错误处理
+        if (options?.onError) {
+          options.onError(error);
+        } else {
+          console.error("Cron 任务执行失败:", error);
+        }
       });
     },
     cronOptions,
   );
 
+  // 任务关闭状态
+  let isClosed = false;
+
+  // 关闭处理函数（stop 和 close 共享同一个实现，避免代码重复）
+  const closeHandler = () => {
+    // 避免重复关闭
+    if (isClosed) {
+      return;
+    }
+    isClosed = true;
+    // 停止 cron 任务
+    task.stop();
+    // 取消 AbortController
+    controller.abort();
+  };
+
   return {
     signal: controller.signal,
-    close() {
-      // 停止 cron 任务
-      task.stop();
-      // 取消 AbortController
-      controller.abort();
+    close: closeHandler,
+    stop: closeHandler, // stop 是 close 的别名，直接引用同一个函数
+    get isClosed() {
+      return isClosed;
     },
   };
 }

@@ -3,7 +3,8 @@
  * 提供统一的路径操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getDeno, getProcess } from "./utils.ts";
 
 /**
  * 拼接路径
@@ -137,14 +138,16 @@ export function extname(path: string): string {
 export function resolve(...paths: string[]): string {
   // 获取当前工作目录
   let base = ".";
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      base = (globalThis as any).Deno.cwd();
+      base = deno.cwd();
     } catch {
       base = ".";
     }
   } else if (IS_BUN) {
-    base = (globalThis as any).process?.cwd() || ".";
+    const process = getProcess();
+    base = process?.cwd() || ".";
   }
 
   // 如果第一个路径是绝对路径，直接使用
@@ -285,7 +288,9 @@ export function normalize(path: string): string {
 
   // 处理根目录和空路径
   if (result === "") {
-    return isAbs || isWindowsAbs ? (isWindowsAbs ? windowsDrive + "/" : "/") : ".";
+    return isAbs || isWindowsAbs
+      ? (isWindowsAbs ? windowsDrive + "/" : "/")
+      : ".";
   }
 
   // 规范化多个斜杠

@@ -70,9 +70,12 @@ describe("WebSocket API", () => {
 
                 // 测试 addEventListener
                 let messageReceived = false;
-                socket.addEventListener("message", (event: MessageEvent) => {
-                  messageReceived = true;
-                  expect(event.data).toBe("Hello from client");
+                socket.addEventListener("message", (event) => {
+                  // 类型守卫：确保是 MessageEvent
+                  if (event instanceof MessageEvent) {
+                    messageReceived = true;
+                    expect(event.data).toBe("Hello from client");
+                  }
                 });
 
                 // 在连接建立后发送消息
@@ -161,9 +164,12 @@ describe("WebSocket API", () => {
 
                 // 测试 addEventListener（Bun 环境下应该通过适配器支持）
                 let messageReceived = false;
-                socket.addEventListener("message", (event: MessageEvent) => {
-                  messageReceived = true;
-                  expect(event.data).toBe("Hello from client");
+                socket.addEventListener("message", (event) => {
+                  // 类型守卫：确保是 MessageEvent
+                  if (event instanceof MessageEvent) {
+                    messageReceived = true;
+                    expect(event.data).toBe("Hello from client");
+                  }
                 });
 
                 // 在连接建立后发送消息

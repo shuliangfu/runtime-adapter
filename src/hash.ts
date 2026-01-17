@@ -5,6 +5,7 @@
 
 import { IS_BUN, IS_DENO } from "./detect.ts";
 import { readFile, readFileSync } from "./file.ts";
+import type { CryptoModule, RequireFunction } from "./types.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeCrypto from "node:crypto";
 
@@ -127,17 +128,24 @@ export function hashSync(
     : "sha256";
 
   // 获取 Node.js 兼容的 crypto 模块
-  let crypto: any = null;
+  let crypto: CryptoModule | null = null;
 
   if (IS_DENO) {
     // Deno 中需要通过 globalThis.require 获取
-    const requireFn = (globalThis as any).require;
+    const requireFn =
+      (globalThis as unknown as { require?: RequireFunction }).require;
     if (requireFn) {
-      crypto = requireFn("node:crypto");
+      const cryptoModule = requireFn("node:crypto");
+      if (
+        cryptoModule &&
+        typeof (cryptoModule as CryptoModule).createHash === "function"
+      ) {
+        crypto = cryptoModule as CryptoModule;
+      }
     }
   } else if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 crypto 模块
-    crypto = nodeCrypto;
+    crypto = nodeCrypto as unknown as CryptoModule;
   }
 
   if (!crypto || typeof crypto.createHash !== "function") {
@@ -147,7 +155,9 @@ export function hashSync(
   }
 
   // 使用 crypto 模块计算哈希
-  const hash = crypto.createHash(nodeAlgorithm);
+  const hash = crypto.createHash(
+    nodeAlgorithm as "sha256" | "sha512" | "sha1" | "md5",
+  );
   hash.update(bytes);
   return hash.digest("hex");
 }

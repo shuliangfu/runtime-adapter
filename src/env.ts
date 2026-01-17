@@ -3,7 +3,8 @@
  * 提供统一的环境变量操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getDeno, getProcess } from "./utils.ts";
 
 /**
  * 获取环境变量值
@@ -11,13 +12,15 @@ import { IS_BUN, IS_DENO } from "./detect.ts";
  * @returns 环境变量值，如果不存在则返回 undefined
  */
 export function getEnv(key: string): string | undefined {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.env.get(key);
+  const deno = getDeno();
+  if (deno) {
+    return deno.env.get(key);
   }
 
   if (IS_BUN) {
-    // Bun 环境下使用全局 (globalThis as any).process（类型检查时会有警告，但运行时正常）
-    return (globalThis as any).process?.env?.[key];
+    // Bun 环境下使用 process.env
+    const process = getProcess();
+    return process?.env?.[key];
   }
 
   throw new Error("不支持的运行时环境");
@@ -29,15 +32,20 @@ export function getEnv(key: string): string | undefined {
  * @param value 环境变量值
  */
 export function setEnv(key: string, value: string): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.env.set(key, value);
+  const deno = getDeno();
+  if (deno) {
+    deno.env.set(key, value);
     return;
   }
 
   if (IS_BUN) {
-    (globalThis as any).process = (globalThis as any).process || {};
-    (globalThis as any).process.env = (globalThis as any).process.env || {};
-    (globalThis as any).process.env[key] = value;
+    const process = getProcess();
+    if (process) {
+      if (!process.env) {
+        process.env = {};
+      }
+      process.env[key] = value;
+    }
     return;
   }
 
@@ -49,14 +57,16 @@ export function setEnv(key: string, value: string): void {
  * @param key 环境变量键名
  */
 export function deleteEnv(key: string): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.env.delete(key);
+  const deno = getDeno();
+  if (deno) {
+    deno.env.delete(key);
     return;
   }
 
   if (IS_BUN) {
-    if ((globalThis as any).process?.env) {
-      delete (globalThis as any).process.env[key];
+    const process = getProcess();
+    if (process?.env) {
+      delete process.env[key];
     }
     return;
   }
@@ -69,15 +79,14 @@ export function deleteEnv(key: string): void {
  * @returns 环境变量对象
  */
 export function getEnvAll(): Record<string, string> {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.env.toObject();
+  const deno = getDeno();
+  if (deno) {
+    return deno.env.toObject();
   }
 
   if (IS_BUN) {
-    return { ...((globalThis as any).process?.env || {}) } as Record<
-      string,
-      string
-    >;
+    const process = getProcess();
+    return { ...(process?.env || {}) } as Record<string, string>;
   }
 
   throw new Error("不支持的运行时环境");
@@ -89,12 +98,14 @@ export function getEnvAll(): Record<string, string> {
  * @returns 是否存在
  */
 export function hasEnv(key: string): boolean {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.env.has(key);
+  const deno = getDeno();
+  if (deno) {
+    return deno.env.has(key);
   }
 
   if (IS_BUN) {
-    return key in ((globalThis as any).process?.env || {});
+    const process = getProcess();
+    return key in (process?.env || {});
   }
 
   throw new Error("不支持的运行时环境");

@@ -3,7 +3,8 @@
  * 提供统一的进程和命令执行接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getBun, getDeno } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeChildProcess from "node:child_process";
 
@@ -55,8 +56,10 @@ export function createCommand(
   command: string,
   options?: CommandOptions,
 ): CommandProcess {
-  if (IS_DENO) {
-    const cmd = new (globalThis as any).Deno.Command(command, {
+  const deno = getDeno();
+  if (deno) {
+    const Command = deno.Command;
+    const cmd = new Command(command, {
       args: options?.args,
       cwd: options?.cwd,
       env: options?.env,
@@ -113,9 +116,10 @@ export function createCommand(
     };
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     // Bun 使用 Bun.spawn
-    const proc = (globalThis as any).Bun.spawn([
+    const proc = bun.spawn([
       command,
       ...(options?.args || []),
     ], {
@@ -204,9 +208,11 @@ export function execCommandSync(
   args: string[] = [],
   options?: { cwd?: string; env?: Record<string, string> },
 ): string {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     // Deno 使用 Command.outputSync()
-    const cmd = new (globalThis as any).Deno.Command(command, {
+    const Command = deno.Command;
+    const cmd = new Command(command, {
       args,
       cwd: options?.cwd,
       env: options?.env,
@@ -233,19 +239,21 @@ export function execCommandSync(
         stdio: "pipe",
       });
       return typeof result === "string" ? result : String(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 如果是我们抛出的错误，直接抛出
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       if (
-        error.message && (
-          error.message.includes("require 不可用") ||
-          error.message.includes("execFileSync 不可用")
-        )
+        errorMessage.includes("require 不可用") ||
+        errorMessage.includes("execFileSync 不可用")
       ) {
         throw error;
       }
       // 否则是命令执行错误
-      const errorMsg = error?.stderr?.toString() || error?.message ||
-        String(error);
+      const stderr = (error as { stderr?: { toString(): string } })?.stderr
+        ?.toString();
+      const errorMsg = stderr || errorMessage;
       throw new Error(
         `命令执行失败: ${command} ${args.join(" ")}\n${errorMsg}`,
       );

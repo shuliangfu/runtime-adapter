@@ -3,7 +3,8 @@
  * 提供统一的终端操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeFs from "node:fs";
 
@@ -12,12 +13,14 @@ import * as nodeFs from "node:fs";
  * @returns 是否为终端
  */
 export function isTerminal(): boolean {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.stdout.isTerminal();
+  const deno = getDeno();
+  if (deno) {
+    return deno.stdout.isTerminal();
   }
 
   if (IS_BUN) {
-    return (globalThis as any).process?.stdout?.isTTY ?? false;
+    const process = getProcess();
+    return process?.stdout?.isTTY ?? false;
   }
 
   return false;
@@ -28,12 +31,14 @@ export function isTerminal(): boolean {
  * @returns 是否为终端
  */
 export function isStderrTerminal(): boolean {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.stderr.isTerminal();
+  const deno = getDeno();
+  if (deno) {
+    return deno.stderr.isTerminal();
   }
 
   if (IS_BUN) {
-    return (globalThis as any).process?.stderr?.isTTY ?? false;
+    const process = getProcess();
+    return process?.stderr?.isTTY ?? false;
   }
 
   return false;
@@ -44,8 +49,9 @@ export function isStderrTerminal(): boolean {
  * @returns 标准输出流
  */
 export function getStdout(): WritableStream<Uint8Array> {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.stdout.writable;
+  const deno = getDeno();
+  if (deno) {
+    return deno.stdout.writable;
   }
 
   if (IS_BUN) {
@@ -53,7 +59,8 @@ export function getStdout(): WritableStream<Uint8Array> {
     return new WritableStream({
       write(chunk) {
         return new Promise((resolve, reject) => {
-          const stdout = (globalThis as any).process?.stdout;
+          const process = getProcess();
+          const stdout = process?.stdout;
           if (!stdout) {
             reject(new Error("标准输出不可用"));
             return;
@@ -75,8 +82,9 @@ export function getStdout(): WritableStream<Uint8Array> {
  * @returns 标准错误输出流
  */
 export function getStderr(): WritableStream<Uint8Array> {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.stderr.writable;
+  const deno = getDeno();
+  if (deno) {
+    return deno.stderr.writable;
   }
 
   if (IS_BUN) {
@@ -84,7 +92,8 @@ export function getStderr(): WritableStream<Uint8Array> {
     return new WritableStream({
       write(chunk) {
         return new Promise((resolve, reject) => {
-          const stderr = (globalThis as any).process?.stderr;
+          const process = getProcess();
+          const stderr = process?.stderr;
           if (!stderr) {
             reject(new Error("标准错误输出不可用"));
             return;
@@ -106,13 +115,15 @@ export function getStderr(): WritableStream<Uint8Array> {
  * @param data 要写入的数据
  */
 export function writeStdoutSync(data: Uint8Array): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.stdout.writeSync(data);
+  const deno = getDeno();
+  if (deno) {
+    deno.stdout.writeSync(data);
     return;
   }
 
   if (IS_BUN) {
-    const stdout = (globalThis as any).process?.stdout;
+    const process = getProcess();
+    const stdout = process?.stdout;
     if (stdout) {
       // 使用文件描述符 1（标准输出）或 stdout.fd
       const fd = stdout.fd !== undefined ? stdout.fd : 1;
@@ -133,18 +144,32 @@ export function writeStdoutSync(data: Uint8Array): void {
 export async function readStdin(
   buffer: Uint8Array,
 ): Promise<number | null> {
-  if (IS_DENO) {
-    return await (globalThis as any).Deno.stdin.read(buffer);
+  const deno = getDeno();
+  if (deno) {
+    // Deno.stdin.readable 是一个 ReadableStream，使用 reader 读取
+    const reader = deno.stdin.readable.getReader();
+    try {
+      const result = await reader.read();
+      if (result.done) {
+        return null;
+      }
+      const len = Math.min(result.value.length, buffer.length);
+      buffer.set(result.value.subarray(0, len));
+      return len;
+    } finally {
+      reader.releaseLock();
+    }
   }
 
   if (IS_BUN) {
-    const stdin = (globalThis as any).process?.stdin;
+    const process = getProcess();
+    const stdin = process?.stdin;
     if (!stdin) {
       return null;
     }
     // Bun 使用 Node.js 兼容的流
     return new Promise((resolve) => {
-      stdin.once("data", (chunk: any) => {
+      stdin.once("data", (chunk: Uint8Array) => {
         // chunk 可能是 Buffer 或 Uint8Array
         const data = chunk instanceof Uint8Array
           ? chunk
@@ -175,9 +200,13 @@ export function setStdinRaw(
   mode: boolean,
   options?: { cbreak?: boolean },
 ): boolean {
-  if (IS_DENO) {
-    const stdin = (globalThis as any).Deno.stdin;
-    if (stdin.setRaw) {
+  const deno = getDeno();
+  if (deno) {
+    const stdin = deno.stdin as unknown as {
+      setRaw?: (mode: boolean, options?: { cbreak?: boolean }) => void;
+    };
+    // Deno.stdin 可能没有 setRaw 方法，需要类型检查
+    if (typeof stdin.setRaw === "function") {
       stdin.setRaw(mode, options);
       return true;
     }
@@ -197,13 +226,15 @@ export function setStdinRaw(
  * @param data 要写入的数据
  */
 export function writeStderrSync(data: Uint8Array): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.stderr.writeSync(data);
+  const deno = getDeno();
+  if (deno) {
+    deno.stderr.writeSync(data);
     return;
   }
 
   if (IS_BUN) {
-    const stderr = (globalThis as any).process?.stderr;
+    const process = getProcess();
+    const stderr = process?.stderr;
     if (stderr) {
       // 使用文件描述符 2（标准错误输出）或 stderr.fd
       const fd = stderr.fd !== undefined ? stderr.fd : 2;
@@ -221,12 +252,14 @@ export function writeStderrSync(data: Uint8Array): void {
  * @returns 是否为终端
  */
 export function isStdinTerminal(): boolean {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.stdin.isTerminal();
+  const deno = getDeno();
+  if (deno) {
+    return deno.stdin.isTerminal();
   }
 
   if (IS_BUN) {
-    return (globalThis as any).process?.stdin?.isTTY ?? false;
+    const process = getProcess();
+    return process?.stdin?.isTTY ?? false;
   }
 
   return false;

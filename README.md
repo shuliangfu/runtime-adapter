@@ -15,59 +15,97 @@
 
 ## ✨ 特性
 
-| 特性 | 说明 |
-|------|------|
-| 🔍 **运行时自动检测** | 自动检测当前运行环境（Deno / Bun） |
-| 📁 **文件系统 API 适配** | 统一的文件读写、目录操作接口（支持同步和异步） |
-| 🌐 **网络 API 适配** | HTTP 服务器、WebSocket、TCP/TLS 连接 |
-| 🔐 **环境变量 API 适配** | 统一的环境变量操作接口 |
-| ⚙️ **进程/命令 API 适配** | 统一的命令执行接口（支持同步和异步） |
-| 📊 **进程信息 API 适配** | 进程 ID、平台、架构、版本信息 |
-| 🔧 **进程工具 API 适配** | 命令行参数、程序退出 |
-| 📡 **信号处理 API 适配** | 操作系统信号监听和处理 |
-| 💻 **终端 API 适配** | TTY 检测、标准输入输出流、同步写入、原始模式 |
-| ⏰ **定时任务 API 适配** | Cron 定时任务（统一使用 `node-cron`，支持秒级任务） |
-| 🛤️ **路径操作 API 适配** | 路径拼接、解析、规范化、相对路径计算 |
-| 🔐 **文件哈希 API 适配** | 文件和数据哈希计算（支持同步和异步，SHA-256、SHA-512、SHA-1、MD5） |
-| 📊 **系统信息 API 适配** | 内存、CPU、磁盘使用情况、系统负载、系统信息（支持同步和异步） |
+- **运行时自动检测**：
+  - 自动检测当前运行环境（Deno / Bun）
+  - 提供运行时类型定义和常量
+- **完全类型安全**：
+  - 所有 API 都有完整的 TypeScript 类型定义
+  - 零 `any` 类型，使用类型守卫和明确的接口定义
+  - 运行时 API 访问通过类型安全的工具函数
+  - 完善的类型定义覆盖 Deno 和 Bun 的所有运行时 API
+- **文件系统 API 适配**：
+  - 统一的文件读写、目录操作接口
+  - 支持同步和异步操作
+  - 文件监控、目录遍历、临时文件/目录
+- **网络 API 适配**：
+  - HTTP 服务器（自动适配 Deno 和 Bun）
+  - WebSocket 升级（统一 API，自动适配）
+  - TCP/TLS 连接
+- **环境变量 API 适配**：
+  - 统一的环境变量操作接口
+  - 支持获取、设置、删除、检查
+- **进程/命令 API 适配**：
+  - 统一的命令执行接口
+  - 支持同步和异步执行
+  - 进程管理（PID、状态、终止）
+- **进程信息 API 适配**：
+  - 进程 ID、平台、架构、版本信息
+  - 运行时版本检测
+- **进程工具 API 适配**：
+  - 命令行参数获取
+  - 程序退出
+- **信号处理 API 适配**：
+  - 操作系统信号监听和处理
+  - 支持 SIGTERM、SIGINT、SIGUSR1、SIGUSR2
+- **终端 API 适配**：
+  - TTY 检测（标准输入、输出、错误）
+  - 标准输入输出流（异步和同步）
+  - 原始模式支持
+- **定时任务 API 适配**：
+  - Cron 定时任务（统一使用 `node-cron`）
+  - 支持秒级任务
+  - AbortSignal 支持
+- **路径操作 API 适配**：
+  - 路径拼接、解析、规范化
+  - 相对路径计算
+  - 绝对路径判断
+- **文件哈希 API 适配**：
+  - 文件和数据哈希计算
+  - 支持同步和异步
+  - 支持 SHA-256、SHA-512、SHA-1、MD5
+- **系统信息 API 适配**：
+  - 内存、CPU、磁盘使用情况
+  - 系统负载（Linux/macOS）
+  - 系统信息（主机名、平台、架构、运行时间）
+  - 支持同步和异步
 
 ---
 
 ## 🎨 设计原则
 
-**所有 `@dreamer/*` 库都遵循以下原则**：
+**所有 @dreamer/* 库都遵循以下原则**：
 
-- **主包（@dreamer/xxx）**：用于服务端（Bun/Deno 运行时）
+- **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
 
 这样可以：
-- ✅ 明确区分服务端和客户端代码
-- ✅ 避免在客户端代码中引入服务端依赖
-- ✅ 提供更好的类型安全和代码提示
-- ✅ 支持更好的 tree-shaking
+- 明确区分服务端和客户端代码
+- 避免在客户端代码中引入服务端依赖
+- 提供更好的类型安全和代码提示
+- 支持更好的 tree-shaking
 
 ---
 
-## 🚀 使用场景
+## 🎯 使用场景
 
-- 🔄 跨运行时库开发（Bun 和 Deno 兼容）
-- 🔧 运行时 API 统一抽象
-- 📦 其他 `@dreamer/*` 库的基础依赖
+- **跨运行时库开发**：Bun 和 Deno 兼容的库开发
+- **运行时 API 统一抽象**：统一不同运行时的 API 差异
+- **基础依赖库**：其他 `@dreamer/*` 库的基础依赖
 
 ---
 
 ## 📦 安装
 
-### Bun
-
-```bash
-bunx jsr add @dreamer/runtime-adapter
-```
-
 ### Deno
 
 ```bash
 deno add jsr:@dreamer/runtime-adapter
+```
+
+### Bun
+
+```bash
+bunx jsr add @dreamer/runtime-adapter
 ```
 
 ---
@@ -76,9 +114,9 @@ deno add jsr:@dreamer/runtime-adapter
 
 | 环境 | 版本要求 | 状态 |
 |------|---------|------|
-| **Bun** | 1.0+ | ✅ 完全支持 |
 | **Deno** | 2.5+ | ✅ 完全支持 |
-| **服务端** | - | ✅ 支持（Bun 和 Deno 运行时） |
+| **Bun** | 1.0+ | ✅ 完全支持 |
+| **服务端** | - | ✅ 支持（兼容 Deno 和 Bun 运行时） |
 | **客户端** | - | ❌ 不支持（浏览器环境） |
 | **依赖** | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
 
@@ -498,9 +536,9 @@ const handle3 = cron("0 0 2 * * *", async () => {
   console.log("每天凌晨 2 点执行");
 });
 
-// 取消任务
+// 取消任务（可以使用 close 或 stop）
 handle1.close();
-handle2.close();
+handle2.stop(); // stop 是 close 的别名
 handle3.close();
 
 // 使用 AbortSignal 取消任务
@@ -639,7 +677,7 @@ console.log(`平台: ${system.platform}`);
 
 ## 📚 API 文档
 
-### 🔍 运行时检测
+### 运行时检测
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
@@ -649,7 +687,7 @@ console.log(`平台: ${system.platform}`);
 | `IS_DENO` | 是否为 Deno 环境 | `boolean` |
 | `type Runtime` | 运行时类型定义 | `"deno" \| "bun" \| "unknown"` |
 
-### 📁 文件系统 API
+### 文件系统 API
 
 #### 异步文件读写
 
@@ -755,7 +793,7 @@ for await (const event of watcher) {
 }
 ```
 
-### 🌐 网络 API
+### 网络 API
 
 #### HTTP 服务器
 
@@ -824,7 +862,7 @@ const handle = serve({ port: 3000 }, (req) => {
 | `connect(options: ConnectOptions)` | 建立 TCP 连接 | `host: string`<br>`port: number` |
 | `startTls(conn: TcpConn, options?: StartTlsOptions)` | 升级 TCP 连接到 TLS | `host?: string` |
 
-### 🔐 环境变量 API
+### 环境变量 API
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
@@ -834,7 +872,7 @@ const handle = serve({ port: 3000 }, (req) => {
 | `getEnvAll()` | 获取所有环境变量 | `Record<string, string>` |
 | `hasEnv(key: string)` | 检查环境变量是否存在 | `boolean` |
 
-### ⚙️ 进程/命令 API
+### 进程/命令 API
 
 #### 异步执行
 
@@ -875,7 +913,7 @@ execCommandSync(
 - Deno 使用 `Deno.Command.outputSync()`
 - Bun 使用 `child_process.execFileSync()`
 
-### 💻 终端 API
+### 终端 API
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
@@ -889,7 +927,7 @@ execCommandSync(
 | `readStdin(buffer: Uint8Array)` | 读取标准输入 | `Promise<number \| null>` |
 | `setStdinRaw(mode: boolean, options?)` | 设置标准输入为原始模式 | `boolean` |
 
-### ⏰ 定时任务 API
+### 定时任务 API
 
 ```typescript
 cron(
@@ -910,10 +948,11 @@ cron(
 
 **返回值：**
 - `CronHandle.close()` - 关闭定时任务
+- `CronHandle.stop()` - 停止定时任务（close 的别名）
 
-> 📌 **注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。
+> 📌 **注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。`stop()` 和 `close()` 方法功能相同，可以根据使用习惯选择。
 
-### 📊 进程信息 API
+### 进程信息 API
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
@@ -936,21 +975,21 @@ interface RuntimeVersion {
 }
 ```
 
-### 🔧 进程工具 API
+### 进程工具 API
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
 | `args()` | 获取命令行参数数组 | `string[]` |
 | `exit(code: number)` | 退出程序 | `never` |
 
-### 📡 信号处理 API
+### 信号处理 API
 
 | API | 说明 | 参数 |
 |-----|------|------|
 | `addSignalListener(signal: Signal, handler: () => void)` | 添加信号监听器 | `signal`: `"SIGTERM" \| "SIGINT" \| "SIGUSR1" \| "SIGUSR2" \| "SIGHUP"`<br>`handler`: 信号处理函数 |
 | `removeSignalListener(signal: Signal, handler: () => void)` | 移除信号监听器 | 同上 |
 
-### 🛤️ 路径操作 API
+### 路径操作 API
 
 | API | 说明 | 返回值 |
 |-----|------|--------|
@@ -964,7 +1003,7 @@ interface RuntimeVersion {
 | `isAbsolute(path: string)` | 判断是否为绝对路径 | `boolean` |
 | `isRelative(path: string)` | 判断是否为相对路径 | `boolean` |
 
-### 🔐 文件哈希 API
+### 文件哈希 API
 
 #### 异步 API
 
@@ -988,7 +1027,7 @@ interface RuntimeVersion {
 
 > 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用 Node.js 兼容模式，Bun 原生支持。
 
-### 📊 系统信息 API
+### 系统信息 API
 
 #### 异步 API
 
@@ -1079,6 +1118,16 @@ interface SystemStatus {
 
 ---
 
+## ⚡ 性能优化
+
+- **类型安全访问**：所有运行时 API 访问都通过类型安全的工具函数，避免运行时类型检查开销
+- **自动适配**：在编译时确定运行时环境，减少运行时判断
+- **同步 API**：提供同步 API 用于需要阻塞等待的场景，避免异步开销
+- **批量操作**：文件系统操作支持批量处理，减少 I/O 操作
+- **流式处理**：网络和文件操作支持流式处理，减少内存占用
+
+---
+
 ## 🧪 测试
 
 ### 运行测试
@@ -1104,65 +1153,18 @@ bun test tests/
 
 ---
 
-## ⚠️ 注意事项
+## 📝 备注
 
-1. **文件监控**：`watchFs()` 在 Deno 和 Bun 环境下都已实现。Bun 环境使用 Node.js 的 `fs.watch` API，功能完整，支持递归监控、文件过滤和路径排除。
-
-2. **WebSocket 升级**：`upgradeWebSocket()` 在 Deno 和 Bun 环境下都支持，使用统一的 API。Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置 `websocket` 处理器。返回的 `socket` 对象支持标准的 `addEventListener`、`send`、`close` 等方法。
-
-3. **定时任务**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。
-
-4. **TCP/TLS 连接**：Bun 环境下的 TCP/TLS 连接使用 Node.js 兼容 API，功能与 Deno 原生 API 基本一致。
-
-5. **设计理念**：本库提供统一的 API 抽象层，在 Deno 和 Bun 环境下自动适配到对应的原生 API。
-
-6. **同步 API**：新增的同步 API（文件系统、命令执行、哈希计算、系统信息）适合在需要阻塞等待的场景使用。Deno 使用原生同步 API，Bun 使用 Node.js 兼容的同步 API。
-
-7. **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all` 标志来授予所有权限。
-
----
-
-## ❓ 常见问题
-
-### Q: 为什么在 Deno 环境下测试需要 `-A` 标志？
-
-**A:** Deno 默认是安全的，需要显式授予权限。文件系统操作需要 `--allow-write` 权限，网络操作需要 `--allow-net` 权限，进程操作需要 `--allow-run` 权限。使用 `-A` 可以授予所有权限，方便测试。
-
-### Q: Bun 和 Deno 的测试输出为什么不一样？
-
-**A:** 这是两个测试框架的差异。Deno 会自动捕获测试中的 `stdout`/`stderr` 输出并显示，而 Bun 默认不显示子进程的输出。这是正常行为，不影响测试结果。
-
-### Q: 定时任务支持哪些 Cron 表达式格式？
-
-**A:** 统一使用 `node-cron`，支持标准的 6 字段格式（秒 分 时 日 月 周），例如：
-- `"*/5 * * * * *"` - 每 5 秒执行
-- `"0 * * * * *"` - 每分钟执行
-- `"0 0 2 * * *"` - 每天凌晨 2 点执行
-
-### Q: 如何在不同运行时环境下使用不同的实现？
-
-**A:** 使用运行时检测 API：
-
-```typescript
-import { IS_BUN, IS_DENO } from "jsr:@dreamer/runtime-adapter";
-
-if (IS_BUN) {
-  // Bun 特定代码
-} else if (IS_DENO) {
-  // Deno 特定代码
-}
-```
-
-### Q: 同步 API 和异步 API 有什么区别？
-
-**A:**
-- **异步 API**：使用 `async/await`，不会阻塞执行，适合大多数场景
-- **同步 API**：会阻塞执行直到操作完成，适合需要立即获取结果的场景（如 CLI 工具中的文件检查）
-
-同步 API 在以下场景特别有用：
-- CLI 工具中需要立即检查文件是否存在
-- 需要同步计算哈希值
-- 需要同步执行命令并获取输出
+- **服务端和客户端分离**：通过 `/client` 子路径明确区分服务端和客户端代码（本库仅支持服务端）
+- **统一接口**：所有 API 在 Deno 和 Bun 环境下使用相同的接口，降低学习成本
+- **类型安全**：完全采用类型安全的实现方式，所有运行时 API 访问都通过类型安全的工具函数（`getDeno()`, `getBun()`, `getProcess()`），避免了 `(globalThis as any)` 的使用。所有 API 都有完整的 TypeScript 类型定义，零 `any` 类型。
+- **自动适配**：本库提供统一的 API 抽象层，在 Deno 和 Bun 环境下自动适配到对应的原生 API
+- **同步和异步 API**：提供同步和异步两种 API，同步 API 适合需要阻塞等待的场景（如 CLI 工具），异步 API 适合大多数场景
+- **文件监控**：`watchFs()` 在 Deno 和 Bun 环境下都已实现。Bun 环境使用 Node.js 的 `fs.watch` API，功能完整，支持递归监控、文件过滤和路径排除
+- **WebSocket 升级**：`upgradeWebSocket()` 在 Deno 和 Bun 环境下都支持，使用统一的 API。Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置 `websocket` 处理器。返回的 `socket` 对象支持标准的 `addEventListener`、`send`、`close` 等方法
+- **定时任务**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致
+- **TCP/TLS 连接**：Bun 环境下的 TCP/TLS 连接使用 Node.js 兼容 API，功能与 Deno 原生 API 基本一致
+- **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all` 标志来授予所有权限
 
 ---
 
@@ -1174,12 +1176,12 @@ if (IS_BUN) {
 
 ## 📄 许可证
 
-MIT License
+MIT License - 详见 [LICENSE.md](./LICENSE.md)
 
 ---
 
 <div align="center">
 
-**Made with ❤️ by @dreamer**
+**Made with ❤️ by Dreamer Team**
 
 </div>

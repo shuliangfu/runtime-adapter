@@ -3,8 +3,9 @@
  * 提供统一的系统信息接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
 import { createCommand, execCommandSync } from "./process.ts";
+import { getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeOs from "node:os";
 
@@ -134,9 +135,10 @@ export interface SystemStatus {
  * ```
  */
 export async function getMemoryInfo(): Promise<MemoryInfo> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      const info = (globalThis as any).Deno.systemMemoryInfo();
+      const info = deno.systemMemoryInfo();
       const total = info.total || 0;
       const available = info.available || 0;
       const free = info.free || 0;
@@ -167,7 +169,8 @@ export async function getMemoryInfo(): Promise<MemoryInfo> {
   if (IS_BUN) {
     // Bun 需要通过系统命令获取内存信息
     try {
-      const platform = (globalThis as any).process?.platform;
+      const process = getProcess();
+      const platform = process?.platform;
       if (platform === "win32") {
         // Windows: 使用 wmic
         const text = await execCommand("wmic", [
@@ -267,11 +270,12 @@ export async function getMemoryInfo(): Promise<MemoryInfo> {
 export async function getCpuUsage(
   interval: number = 100,
 ): Promise<CpuUsage> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      const start = (globalThis as any).Deno.cpuUsage();
+      const start = deno.cpuUsage();
       await new Promise((resolve) => setTimeout(resolve, interval));
-      const end = (globalThis as any).Deno.cpuUsage(start);
+      const end = deno.cpuUsage(start);
 
       // Deno.cpuUsage 返回的是微秒（microseconds）
       // interval 是毫秒，需要转换为微秒
@@ -306,7 +310,7 @@ export async function getCpuUsage(
     // 这里返回进程级别的 CPU 使用率（如果可用）
     try {
       // Bun 可能支持 process.cpuUsage()（Node.js 兼容）
-      const process = (globalThis as any).process;
+      const process = getProcess();
       if (process?.cpuUsage) {
         const start = process.cpuUsage();
         await new Promise((resolve) => setTimeout(resolve, interval));
@@ -358,9 +362,10 @@ export async function getCpuUsage(
  * ```
  */
 export async function getLoadAverage(): Promise<LoadAverage | undefined> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      const loadavg = (globalThis as any).Deno.loadavg();
+      const loadavg = deno.loadavg();
       if (Array.isArray(loadavg) && loadavg.length >= 3) {
         return {
           load1: loadavg[0],
@@ -377,7 +382,8 @@ export async function getLoadAverage(): Promise<LoadAverage | undefined> {
   if (IS_BUN) {
     // Bun 需要通过系统命令获取负载信息
     try {
-      const platform = (globalThis as any).process?.platform;
+      const process = getProcess();
+      const platform = process?.platform;
       if (platform !== "win32") {
         // Linux/macOS: 使用 uptime 命令
         const text = await execCommand("uptime");
@@ -420,9 +426,9 @@ export async function getDiskUsage(
   path: string = ".",
 ): Promise<DiskUsage> {
   try {
-    const platform = IS_DENO
-      ? (globalThis as any).Deno.build?.os
-      : (globalThis as any).process?.platform;
+    const deno = getDeno();
+    const process = getProcess();
+    const platform = deno?.build?.os || process?.platform;
 
     if (platform === "win32" || platform === "windows") {
       // Windows: 使用 wmic
@@ -507,12 +513,13 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   let uptime = 0;
   let cpus: number | undefined;
 
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      hostname = (globalThis as any).Deno.hostname();
-      platform = (globalThis as any).Deno.build?.os || "unknown";
-      arch = (globalThis as any).Deno.build?.arch || "unknown";
-      uptime = (globalThis as any).Deno.osUptime() || 0;
+      hostname = deno.hostname();
+      platform = deno.build?.os || "unknown";
+      arch = deno.build?.arch || "unknown";
+      uptime = deno.osUptime() || 0;
 
       // Deno 可能没有直接获取 CPU 核心数的 API
       // 可以通过系统命令获取
@@ -539,7 +546,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 
   if (IS_BUN) {
     try {
-      const process = (globalThis as any).process;
+      const process = getProcess();
 
       hostname = nodeOs.hostname();
       platform = process?.platform || "unknown";
@@ -617,9 +624,10 @@ export async function getSystemStatus(
  * ```
  */
 export function getMemoryInfoSync(): MemoryInfo {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      const info = (globalThis as any).Deno.systemMemoryInfo();
+      const info = deno.systemMemoryInfo();
       const total = info.total || 0;
       const available = info.available || 0;
       const free = info.free || 0;
@@ -650,7 +658,8 @@ export function getMemoryInfoSync(): MemoryInfo {
   if (IS_BUN) {
     // Bun 需要通过系统命令获取内存信息
     try {
-      const platform = (globalThis as any).process?.platform;
+      const process = getProcess();
+      const platform = process?.platform;
       if (platform === "win32") {
         // Windows: 使用 wmic
         const text = execCommandSync("wmic", [
@@ -745,9 +754,10 @@ export function getMemoryInfoSync(): MemoryInfo {
  * ```
  */
 export function getLoadAverageSync(): LoadAverage | undefined {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      const loadavg = (globalThis as any).Deno.loadavg();
+      const loadavg = deno.loadavg();
       if (Array.isArray(loadavg) && loadavg.length >= 3) {
         return {
           load1: loadavg[0],
@@ -764,7 +774,8 @@ export function getLoadAverageSync(): LoadAverage | undefined {
   if (IS_BUN) {
     // Bun 需要通过系统命令获取负载信息
     try {
-      const platform = (globalThis as any).process?.platform;
+      const process = getProcess();
+      const platform = process?.platform;
       if (platform !== "win32") {
         // Linux/macOS: 使用 uptime 命令
         const text = execCommandSync("uptime");
@@ -808,12 +819,13 @@ export function getSystemInfoSync(): SystemInfo {
   let uptime = 0;
   let cpus: number | undefined;
 
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     try {
-      hostname = (globalThis as any).Deno.hostname();
-      platform = (globalThis as any).Deno.build?.os || "unknown";
-      arch = (globalThis as any).Deno.build?.arch || "unknown";
-      uptime = (globalThis as any).Deno.osUptime() || 0;
+      hostname = deno.hostname();
+      platform = deno.build?.os || "unknown";
+      arch = deno.build?.arch || "unknown";
+      uptime = deno.osUptime() || 0;
 
       // Deno 可能没有直接获取 CPU 核心数的 API
       // 可以通过系统命令获取（同步）
@@ -840,15 +852,13 @@ export function getSystemInfoSync(): SystemInfo {
 
   if (IS_BUN) {
     try {
-      const process = (globalThis as any).process;
+      const process = getProcess();
       // Bun 支持 Node.js 兼容的 os 模块
-      {
-        hostname = nodeOs.hostname();
-        platform = process?.platform || "unknown";
-        arch = process?.arch || "unknown";
-        uptime = nodeOs.uptime();
-        cpus = nodeOs.cpus().length;
-      }
+      hostname = nodeOs.hostname();
+      platform = process?.platform || "unknown";
+      arch = process?.arch || "unknown";
+      uptime = nodeOs.uptime();
+      cpus = nodeOs.cpus().length;
     } catch {
       // 如果获取失败，使用默认值
     }

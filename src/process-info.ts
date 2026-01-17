@@ -3,7 +3,8 @@
  * 提供统一的进程信息接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
+import { getBun, getDeno, getProcess } from "./utils.ts";
 
 /**
  * 操作系统平台类型
@@ -44,11 +45,13 @@ export interface RuntimeVersion {
  * ```
  */
 export function pid(): number {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.pid;
+  const deno = getDeno();
+  if (deno) {
+    return deno.pid;
   }
   if (IS_BUN) {
-    return (globalThis as any).process?.pid || 0;
+    const process = getProcess();
+    return process?.pid || 0;
   }
   return 0;
 }
@@ -65,15 +68,17 @@ export function pid(): number {
  * ```
  */
 export function platform(): Platform {
-  if (IS_DENO) {
-    const os = (globalThis as any).Deno.build?.os;
+  const deno = getDeno();
+  if (deno) {
+    const os = deno.build?.os;
     if (os === "darwin") return "darwin";
     if (os === "windows") return "windows";
     if (os === "linux") return "linux";
     return "unknown";
   }
   if (IS_BUN) {
-    const plat = (globalThis as any).process?.platform;
+    const process = getProcess();
+    const plat = process?.platform;
     if (plat === "darwin") return "darwin";
     if (plat === "win32") return "windows";
     if (plat === "linux") return "linux";
@@ -94,16 +99,18 @@ export function platform(): Platform {
  * ```
  */
 export function arch(): Arch {
-  if (IS_DENO) {
-    const arch = (globalThis as any).Deno.build?.arch;
-    if (arch === "x86_64") return "x86_64";
-    if (arch === "aarch64") return "aarch64";
+  const deno = getDeno();
+  if (deno) {
+    const archValue = deno.build?.arch;
+    if (archValue === "x86_64") return "x86_64";
+    if (archValue === "aarch64") return "aarch64";
     return "unknown";
   }
   if (IS_BUN) {
-    const arch = (globalThis as any).process?.arch;
-    if (arch === "x64") return "x86_64";
-    if (arch === "arm64") return "arm64";
+    const process = getProcess();
+    const archValue = process?.arch;
+    if (archValue === "x64") return "x86_64";
+    if (archValue === "arm64") return "arm64";
     return "unknown";
   }
   return "unknown";
@@ -122,26 +129,27 @@ export function arch(): Arch {
  * ```
  */
 export function version(): RuntimeVersion {
-  if (IS_DENO) {
-    const denoVersion = (globalThis as any).Deno.version;
+  const deno = getDeno();
+  if (deno) {
+    const denoVersion = deno.version;
     return {
       runtime: "deno",
       version: denoVersion?.deno || "unknown",
       build: denoVersion?.v8
         ? {
           target: denoVersion.target || "",
-          arch: (globalThis as any).Deno.build?.arch || "",
-          os: (globalThis as any).Deno.build?.os || "",
+          arch: deno.build?.arch || "",
+          os: deno.build?.os || "",
           vendor: "deno",
         }
         : undefined,
     };
   }
-  if (IS_BUN) {
-    const bunVersion = (globalThis as any).Bun?.version;
+  const bun = getBun();
+  if (bun) {
     return {
       runtime: "bun",
-      version: bunVersion || "unknown",
+      version: bun.version || "unknown",
     };
   }
   return {

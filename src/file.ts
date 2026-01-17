@@ -3,8 +3,9 @@
  * 提供统一的文件系统操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
+import { IS_BUN } from "./detect.ts";
 import { join } from "./path.ts";
+import { getBuffer, getBun, getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeCrypto from "node:crypto";
 import * as nodeFs from "node:fs";
@@ -73,12 +74,14 @@ export interface FileWatcher {
  * @returns 文件内容（Uint8Array）
  */
 export async function readFile(path: string): Promise<Uint8Array> {
-  if (IS_DENO) {
-    return await (globalThis as any).Deno.readFile(path);
+  const deno = getDeno();
+  if (deno) {
+    return await deno.readFile(path);
   }
 
-  if (IS_BUN) {
-    const file = (globalThis as any).Bun.file(path);
+  const bun = getBun();
+  if (bun) {
+    const file = bun.file(path);
     const arrayBuffer = await file.arrayBuffer();
     return new Uint8Array(arrayBuffer);
   }
@@ -96,12 +99,14 @@ export async function readTextFile(
   path: string,
   _encoding = "utf-8",
 ): Promise<string> {
-  if (IS_DENO) {
-    return await (globalThis as any).Deno.readTextFile(path);
+  const deno = getDeno();
+  if (deno) {
+    return await deno.readTextFile(path, { encoding: _encoding });
   }
 
-  if (IS_BUN) {
-    const file = (globalThis as any).Bun.file(path);
+  const bun = getBun();
+  if (bun) {
+    const file = bun.file(path);
     return await file.text();
   }
 
@@ -119,19 +124,22 @@ export async function writeFile(
   data: Uint8Array,
   options?: { create?: boolean; mode?: number },
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.writeFile(path, data, options);
+  const deno = getDeno();
+  if (deno) {
+    await deno.writeFile(path, data, options);
     return;
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     // Bun 使用原生高性能 API
-    await (globalThis as any).Bun.write(path, data);
+    await bun.write(path, data);
     // 验证文件确实写入成功（处理文件系统同步延迟）
-    let retries = 10;
+    // 优化：减少重试次数，提高性能
+    let retries = 5; // 从 10 次减少到 5 次
     while (retries > 0) {
       try {
-        const file = (globalThis as any).Bun.file(path);
+        const file = bun.file(path);
         const exists = await file.exists();
         if (exists) {
           // 验证文件大小匹配（确保数据完整写入）
@@ -165,19 +173,22 @@ export async function writeTextFile(
   data: string,
   options?: { create?: boolean; mode?: number },
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.writeTextFile(path, data, options);
+  const deno = getDeno();
+  if (deno) {
+    await deno.writeTextFile(path, data, options);
     return;
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     // Bun 使用原生高性能 API
-    await (globalThis as any).Bun.write(path, data);
+    await bun.write(path, data);
     // 验证文件确实写入成功（处理文件系统同步延迟）
-    let retries = 5;
+    // 优化：减少重试次数，提高性能
+    let retries = 5; // 从 10 次减少到 5 次
     while (retries > 0) {
       try {
-        const file = (globalThis as any).Bun.file(path);
+        const file = bun.file(path);
         const exists = await file.exists();
         if (exists) {
           // 验证文件内容匹配（确保数据完整写入）
@@ -216,8 +227,9 @@ export async function open(
     close(): void;
   }
 > {
-  if (IS_DENO) {
-    const file = await (globalThis as any).Deno.open(path, options);
+  const deno = getDeno();
+  if (deno) {
+    const file = await deno.open(path, options);
     return {
       readable: file.readable,
       writable: file.writable,
@@ -225,9 +237,10 @@ export async function open(
     };
   }
 
-  if (IS_BUN) {
+  const bun = getBun();
+  if (bun) {
     // Bun 使用不同的方式打开文件
-    const file = (globalThis as any).Bun.file(path);
+    const file = bun.file(path);
     return {
       readable: file.stream(),
       writable: new WritableStream({
@@ -240,7 +253,7 @@ export async function open(
           combined.set(new Uint8Array(existing), 0);
           combined.set(chunk, existing.byteLength);
           // Bun 使用原生高性能 API
-          await (globalThis as any).Bun.write(path, combined);
+          await bun.write(path, combined);
         },
         close() {
           // Bun 文件写入完成
@@ -281,8 +294,9 @@ export async function mkdir(
   path: string,
   options?: { recursive?: boolean; mode?: number },
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.mkdir(path, options);
+  const deno = getDeno();
+  if (deno) {
+    await deno.mkdir(path, options);
     return;
   }
 
@@ -293,10 +307,11 @@ export async function mkdir(
         recursive: options?.recursive,
         mode: options?.mode,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 如果目录已存在且 recursive 为 true，忽略错误
       // Bun 在某些情况下会抛出 EINVAL 错误，即使 recursive: true
-      if (error?.code === "EEXIST" || error?.code === "EINVAL") {
+      const err = error as { code?: string };
+      if (err?.code === "EEXIST" || err?.code === "EINVAL") {
         // 检查目录是否真的存在
         try {
           const info = await nodeFsPromises.stat(path);
@@ -326,8 +341,9 @@ export async function remove(
   path: string,
   options?: { recursive?: boolean },
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.remove(path, options);
+  const deno = getDeno();
+  if (deno) {
+    await deno.remove(path, options);
     return;
   }
 
@@ -357,8 +373,9 @@ export async function remove(
  * @returns 文件信息
  */
 export async function stat(path: string): Promise<FileInfo> {
-  if (IS_DENO) {
-    const info = await (globalThis as any).Deno.stat(path);
+  const deno = getDeno();
+  if (deno) {
+    const info = await deno.stat(path);
     return {
       isFile: info.isFile,
       isDirectory: info.isDirectory,
@@ -458,9 +475,10 @@ export function watchFs(
   paths: string | string[],
   options?: WatchFsOptions,
 ): FileWatcher {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     const pathArray = Array.isArray(paths) ? paths : [paths];
-    const watcher = (globalThis as any).Deno.watchFs(pathArray, {
+    const watcher = deno.watchFs(pathArray, {
       recursive: options?.recursive ?? false,
     });
     const filesOnly = options?.filesOnly ?? false;
@@ -483,7 +501,7 @@ export function watchFs(
             // 如果设置了只监听文件，过滤掉目录事件
             if (filesOnly) {
               try {
-                const info = await (globalThis as any).Deno.stat(path);
+                const info = await deno.stat(path);
                 // 只包含文件，排除目录
                 if (info.isFile) {
                   filteredPaths.push(path);
@@ -732,9 +750,10 @@ export interface DirEntry {
  * @returns 目录项数组
  */
 export async function readdir(path: string): Promise<DirEntry[]> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     const entries: DirEntry[] = [];
-    for await (const entry of (globalThis as any).Deno.readDir(path)) {
+    for await (const entry of deno.readDir(path)) {
       entries.push({
         name: entry.name,
         isFile: entry.isFile,
@@ -763,8 +782,9 @@ export async function readdir(path: string): Promise<DirEntry[]> {
         isDirectory: entry.isDirectory(),
         isSymlink: entry.isSymbolicLink(),
       }));
-    } catch (error: any) {
-      if (error?.code === "ENOENT") {
+    } catch (error: unknown) {
+      const nodeError = error as { code?: string };
+      if (nodeError?.code === "ENOENT") {
         throw new Error(`目录不存在: ${path}`);
       }
       throw error;
@@ -783,8 +803,9 @@ export async function copyFile(
   src: string,
   dest: string,
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.copyFile(src, dest);
+  const deno = getDeno();
+  if (deno) {
+    await deno.copyFile(src, dest);
     return;
   }
 
@@ -806,8 +827,9 @@ export async function rename(
   oldPath: string,
   newPath: string,
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.rename(oldPath, newPath);
+  const deno = getDeno();
+  if (deno) {
+    await deno.rename(oldPath, newPath);
     return;
   }
 
@@ -818,9 +840,10 @@ export async function rename(
       const destDir = nodePath.dirname(newPath);
       try {
         await nodeFsPromises.mkdir(destDir, { recursive: true });
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 如果目录已存在，忽略错误
-        if (error?.code !== "EEXIST" && error?.code !== "EINVAL") {
+        const nodeError = error as { code?: string };
+        if (nodeError?.code !== "EEXIST" && nodeError?.code !== "EINVAL") {
           throw error;
         }
         // 验证目录确实存在
@@ -849,8 +872,9 @@ export async function rename(
           } else {
             throw new Error(`源路径存在但不是文件或目录: ${oldPath}`);
           }
-        } catch (error: any) {
-          if (error?.code === "ENOENT") {
+        } catch (error: unknown) {
+          const nodeError = error as { code?: string };
+          if (nodeError?.code === "ENOENT") {
             retries--;
             if (retries > 0) {
               // 等待文件系统同步（增加等待时间）
@@ -866,9 +890,10 @@ export async function rename(
 
       // 执行重命名
       await nodeFsPromises.rename(oldPath, newPath);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 提供更详细的错误信息
-      if (error?.code === "ENOENT") {
+      const nodeError = error as { code?: string };
+      if (nodeError?.code === "ENOENT") {
         throw new Error(
           `重命名失败: 源路径不存在 "${oldPath}" 或目标目录不存在 "${
             nodePath.dirname(newPath)
@@ -894,13 +919,14 @@ export async function symlink(
   path: string,
   type?: "file" | "dir",
 ): Promise<void> {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     // Deno.symlink 的签名：symlink(target, path, options?)
     // options 可以是 { type: "file" | "dir" } 或直接是 type 字符串
     if (type) {
-      await (globalThis as any).Deno.symlink(target, path, { type });
+      await deno.symlink(target, path, { type });
     } else {
-      await (globalThis as any).Deno.symlink(target, path);
+      await deno.symlink(target, path);
     }
     return;
   }
@@ -920,8 +946,9 @@ export async function symlink(
  * @returns 真实路径
  */
 export async function realPath(path: string): Promise<string> {
-  if (IS_DENO) {
-    return await (globalThis as any).Deno.realPath(path);
+  const deno = getDeno();
+  if (deno) {
+    return await deno.realPath(path);
   }
 
   if (IS_BUN) {
@@ -938,8 +965,9 @@ export async function realPath(path: string): Promise<string> {
  * @param mode 权限模式（八进制数字，如 0o755）
  */
 export async function chmod(path: string, mode: number): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.chmod(path, mode);
+  const deno = getDeno();
+  if (deno) {
+    await deno.chmod(path, mode);
     return;
   }
 
@@ -963,8 +991,9 @@ export async function chown(
   uid: number,
   gid: number,
 ): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.chown(path, uid, gid);
+  const deno = getDeno();
+  if (deno) {
+    await deno.chown(path, uid, gid);
     return;
   }
 
@@ -987,8 +1016,9 @@ export async function chown(
 export async function makeTempDir(
   options?: { prefix?: string; dir?: string },
 ): Promise<string> {
-  if (IS_DENO) {
-    return await (globalThis as any).Deno.makeTempDir(options);
+  const deno = getDeno();
+  if (deno) {
+    return await deno.makeTempDir(options);
   }
 
   if (IS_BUN) {
@@ -1016,8 +1046,9 @@ export async function makeTempDir(
 export async function makeTempFile(
   options?: { prefix?: string; suffix?: string; dir?: string },
 ): Promise<string> {
-  if (IS_DENO) {
-    return await (globalThis as any).Deno.makeTempFile(options);
+  const deno = getDeno();
+  if (deno) {
+    return await deno.makeTempFile(options);
   }
 
   if (IS_BUN) {
@@ -1044,13 +1075,14 @@ export async function makeTempFile(
  * @returns 当前工作目录路径
  */
 export function cwd(): string {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.cwd();
+  const deno = getDeno();
+  if (deno) {
+    return deno.cwd();
   }
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 process API
-    const process = (globalThis as any).process;
+    const process = getProcess();
     if (process?.cwd) {
       return process.cwd();
     }
@@ -1066,14 +1098,15 @@ export function cwd(): string {
  * @param path 目标目录路径
  */
 export function chdir(path: string): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.chdir(path);
+  const deno = getDeno();
+  if (deno) {
+    deno.chdir(path);
     return;
   }
 
   if (IS_BUN) {
     // Bun 使用 Node.js 兼容的 process API
-    const process = (globalThis as any).process;
+    const process = getProcess();
     if (process?.chdir) {
       process.chdir(path);
       return;
@@ -1090,8 +1123,9 @@ export function chdir(path: string): void {
  * @param len 截断后的文件长度（字节）
  */
 export async function truncate(path: string, len: number): Promise<void> {
-  if (IS_DENO) {
-    await (globalThis as any).Deno.truncate(path, len);
+  const deno = getDeno();
+  if (deno) {
+    await deno.truncate(path, len);
     return;
   }
 
@@ -1191,8 +1225,9 @@ export async function isDirectory(path: string): Promise<boolean> {
  * ```
  */
 export function statSync(path: string): FileInfo {
-  if (IS_DENO) {
-    const info = (globalThis as any).Deno.statSync(path);
+  const deno = getDeno();
+  if (deno) {
+    const info = deno.statSync(path);
     return {
       isFile: info.isFile,
       isDirectory: info.isDirectory,
@@ -1261,15 +1296,16 @@ export function readTextFileSync(
   path: string,
   _encoding = "utf-8",
 ): string {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.readTextFileSync(path);
+  const deno = getDeno();
+  if (deno) {
+    return deno.readTextFileSync(path);
   }
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     return nodeFs.readFileSync(path, {
-      encoding: _encoding as any,
-    }) as unknown as string;
+      encoding: _encoding as "utf-8" | "utf8",
+    }) as string;
   }
 
   throw new Error("不支持的运行时环境");
@@ -1315,8 +1351,9 @@ export function existsSync(path: string): boolean {
  * ```
  */
 export function readFileSync(path: string): Uint8Array {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.readFileSync(path);
+  const deno = getDeno();
+  if (deno) {
+    return deno.readFileSync(path);
   }
 
   if (IS_BUN) {
@@ -1347,9 +1384,10 @@ export function readFileSync(path: string): Uint8Array {
  * ```
  */
 export function readdirSync(path: string): DirEntry[] {
-  if (IS_DENO) {
+  const deno = getDeno();
+  if (deno) {
     const entries: DirEntry[] = [];
-    for (const entry of (globalThis as any).Deno.readDirSync(path)) {
+    for (const entry of deno.readDirSync(path)) {
       entries.push({
         name: entry.name,
         isFile: entry.isFile,
@@ -1370,14 +1408,22 @@ export function readdirSync(path: string): DirEntry[] {
       }
 
       const entries = nodeFs.readdirSync(path, { withFileTypes: true });
-      return entries.map((entry: any) => ({
+      return entries.map((
+        entry: {
+          name: string;
+          isFile(): boolean;
+          isDirectory(): boolean;
+          isSymbolicLink(): boolean;
+        },
+      ) => ({
         name: entry.name,
         isFile: entry.isFile(),
         isDirectory: entry.isDirectory(),
         isSymlink: entry.isSymbolicLink(),
       }));
-    } catch (error: any) {
-      if (error?.code === "ENOENT") {
+    } catch (error: unknown) {
+      const nodeError = error as { code?: string };
+      if (nodeError?.code === "ENOENT") {
         throw new Error(`目录不存在: ${path}`);
       }
       throw error;
@@ -1449,8 +1495,9 @@ export function isDirectorySync(path: string): boolean {
  * ```
  */
 export function realPathSync(path: string): string {
-  if (IS_DENO) {
-    return (globalThis as any).Deno.realPathSync(path);
+  const deno = getDeno();
+  if (deno) {
+    return deno.realPathSync(path);
   }
 
   if (IS_BUN) {
@@ -1482,8 +1529,9 @@ export function mkdirSync(
   path: string,
   options?: { recursive?: boolean; mode?: number },
 ): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.mkdirSync(path, options);
+  const deno = getDeno();
+  if (deno) {
+    deno.mkdirSync(path, options);
     return;
   }
 
@@ -1494,9 +1542,10 @@ export function mkdirSync(
         recursive: options?.recursive,
         mode: options?.mode,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 如果目录已存在且 recursive 为 true，忽略错误
-      if (error?.code === "EEXIST" || error?.code === "EINVAL") {
+      const nodeError = error as { code?: string };
+      if (nodeError?.code === "EEXIST" || nodeError?.code === "EINVAL") {
         // 检查目录是否真的存在
         try {
           const info = nodeFs.statSync(path);
@@ -1538,8 +1587,9 @@ export function removeSync(
   path: string,
   options?: { recursive?: boolean },
 ): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.removeSync(path, options);
+  const deno = getDeno();
+  if (deno) {
+    deno.removeSync(path, options);
     return;
   }
 
@@ -1553,8 +1603,9 @@ export function removeSync(
       } else {
         nodeFs.unlinkSync(path);
       }
-    } catch (error: any) {
-      if (error?.code !== "ENOENT") {
+    } catch (error: unknown) {
+      const nodeError = error as { code?: string };
+      if (nodeError?.code !== "ENOENT") {
         throw error;
       }
       // ENOENT 表示文件不存在，这是可以接受的
@@ -1589,15 +1640,16 @@ export function writeFileSync(
   data: Uint8Array,
   options?: { create?: boolean; mode?: number },
 ): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.writeFileSync(path, data, options);
+  const deno = getDeno();
+  if (deno) {
+    deno.writeFileSync(path, data, options);
     return;
   }
 
   if (IS_BUN) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
-    const Buffer = (globalThis as any).Buffer;
+    const Buffer = getBuffer();
     if (Buffer && typeof Buffer.from === "function") {
       const buffer = Buffer.from(data);
       nodeFs.writeFileSync(path, buffer, {
@@ -1640,8 +1692,9 @@ export function writeTextFileSync(
   data: string,
   options?: { create?: boolean; mode?: number },
 ): void {
-  if (IS_DENO) {
-    (globalThis as any).Deno.writeTextFileSync(path, data, options);
+  const deno = getDeno();
+  if (deno) {
+    deno.writeTextFileSync(path, data, options);
     return;
   }
 
