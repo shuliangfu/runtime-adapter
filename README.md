@@ -4,6 +4,7 @@
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-207%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
