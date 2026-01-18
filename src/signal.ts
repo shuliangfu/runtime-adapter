@@ -5,11 +5,9 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
+import type { DenoSignal, BunSignal } from "./types.ts";
 
-/**
- * 信号类型
- */
-export type Signal = "SIGTERM" | "SIGINT" | "SIGUSR1" | "SIGUSR2";
+
 
 /**
  * 信号处理器函数类型
@@ -33,7 +31,7 @@ export type SignalHandler = () => void;
  * ```
  */
 export function addSignalListener(
-  signal: Signal,
+  signal: DenoSignal | BunSignal,
   handler: SignalHandler,
 ): void {
   const deno = getDeno();
@@ -66,7 +64,7 @@ export function addSignalListener(
  * ```
  */
 export function removeSignalListener(
-  signal: Signal,
+  signal: DenoSignal | BunSignal,
   handler: SignalHandler,
 ): void {
   const deno = getDeno();

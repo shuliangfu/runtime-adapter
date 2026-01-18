@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/runtime-adapter",
-  "version": "1.0.0-beta.18",
+  "version": "1.0.0-beta.19",
   "license": "MIT",
   "exports": {
     ".": "./src/mod.ts"
@@ -49,5 +49,9 @@
   "imports": {
     "@dreamer/test": "jsr:@dreamer/test@^1.0.0-beta.17",
     "node-cron": "npm:node-cron@3.0.3"
+  },
+  "allowScripts": {
+    "allow": [],
+    "deny": ["npm:esbuild@0.27.2", "npm:puppeteer@24.35.0"]
   }
 }
