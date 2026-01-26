@@ -13,8 +13,8 @@
 
 ### 总体统计
 
-- **总测试数**: 207
-- **通过**: 207 ✅
+- **总测试数**: 211
+- **通过**: 211 ✅
 - **失败**: 0
 - **通过率**: 100% ✅
 - **测试执行时间**: ~20 秒
@@ -24,8 +24,8 @@
 | 测试文件 | 测试数 | 状态 | 说明 |
 |---------|--------|------|------|
 | `detect.test.ts` | 7 | ✅ 全部通过 | 运行时检测 |
-| `file.test.ts` | 26 | ✅ 全部通过 | 异步文件系统 API |
-| `file-sync.test.ts` | 16 | ✅ 全部通过 | **新增** 同步文件系统 API |
+| `file.test.ts` | 30 | ✅ 全部通过 | 异步文件系统 API（包含 ensureDir） |
+| `file-sync.test.ts` | 20 | ✅ 全部通过 | **新增** 同步文件系统 API（包含 ensureDirSync） |
 | `file-ext.test.ts` | 4 | ✅ 全部通过 | 文件扩展功能 |
 | `network.test.ts` | 5 | ✅ 全部通过 | 网络 API（HTTP 服务器） |
 | `websocket.test.ts` | 5 | ✅ 全部通过 | **新增** WebSocket API |
@@ -65,6 +65,11 @@
 - ✅ 目录操作
   - `mkdir` - 创建目录
   - `mkdir` - 支持递归创建目录
+  - `ensureDir` - 确保目录存在（如果不存在则创建） ⭐ 新增
+    - 应该创建不存在的目录
+    - 应该创建嵌套目录
+    - 如果目录已存在，不应该抛出错误
+    - 应该支持 mode 选项
 - ✅ 文件读写
   - `writeTextFile` - 写入文本文件
   - `readTextFile` - 读取文本文件
@@ -91,7 +96,7 @@
     - 遍历目录中的所有文件
     - 支持路径匹配
 
-**测试结果**: 26 个测试全部通过
+**测试结果**: 30 个测试全部通过
 
 ### 3. 文件系统同步 API (file-sync.test.ts) ⭐ 新增
 
@@ -99,6 +104,11 @@
 - ✅ 目录操作
   - `mkdirSync` - 同步创建目录
   - `mkdirSync` - 支持递归创建目录
+  - `ensureDirSync` - 同步确保目录存在（如果不存在则创建） ⭐ 新增
+    - 应该创建不存在的目录
+    - 应该创建嵌套目录
+    - 如果目录已存在，不应该抛出错误
+    - 应该支持 mode 选项
 - ✅ 文件读写
   - `writeTextFileSync` - 同步写入文本文件
   - `readTextFileSync` - 同步读取文本文件
@@ -116,7 +126,7 @@
   - `readdirSync` - 同步读取目录内容
   - `realPathSync` - 同步解析真实路径
 
-**测试结果**: 16 个测试全部通过
+**测试结果**: 20 个测试全部通过
 
 **实现特点**:
 - ✅ 跨运行时兼容：Deno 使用原生同步 API，Bun 使用 Node.js 兼容的 `fs` 模块
@@ -369,7 +379,7 @@
 
 **测试场景**:
 - ✅ 导出运行时检测相关 API
-- ✅ 导出文件系统 API
+- ✅ 导出文件系统 API（包含 ensureDir 和 ensureDirSync）
 - ✅ 导出网络 API
 - ✅ 导出环境变量 API
 - ✅ 导出进程/命令 API
@@ -397,7 +407,7 @@
 ### 2. 同步文件系统 API
 
 新增了完整的同步文件系统 API，包括：
-- `mkdirSync`, `writeTextFileSync`, `readTextFileSync`
+- `mkdirSync`, `ensureDirSync`, `writeTextFileSync`, `readTextFileSync`
 - `writeFileSync`, `readFileSync`
 - `statSync`, `removeSync`, `existsSync`
 - `isFileSync`, `isDirectorySync`, `readdirSync`, `realPathSync`
@@ -427,6 +437,19 @@
 - `getMemoryInfoSync`
 - `getLoadAverageSync`
 - `getSystemInfoSync`
+
+### 6. ensureDir 和 ensureDirSync ⭐ 新增
+
+新增目录确保功能，类似于 `mkdir -p` 命令：
+- `ensureDir` - 异步确保目录存在（如果不存在则创建，如果已存在则不做任何操作）
+- `ensureDirSync` - 同步确保目录存在
+
+**优势**:
+- 简化目录创建逻辑，无需手动检查目录是否存在
+- 支持嵌套目录的自动创建
+- 如果目录已存在，不会抛出错误
+- 支持 mode 选项设置目录权限
+- 完全兼容 Deno 和 Bun
 
 ## 跨运行时兼容性测试
 
@@ -512,12 +535,12 @@
 
 ### ✅ 测试通过率: 100%
 
-所有 207 个测试用例全部通过，包括：
+所有 211 个测试用例全部通过，包括：
 
 1. **核心功能**: 运行时检测、文件系统、网络、WebSocket、环境变量、进程管理
 2. **扩展功能**: 路径操作、目录遍历、文件哈希、系统信息
 3. **工具功能**: 终端操作、定时任务、信号处理
-4. **新增功能**: WebSocket API、同步文件系统 API、同步命令执行、同步哈希计算、同步系统信息
+4. **新增功能**: WebSocket API、同步文件系统 API、同步命令执行、同步哈希计算、同步系统信息、ensureDir/ensureDirSync
 
 ### 质量保证
 
@@ -537,8 +560,8 @@
 
 ---
 
-**测试报告生成时间**: 2026-01-13
+**测试报告生成时间**: 2026-01-26
 **测试框架**: @dreamer/test@^1.0.0-beta.12
 **测试环境**: Bun 1.3.5, Deno 2.6.4
-**测试总数**: 207
+**测试总数**: 211
 **通过率**: 100% ✅

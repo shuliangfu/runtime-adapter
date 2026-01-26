@@ -4,7 +4,7 @@
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-207%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-211%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -156,6 +156,7 @@ import {
   readTextFile,
   writeTextFile,
   mkdir,
+  ensureDir,
   remove,
   stat,
   readdir,
@@ -187,6 +188,7 @@ await writeTextFile("./output.txt", "Hello, World!");
 
 // 目录操作
 await mkdir("./data", { recursive: true });
+await ensureDir("./data/subdir"); // 确保目录存在（如果不存在则创建）
 await remove("./data", { recursive: true });
 
 // 获取文件信息
@@ -274,6 +276,7 @@ import {
   readTextFileSync,
   writeTextFileSync,
   mkdirSync,
+  ensureDirSync,
   removeSync,
   statSync,
   readdirSync,
@@ -293,6 +296,7 @@ writeTextFileSync("./output.txt", "Hello, World!");
 
 // 同步目录操作
 mkdirSync("./data", { recursive: true });
+ensureDirSync("./data/subdir"); // 同步确保目录存在（如果不存在则创建）
 removeSync("./data", { recursive: true });
 
 // 同步获取文件信息
@@ -715,6 +719,7 @@ console.log(`平台: ${system.platform}`);
 | API | 说明 | 选项 |
 |-----|------|------|
 | `mkdir(path: string, options?)` | 创建目录 | `recursive?: boolean`<br>`mode?: number` |
+| `ensureDir(path: string, options?)` | 确保目录存在（如果不存在则创建） | `mode?: number` |
 | `remove(path: string, options?)` | 删除文件或目录 | `recursive?: boolean` |
 | `readdir(path: string)` | 读取目录内容 | - |
 | `stat(path: string)` | 获取文件信息 | - |
@@ -725,6 +730,7 @@ console.log(`平台: ${system.platform}`);
 | API | 说明 | 选项 |
 |-----|------|------|
 | `mkdirSync(path: string, options?)` | 同步创建目录 | `recursive?: boolean`<br>`mode?: number` |
+| `ensureDirSync(path: string, options?)` | 同步确保目录存在（如果不存在则创建） | `mode?: number` |
 | `removeSync(path: string, options?)` | 同步删除文件或目录 | `recursive?: boolean` |
 | `readdirSync(path: string)` | 同步读取目录内容 | - |
 | `statSync(path: string)` | 同步获取文件信息 | - |
@@ -1146,7 +1152,7 @@ bun test tests/
 详细的测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 
 测试覆盖包括：
-- ✅ 207 个测试用例全部通过
+- ✅ 211 个测试用例全部通过
 - ✅ 17 个功能模块完整测试
 - ✅ Deno 和 Bun 跨运行时兼容性验证
 - ✅ 同步和异步 API 完整测试

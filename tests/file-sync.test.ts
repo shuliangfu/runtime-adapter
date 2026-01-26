@@ -4,6 +4,7 @@
 
 import { afterAll, describe, expect, it } from "@dreamer/test";
 import {
+  ensureDirSync,
   existsSync,
   isDirectorySync,
   isFileSync,
@@ -32,6 +33,59 @@ describe("文件系统同步 API", () => {
     } catch {
       // 忽略清理错误
     }
+  });
+
+  describe("ensureDirSync", () => {
+    it("应该创建不存在的目录", () => {
+      const testDir = `${TEST_DIR}/ensure-dir-sync-test`;
+      try {
+        removeSync(testDir, { recursive: true });
+      } catch {
+        // 忽略删除错误
+      }
+
+      ensureDirSync(testDir);
+
+      expect(existsSync(testDir)).toBe(true);
+      expect(isDirectorySync(testDir)).toBe(true);
+    });
+
+    it("应该创建嵌套目录", () => {
+      const nestedDir = `${TEST_DIR}/nested-sync/deep/path`;
+      try {
+        removeSync(`${TEST_DIR}/nested-sync`, { recursive: true });
+      } catch {
+        // 忽略删除错误
+      }
+
+      ensureDirSync(nestedDir);
+
+      expect(existsSync(nestedDir)).toBe(true);
+      expect(isDirectorySync(nestedDir)).toBe(true);
+    });
+
+    it("如果目录已存在，不应该抛出错误", () => {
+      const testDir = `${TEST_DIR}/ensure-dir-sync-existing`;
+      mkdirSync(testDir, { recursive: true });
+
+      // 再次调用 ensureDirSync 不应该抛出错误
+      expect(() => ensureDirSync(testDir)).not.toThrow();
+
+      expect(existsSync(testDir)).toBe(true);
+    });
+
+    it("应该支持 mode 选项", () => {
+      const testDir = `${TEST_DIR}/ensure-dir-sync-mode`;
+      try {
+        removeSync(testDir, { recursive: true });
+      } catch {
+        // 忽略删除错误
+      }
+
+      ensureDirSync(testDir, { mode: 0o755 });
+
+      expect(existsSync(testDir)).toBe(true);
+    });
   });
 
   describe("mkdirSync", () => {

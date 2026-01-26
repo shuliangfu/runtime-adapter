@@ -9,6 +9,9 @@ import {
   chown,
   copyFile,
   cwd,
+  ensureDir,
+  exists,
+  isDirectory,
   makeTempDir,
   makeTempFile,
   mkdir,
@@ -30,6 +33,47 @@ describe("文件系统 API", () => {
   const TEST_FILE = `${TEST_DIR}/test.txt`;
   const TEST_CONTENT = "Hello, Runtime Adapter!";
   const TEST_BINARY = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+
+  describe("ensureDir", () => {
+    it("应该创建不存在的目录", async () => {
+      const testDir = `${TEST_DIR}/ensure-dir-test`;
+      await remove(testDir, { recursive: true }).catch(() => {});
+
+      await ensureDir(testDir);
+
+      expect(await exists(testDir)).toBe(true);
+      expect(await isDirectory(testDir)).toBe(true);
+    });
+
+    it("应该创建嵌套目录", async () => {
+      const nestedDir = `${TEST_DIR}/nested/deep/path`;
+      await remove(`${TEST_DIR}/nested`, { recursive: true }).catch(() => {});
+
+      await ensureDir(nestedDir);
+
+      expect(await exists(nestedDir)).toBe(true);
+      expect(await isDirectory(nestedDir)).toBe(true);
+    });
+
+    it("如果目录已存在，不应该抛出错误", async () => {
+      const testDir = `${TEST_DIR}/ensure-dir-existing`;
+      await mkdir(testDir, { recursive: true });
+
+      // 再次调用 ensureDir 不应该抛出错误
+      await ensureDir(testDir);
+
+      expect(await exists(testDir)).toBe(true);
+    });
+
+    it("应该支持 mode 选项", async () => {
+      const testDir = `${TEST_DIR}/ensure-dir-mode`;
+      await remove(testDir, { recursive: true }).catch(() => {});
+
+      await ensureDir(testDir, { mode: 0o755 });
+
+      expect(await exists(testDir)).toBe(true);
+    });
+  });
 
   describe("mkdir", () => {
     it("应该创建目录", async () => {

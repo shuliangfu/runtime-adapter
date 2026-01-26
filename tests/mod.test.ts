@@ -19,6 +19,9 @@ describe("主模块导出", () => {
     expect(runtimeAdapter.readTextFile).toBeDefined();
     expect(runtimeAdapter.writeTextFile).toBeDefined();
     expect(runtimeAdapter.mkdir).toBeDefined();
+    expect(runtimeAdapter.mkdirSync).toBeDefined();
+    expect(runtimeAdapter.ensureDir).toBeDefined();
+    expect(runtimeAdapter.ensureDirSync).toBeDefined();
     expect(runtimeAdapter.remove).toBeDefined();
     expect(runtimeAdapter.stat).toBeDefined();
     // 同步 API

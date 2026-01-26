@@ -333,6 +333,27 @@ export async function mkdir(
 }
 
 /**
+ * 确保目录存在（如果不存在则创建，如果已存在则不做任何操作）
+ * 类似于 mkdir -p 命令
+ * @param path 目录路径
+ * @param options 创建选项（mode 用于设置目录权限）
+ * @throws 如果目录创建失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { ensureDir } from "@dreamer/runtime-adapter";
+ * await ensureDir("./path/to/dir");
+ * ```
+ */
+export async function ensureDir(
+  path: string,
+  options?: { mode?: number },
+): Promise<void> {
+  // ensureDir 就是 mkdir 的 recursive: true 的封装
+  await mkdir(path, { recursive: true, mode: options?.mode });
+}
+
+/**
  * 删除文件或目录
  * @param path 路径
  * @param options 删除选项
@@ -1564,6 +1585,27 @@ export function mkdirSync(
   }
 
   throw new Error("不支持的运行时环境");
+}
+
+/**
+ * 同步确保目录存在（如果不存在则创建，如果已存在则不做任何操作）
+ * 类似于 mkdir -p 命令
+ * @param path 目录路径
+ * @param options 创建选项（mode 用于设置目录权限）
+ * @throws 如果目录创建失败，抛出错误
+ *
+ * @example
+ * ```typescript
+ * import { ensureDirSync } from "@dreamer/runtime-adapter";
+ * ensureDirSync("./path/to/dir");
+ * ```
+ */
+export function ensureDirSync(
+  path: string,
+  options?: { mode?: number },
+): void {
+  // ensureDirSync 就是 mkdirSync 的 recursive: true 的封装
+  mkdirSync(path, { recursive: true, mode: options?.mode });
 }
 
 /**
