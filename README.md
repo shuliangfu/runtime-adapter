@@ -3,7 +3,7 @@
 > 运行时适配层库，提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
 [![Tests](https://img.shields.io/badge/tests-211%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
