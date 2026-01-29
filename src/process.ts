@@ -32,25 +32,55 @@ export interface CommandOutput {
 }
 
 /**
- * 命令进程句柄
+ * 已启动的子进程句柄
  */
-export interface CommandProcess {
+export interface SpawnedProcess {
   readonly stdin: WritableStream<Uint8Array> | null;
   readonly stdout: ReadableStream<Uint8Array> | null;
   readonly stderr: ReadableStream<Uint8Array> | null;
   readonly pid: number;
-  status(): Promise<CommandOutput>;
-  output(): Promise<CommandOutput>;
+  /** 等待进程结束并返回状态（不读取 stdout/stderr） */
+  readonly status: Promise<CommandOutput>;
+  /** 终止进程 */
   kill(signo?: number): void;
-  spawn(): CommandProcess;
-  abort(): void;
 }
 
 /**
- * 创建命令对象
+ * 命令对象（未启动）
+ */
+export interface CommandProcess {
+  /** 启动进程并返回子进程句柄（适用于 inherit 模式的实时输出） */
+  spawn(): SpawnedProcess;
+  /** 执行命令并等待完成，返回输出（适用于 piped 模式） */
+  output(): Promise<CommandOutput>;
+}
+
+/**
+ * 创建命令对象（不立即启动进程）
  * @param command 命令名称
  * @param options 命令选项
- * @returns 命令对象
+ * @returns 命令对象，可通过 spawn() 启动或 output() 执行
+ *
+ * @example
+ * ```typescript
+ * // 方式1：实时输出模式（适用于 inherit）
+ * const cmd = createCommand("deno", {
+ *   args: ["test"],
+ *   stdout: "inherit",
+ *   stderr: "inherit",
+ * });
+ * const child = cmd.spawn();
+ * const status = await child.status;
+ * console.log(status.success);
+ *
+ * // 方式2：捕获输出模式（适用于 piped）
+ * const cmd = createCommand("echo", {
+ *   args: ["hello"],
+ *   stdout: "piped",
+ * });
+ * const output = await cmd.output();
+ * console.log(new TextDecoder().decode(output.stdout));
+ * ```
  */
 export function createCommand(
   command: string,
@@ -59,42 +89,59 @@ export function createCommand(
   const deno = getDeno();
   if (deno) {
     const Command = deno.Command;
-    const cmd = new Command(command, {
-      args: options?.args,
-      cwd: options?.cwd,
-      env: options?.env,
-      stdin: options?.stdin,
-      stdout: options?.stdout,
-      stderr: options?.stderr,
-    });
-
-    // 创建子进程
-    const child = cmd.spawn();
 
     return {
-      get stdin() {
-        return child.stdin;
-      },
-      get stdout() {
-        return child.stdout;
-      },
-      get stderr() {
-        return child.stderr;
-      },
-      get pid() {
-        return child.pid;
-      },
-      async status() {
-        const status = await child.status;
+      // spawn() - 启动进程并返回子进程句柄（适用于 inherit 模式）
+      spawn(): SpawnedProcess {
+        const cmd = new Command(command, {
+          args: options?.args,
+          cwd: options?.cwd,
+          env: options?.env,
+          stdin: options?.stdin,
+          stdout: options?.stdout,
+          stderr: options?.stderr,
+        });
+        const child = cmd.spawn();
+
         return {
-          code: status.code,
-          success: status.success,
-          stdout: new Uint8Array(),
-          stderr: new Uint8Array(),
-          signal: status.signal,
+          get stdin() {
+            return child.stdin;
+          },
+          get stdout() {
+            return child.stdout;
+          },
+          get stderr() {
+            return child.stderr;
+          },
+          get pid() {
+            return child.pid;
+          },
+          // status 是一个 Promise，等待进程结束
+          get status(): Promise<CommandOutput> {
+            return child.status.then((s) => ({
+              code: s.code,
+              success: s.success,
+              stdout: new Uint8Array(),
+              stderr: new Uint8Array(),
+              signal: s.signal,
+            }));
+          },
+          kill(signo?: number) {
+            child.kill(signo);
+          },
         };
       },
-      async output() {
+
+      // output() - 执行命令并返回输出（适用于 piped 模式）
+      async output(): Promise<CommandOutput> {
+        const cmd = new Command(command, {
+          args: options?.args,
+          cwd: options?.cwd,
+          env: options?.env,
+          stdin: options?.stdin,
+          stdout: options?.stdout,
+          stderr: options?.stderr,
+        });
         const output = await cmd.output();
         return {
           code: output.code,
@@ -104,56 +151,61 @@ export function createCommand(
           signal: output.signal,
         };
       },
-      kill(signo?: number) {
-        child.kill(signo);
-      },
-      spawn() {
-        return createCommand(command, options);
-      },
-      abort() {
-        child.kill();
-      },
     };
   }
 
   const bun = getBun();
   if (bun) {
-    // Bun 使用 Bun.spawn
-    const proc = bun.spawn([
-      command,
-      ...(options?.args || []),
-    ], {
-      cwd: options?.cwd,
-      env: options?.env,
-      stdin: options?.stdin === "piped" ? "pipe" : options?.stdin,
-      stdout: options?.stdout === "piped" ? "pipe" : options?.stdout,
-      stderr: options?.stderr === "piped" ? "pipe" : options?.stderr,
-    });
-
     return {
-      get stdin() {
-        return proc.stdin || null;
-      },
-      get stdout() {
-        return proc.stdout || null;
-      },
-      get stderr() {
-        return proc.stderr || null;
-      },
-      get pid() {
-        return proc.pid;
-      },
-      async status() {
-        const exitCode = await proc.exited;
+      // spawn() - 启动进程并返回子进程句柄
+      spawn(): SpawnedProcess {
+        const proc = bun.spawn([command, ...(options?.args || [])], {
+          cwd: options?.cwd,
+          env: options?.env,
+          stdin: options?.stdin === "piped" ? "pipe" : options?.stdin,
+          stdout: options?.stdout === "piped" ? "pipe" : options?.stdout,
+          stderr: options?.stderr === "piped" ? "pipe" : options?.stderr,
+        });
+
         return {
-          code: exitCode,
-          success: exitCode === 0,
-          stdout: new Uint8Array(),
-          stderr: new Uint8Array(),
-          signal: null,
+          get stdin() {
+            return proc.stdin || null;
+          },
+          get stdout() {
+            return proc.stdout || null;
+          },
+          get stderr() {
+            return proc.stderr || null;
+          },
+          get pid() {
+            return proc.pid;
+          },
+          // status 是一个 Promise，等待进程结束
+          get status(): Promise<CommandOutput> {
+            return proc.exited.then((exitCode: number) => ({
+              code: exitCode,
+              success: exitCode === 0,
+              stdout: new Uint8Array(),
+              stderr: new Uint8Array(),
+              signal: null,
+            }));
+          },
+          kill(signo?: number) {
+            proc.kill(signo);
+          },
         };
       },
-      async output() {
+
+      // output() - 执行命令并返回输出
+      async output(): Promise<CommandOutput> {
+        const proc = bun.spawn([command, ...(options?.args || [])], {
+          cwd: options?.cwd,
+          env: options?.env,
+          stdin: options?.stdin === "piped" ? "pipe" : options?.stdin,
+          stdout: options?.stdout === "piped" ? "pipe" : options?.stdout,
+          stderr: options?.stderr === "piped" ? "pipe" : options?.stderr,
+        });
+
         const exitCode = await proc.exited;
         const stdout = proc.stdout
           ? new Uint8Array(await new Response(proc.stdout).arrayBuffer())
@@ -161,6 +213,7 @@ export function createCommand(
         const stderr = proc.stderr
           ? new Uint8Array(await new Response(proc.stderr).arrayBuffer())
           : new Uint8Array();
+
         return {
           code: exitCode,
           success: exitCode === 0,
@@ -168,15 +221,6 @@ export function createCommand(
           stderr,
           signal: null,
         };
-      },
-      kill(signo?: number) {
-        proc.kill(signo);
-      },
-      spawn() {
-        return createCommand(command, options);
-      },
-      abort() {
-        proc.kill();
       },
     };
   }

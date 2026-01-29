@@ -10,7 +10,8 @@ import { getDeno, getProcess } from "./utils.ts";
 import * as nodeOs from "node:os";
 
 /**
- * 执行命令并自动关闭流
+ * 执行命令并返回输出
+ * output() 模式下会自动处理流，无需手动关闭
  */
 async function execCommand(
   command: string,
@@ -20,15 +21,8 @@ async function execCommand(
     args,
     stdout: "piped",
   });
-  try {
-    const output = await cmd.output();
-    return new TextDecoder().decode(output.stdout);
-  } finally {
-    // 关闭流以避免资源泄漏
-    if (cmd.stdout) {
-      await cmd.stdout.cancel().catch(() => {});
-    }
-  }
+  const output = await cmd.output();
+  return new TextDecoder().decode(output.stdout);
 }
 
 /**
