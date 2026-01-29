@@ -428,7 +428,7 @@ deleteEnv("DEBUG");
 ```typescript
 import { createCommand } from "jsr:@dreamer/runtime-adapter";
 
-// 执行命令（自动适配 Bun 或 Deno）
+// 方式1：使用 output() 执行命令并获取输出（推荐用于简单场景）
 const cmd = createCommand("ls", {
   args: ["-la"],
   cwd: "./",
@@ -436,19 +436,28 @@ const cmd = createCommand("ls", {
   stderr: "piped",
 });
 
-// 获取输出
 const output = await cmd.output();
 console.log("标准输出:", new TextDecoder().decode(output.stdout));
 console.log("标准错误:", new TextDecoder().decode(output.stderr));
 console.log("退出码:", output.code);
 console.log("是否成功:", output.success);
 
-// 或者只获取状态
-const status = await cmd.status();
+// 方式2：使用 spawn() 获取子进程句柄（适用于需要控制进程的场景）
+const cmd2 = createCommand("sleep", {
+  args: ["10"],
+  stdout: "inherit",
+  stderr: "inherit",
+});
+
+const child = cmd2.spawn();
+console.log("进程 PID:", child.pid);
+
+// 等待进程完成
+const status = await child.status;
 console.log("进程状态:", status);
 
-// 取消进程
-cmd.kill();
+// 或者终止进程
+// child.kill(15); // SIGTERM
 ```
 
 #### 同步执行 ⭐ 新增
