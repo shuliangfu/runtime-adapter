@@ -268,7 +268,9 @@ describe("路径操作 API", () => {
 
   describe("normalize", () => {
     it("应该规范化路径", () => {
-      expect(normalize("/path/to/../from/./file.txt")).toBe("/path/from/file.txt");
+      expect(normalize("/path/to/../from/./file.txt")).toBe(
+        "/path/from/file.txt",
+      );
     });
 
     it("应该处理多个斜杠", () => {

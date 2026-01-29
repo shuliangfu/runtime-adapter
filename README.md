@@ -74,12 +74,13 @@
 
 ## 🎨 设计原则
 
-**所有 @dreamer/* 库都遵循以下原则**：
+__所有 @dreamer/_ 库都遵循以下原则_*：
 
 - **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
 
 这样可以：
+
 - 明确区分服务端和客户端代码
 - 避免在客户端代码中引入服务端依赖
 - 提供更好的类型安全和代码提示
@@ -113,13 +114,13 @@ bunx jsr add @dreamer/runtime-adapter
 
 ## 🌍 环境兼容性
 
-| 环境 | 版本要求 | 状态 |
-|------|---------|------|
-| **Deno** | 2.5+ | ✅ 完全支持 |
-| **Bun** | 1.0+ | ✅ 完全支持 |
-| **服务端** | - | ✅ 支持（兼容 Deno 和 Bun 运行时） |
-| **客户端** | - | ❌ 不支持（浏览器环境） |
-| **依赖** | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
+| 环境       | 版本要求          | 状态                                  |
+| ---------- | ----------------- | ------------------------------------- |
+| **Deno**   | 2.5+              | ✅ 完全支持                           |
+| **Bun**    | 1.0+              | ✅ 完全支持                           |
+| **服务端** | -                 | ✅ 支持（兼容 Deno 和 Bun 运行时）    |
+| **客户端** | -                 | ❌ 不支持（浏览器环境）               |
+| **依赖**   | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
 
 ---
 
@@ -128,7 +129,12 @@ bunx jsr add @dreamer/runtime-adapter
 ### 运行时检测
 
 ```typescript
-import { detectRuntime, IS_DENO, IS_BUN, RUNTIME } from "jsr:@dreamer/runtime-adapter";
+import {
+  detectRuntime,
+  IS_BUN,
+  IS_DENO,
+  RUNTIME,
+} from "jsr:@dreamer/runtime-adapter";
 
 // 检测运行时
 const runtime = detectRuntime(); // "deno" | "bun" | "unknown"
@@ -151,31 +157,31 @@ console.log("当前运行时:", RUNTIME);
 
 ```typescript
 import {
-  readFile,
-  writeFile,
-  readTextFile,
-  writeTextFile,
-  mkdir,
-  ensureDir,
-  remove,
-  stat,
-  readdir,
-  copyFile,
-  rename,
-  symlink,
-  realPath,
+  chdir,
   chmod,
   chown,
+  copyFile,
+  cwd,
+  ensureDir,
+  exists,
+  isDirectory,
+  isFile,
   makeTempDir,
   makeTempFile,
-  cwd,
-  chdir,
-  exists,
-  isFile,
-  isDirectory,
+  mkdir,
+  readdir,
+  readFile,
+  readTextFile,
+  realPath,
+  remove,
+  rename,
+  stat,
+  symlink,
   truncate,
   walk,
   watchFs,
+  writeFile,
+  writeTextFile,
 } from "jsr:@dreamer/runtime-adapter";
 
 // 读取文件（自动适配 Bun 或 Deno）
@@ -243,10 +249,12 @@ console.log("当前目录:", currentDir);
 await chdir("./subdirectory");
 
 // 目录遍历
-for await (const path of walk("./src", {
-  includeDirs: false,
-  match: (p) => p.endsWith(".ts"),
-})) {
+for await (
+  const path of walk("./src", {
+    includeDirs: false,
+    match: (p) => p.endsWith(".ts"),
+  })
+) {
   console.log("找到文件:", path);
 }
 
@@ -255,10 +263,10 @@ const watcher = watchFs(".", {
   recursive: true,
   filesOnly: true, // 只监听文件，排除目录
   exclude: [
-    "uploads",        // 排除包含 "uploads" 的路径
-    "runtime",        // 排除包含 "runtime" 的路径
-    /node_modules/,  // 使用正则表达式排除 node_modules
-    /\.git/,          // 排除 .git 目录
+    "uploads", // 排除包含 "uploads" 的路径
+    "runtime", // 排除包含 "runtime" 的路径
+    /node_modules/, // 使用正则表达式排除 node_modules
+    /\.git/, // 排除 .git 目录
   ],
 });
 
@@ -271,19 +279,19 @@ for await (const event of watcher) {
 
 ```typescript
 import {
-  readFileSync,
-  writeFileSync,
-  readTextFileSync,
-  writeTextFileSync,
-  mkdirSync,
   ensureDirSync,
+  existsSync,
+  isDirectorySync,
+  isFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  readTextFileSync,
+  realPathSync,
   removeSync,
   statSync,
-  readdirSync,
-  existsSync,
-  isFileSync,
-  isDirectorySync,
-  realPathSync,
+  writeFileSync,
+  writeTextFileSync,
 } from "jsr:@dreamer/runtime-adapter";
 
 // 同步读取文件
@@ -328,7 +336,12 @@ console.log("真实路径:", realPath);
 ### 网络操作
 
 ```typescript
-import { serve, connect, startTls, upgradeWebSocket } from "jsr:@dreamer/runtime-adapter";
+import {
+  connect,
+  serve,
+  startTls,
+  upgradeWebSocket,
+} from "jsr:@dreamer/runtime-adapter";
 
 // HTTP 服务器（自动适配 Bun 或 Deno）
 const handle = await serve({ port: 3000 }, (req) => {
@@ -382,7 +395,13 @@ const tlsConn = await startTls(conn, {
 ### 环境变量
 
 ```typescript
-import { getEnv, setEnv, getEnvAll, hasEnv, deleteEnv } from "jsr:@dreamer/runtime-adapter";
+import {
+  deleteEnv,
+  getEnv,
+  getEnvAll,
+  hasEnv,
+  setEnv,
+} from "jsr:@dreamer/runtime-adapter";
 
 // 获取环境变量（自动适配 Bun 或 Deno）
 const apiKey = getEnv("API_KEY");
@@ -457,15 +476,15 @@ console.log("工作目录:", result.trim());
 
 ```typescript
 import {
-  isTerminal,
+  getStderr,
+  getStdout,
   isStderrTerminal,
   isStdinTerminal,
-  getStdout,
-  getStderr,
-  writeStdoutSync,
-  writeStderrSync,
+  isTerminal,
   readStdin,
   setStdinRaw,
+  writeStderrSync,
+  writeStdoutSync,
 } from "jsr:@dreamer/runtime-adapter";
 
 // 检查是否为终端（自动适配 Bun 或 Deno）
@@ -581,7 +600,7 @@ const md5 = await hash("Hello, World!", "MD5");
 #### 同步 API ⭐ 新增
 
 ```typescript
-import { hashSync, hashFileSync } from "jsr:@dreamer/runtime-adapter";
+import { hashFileSync, hashSync } from "jsr:@dreamer/runtime-adapter";
 
 // 同步计算文件哈希
 const fileHash = hashFileSync("./file.txt");
@@ -596,7 +615,8 @@ const sha512 = hashFileSync("./file.txt", "SHA-512");
 const md5 = hashSync("Hello, World!", "MD5");
 ```
 
-> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用 Node.js 兼容模式，Bun 原生支持。
+> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用
+> Node.js 兼容模式，Bun 原生支持。
 
 ### 系统信息
 
@@ -604,10 +624,10 @@ const md5 = hashSync("Hello, World!", "MD5");
 
 ```typescript
 import {
-  getMemoryInfo,
   getCpuUsage,
   getDiskUsage,
   getLoadAverage,
+  getMemoryInfo,
   getSystemInfo,
   getSystemStatus,
 } from "jsr:@dreamer/runtime-adapter";
@@ -657,8 +677,8 @@ console.log("系统状态:", status);
 
 ```typescript
 import {
-  getMemoryInfoSync,
   getLoadAverageSync,
+  getMemoryInfoSync,
   getSystemInfoSync,
 } from "jsr:@dreamer/runtime-adapter";
 
@@ -684,102 +704,105 @@ console.log(`平台: ${system.platform}`);
 
 ### 运行时检测
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
+| API               | 说明               | 返回值                         |
+| ----------------- | ------------------ | ------------------------------ |
 | `detectRuntime()` | 检测当前运行时环境 | `"deno" \| "bun" \| "unknown"` |
-| `RUNTIME` | 当前运行时常量 | `"deno" \| "bun"` |
-| `IS_BUN` | 是否为 Bun 环境 | `boolean` |
-| `IS_DENO` | 是否为 Deno 环境 | `boolean` |
-| `type Runtime` | 运行时类型定义 | `"deno" \| "bun" \| "unknown"` |
+| `RUNTIME`         | 当前运行时常量     | `"deno" \| "bun"`              |
+| `IS_BUN`          | 是否为 Bun 环境    | `boolean`                      |
+| `IS_DENO`         | 是否为 Deno 环境   | `boolean`                      |
+| `type Runtime`    | 运行时类型定义     | `"deno" \| "bun" \| "unknown"` |
 
 ### 文件系统 API
 
 #### 异步文件读写
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `readFile(path: string)` | 读取文件（二进制） | `Promise<Uint8Array>` |
-| `readTextFile(path: string)` | 读取文本文件 | `Promise<string>` |
-| `writeFile(path: string, data: Uint8Array, options?)` | 写入文件（二进制） | `Promise<void>` |
-| `writeTextFile(path: string, data: string, options?)` | 写入文本文件 | `Promise<void>` |
-| `open(path: string, options?)` | 打开文件 | `Promise<File>` |
-| `create(path: string)` | 创建文件 | `Promise<File>` |
+| API                                                   | 说明               | 返回值                |
+| ----------------------------------------------------- | ------------------ | --------------------- |
+| `readFile(path: string)`                              | 读取文件（二进制） | `Promise<Uint8Array>` |
+| `readTextFile(path: string)`                          | 读取文本文件       | `Promise<string>`     |
+| `writeFile(path: string, data: Uint8Array, options?)` | 写入文件（二进制） | `Promise<void>`       |
+| `writeTextFile(path: string, data: string, options?)` | 写入文本文件       | `Promise<void>`       |
+| `open(path: string, options?)`                        | 打开文件           | `Promise<File>`       |
+| `create(path: string)`                                | 创建文件           | `Promise<File>`       |
 
 #### 同步文件读写 ⭐ 新增
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `readFileSync(path: string)` | 同步读取文件（二进制） | `Uint8Array` |
-| `readTextFileSync(path: string)` | 同步读取文本文件 | `string` |
-| `writeFileSync(path: string, data: Uint8Array, options?)` | 同步写入文件（二进制） | `void` |
-| `writeTextFileSync(path: string, data: string, options?)` | 同步写入文本文件 | `void` |
+| API                                                       | 说明                   | 返回值       |
+| --------------------------------------------------------- | ---------------------- | ------------ |
+| `readFileSync(path: string)`                              | 同步读取文件（二进制） | `Uint8Array` |
+| `readTextFileSync(path: string)`                          | 同步读取文本文件       | `string`     |
+| `writeFileSync(path: string, data: Uint8Array, options?)` | 同步写入文件（二进制） | `void`       |
+| `writeTextFileSync(path: string, data: string, options?)` | 同步写入文本文件       | `void`       |
 
 #### 异步目录操作
 
-| API | 说明 | 选项 |
-|-----|------|------|
-| `mkdir(path: string, options?)` | 创建目录 | `recursive?: boolean`<br>`mode?: number` |
-| `ensureDir(path: string, options?)` | 确保目录存在（如果不存在则创建） | `mode?: number` |
-| `remove(path: string, options?)` | 删除文件或目录 | `recursive?: boolean` |
-| `readdir(path: string)` | 读取目录内容 | - |
-| `stat(path: string)` | 获取文件信息 | - |
-| `walk(dir: string, options?)` | 递归遍历目录 | `maxDepth?: number`<br>`includeFiles?: boolean`<br>`includeDirs?: boolean`<br>`match?: (path: string, info: FileInfo) => boolean`<br>`skipSymlinks?: boolean` |
+| API                                 | 说明                             | 选项                                                                                                                                                          |
+| ----------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mkdir(path: string, options?)`     | 创建目录                         | `recursive?: boolean`<br>`mode?: number`                                                                                                                      |
+| `ensureDir(path: string, options?)` | 确保目录存在（如果不存在则创建） | `mode?: number`                                                                                                                                               |
+| `remove(path: string, options?)`    | 删除文件或目录                   | `recursive?: boolean`                                                                                                                                         |
+| `readdir(path: string)`             | 读取目录内容                     | -                                                                                                                                                             |
+| `stat(path: string)`                | 获取文件信息                     | -                                                                                                                                                             |
+| `walk(dir: string, options?)`       | 递归遍历目录                     | `maxDepth?: number`<br>`includeFiles?: boolean`<br>`includeDirs?: boolean`<br>`match?: (path: string, info: FileInfo) => boolean`<br>`skipSymlinks?: boolean` |
 
 #### 同步目录操作 ⭐ 新增
 
-| API | 说明 | 选项 |
-|-----|------|------|
-| `mkdirSync(path: string, options?)` | 同步创建目录 | `recursive?: boolean`<br>`mode?: number` |
-| `ensureDirSync(path: string, options?)` | 同步确保目录存在（如果不存在则创建） | `mode?: number` |
-| `removeSync(path: string, options?)` | 同步删除文件或目录 | `recursive?: boolean` |
-| `readdirSync(path: string)` | 同步读取目录内容 | - |
-| `statSync(path: string)` | 同步获取文件信息 | - |
-| `existsSync(path: string)` | 同步检查文件或目录是否存在 | - |
-| `isFileSync(path: string)` | 同步检查路径是否为文件 | - |
-| `isDirectorySync(path: string)` | 同步检查路径是否为目录 | - |
-| `realPathSync(path: string)` | 同步获取真实路径（解析符号链接） | - |
+| API                                     | 说明                                 | 选项                                     |
+| --------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| `mkdirSync(path: string, options?)`     | 同步创建目录                         | `recursive?: boolean`<br>`mode?: number` |
+| `ensureDirSync(path: string, options?)` | 同步确保目录存在（如果不存在则创建） | `mode?: number`                          |
+| `removeSync(path: string, options?)`    | 同步删除文件或目录                   | `recursive?: boolean`                    |
+| `readdirSync(path: string)`             | 同步读取目录内容                     | -                                        |
+| `statSync(path: string)`                | 同步获取文件信息                     | -                                        |
+| `existsSync(path: string)`              | 同步检查文件或目录是否存在           | -                                        |
+| `isFileSync(path: string)`              | 同步检查路径是否为文件               | -                                        |
+| `isDirectorySync(path: string)`         | 同步检查路径是否为目录               | -                                        |
+| `realPathSync(path: string)`            | 同步获取真实路径（解析符号链接）     | -                                        |
 
 #### 文件操作
 
-| API | 说明 |
-|-----|------|
-| `copyFile(src: string, dest: string)` | 复制文件 |
-| `rename(oldPath: string, newPath: string)` | 重命名或移动文件/目录 |
-| `symlink(target: string, path: string, type?: "file" \| "dir")` | 创建符号链接 |
-| `realPath(path: string)` | 获取真实路径（解析符号链接） |
-| `chmod(path: string, mode: number)` | 修改文件权限 |
-| `chown(path: string, uid: number, gid: number)` | 修改文件所有者 |
-| `exists(path: string)` | 检查文件或目录是否存在 |
-| `isFile(path: string)` | 检查路径是否为文件 |
-| `isDirectory(path: string)` | 检查路径是否为目录 |
-| `truncate(path: string, len: number)` | 截断文件 |
+| API                                                             | 说明                         |
+| --------------------------------------------------------------- | ---------------------------- |
+| `copyFile(src: string, dest: string)`                           | 复制文件                     |
+| `rename(oldPath: string, newPath: string)`                      | 重命名或移动文件/目录        |
+| `symlink(target: string, path: string, type?: "file" \| "dir")` | 创建符号链接                 |
+| `realPath(path: string)`                                        | 获取真实路径（解析符号链接） |
+| `chmod(path: string, mode: number)`                             | 修改文件权限                 |
+| `chown(path: string, uid: number, gid: number)`                 | 修改文件所有者               |
+| `exists(path: string)`                                          | 检查文件或目录是否存在       |
+| `isFile(path: string)`                                          | 检查路径是否为文件           |
+| `isDirectory(path: string)`                                     | 检查路径是否为目录           |
+| `truncate(path: string, len: number)`                           | 截断文件                     |
 
 #### 临时文件/目录
 
-| API | 说明 | 选项 |
-|-----|------|------|
-| `makeTempDir(options?)` | 创建临时目录 | `prefix?: string`<br>`suffix?: string`<br>`dir?: string` |
+| API                      | 说明         | 选项                                                     |
+| ------------------------ | ------------ | -------------------------------------------------------- |
+| `makeTempDir(options?)`  | 创建临时目录 | `prefix?: string`<br>`suffix?: string`<br>`dir?: string` |
 | `makeTempFile(options?)` | 创建临时文件 | `prefix?: string`<br>`suffix?: string`<br>`dir?: string` |
 
 #### 工作目录
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `cwd()` | 获取当前工作目录 | `string` |
+| API                   | 说明             | 返回值          |
+| --------------------- | ---------------- | --------------- |
+| `cwd()`               | 获取当前工作目录 | `string`        |
 | `chdir(path: string)` | 更改当前工作目录 | `Promise<void>` |
 
 #### 文件监控
 
-| API | 说明 | 选项 |
-|-----|------|------|
+| API                                            | 说明             | 选项                                                                                                                            |
+| ---------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `watchFs(paths: string \| string[], options?)` | 监控文件系统变化 | `recursive?: boolean` - 是否递归监控<br>`filesOnly?: boolean` - 是否只监听文件<br>`exclude?: (string \| RegExp)[]` - 排除的路径 |
 
 **选项说明**：
+
 - `recursive`: 是否递归监控子目录（默认：`false`）
 - `filesOnly`: 是否只监听文件，排除目录（默认：`false`）
-- `exclude`: 排除的路径规则数组，支持字符串（路径包含该字符串即排除）或正则表达式
+- `exclude`:
+  排除的路径规则数组，支持字符串（路径包含该字符串即排除）或正则表达式
 
 **使用示例**：
+
 ```typescript
 import { watchFs } from "jsr:@dreamer/runtime-adapter";
 
@@ -788,10 +811,10 @@ const watcher = watchFs(".", {
   recursive: true,
   filesOnly: true,
   exclude: [
-    "uploads",        // 排除包含 "uploads" 的路径
-    "runtime",        // 排除包含 "runtime" 的路径
-    /node_modules/,  // 使用正则表达式排除 node_modules
-    /\.git/,          // 排除 .git 目录
+    "uploads", // 排除包含 "uploads" 的路径
+    "runtime", // 排除包含 "runtime" 的路径
+    /node_modules/, // 使用正则表达式排除 node_modules
+    /\.git/, // 排除 .git 目录
   ],
 });
 
@@ -812,11 +835,13 @@ serve(
 ```
 
 **选项：**
+
 - `port?: number` - 端口号（可选，默认随机端口）
 - `host?: string` - 主机名（可选，默认 `"0.0.0.0"`）
 - `onListen?: (params: { host: string; port: number }) => void` - 监听回调函数
 
 **返回值：**
+
 - `ServeHandle.port` - 服务器端口号
 - `ServeHandle.close()` - 关闭服务器
 
@@ -830,20 +855,28 @@ upgradeWebSocket(
 ```
 
 **选项：**
+
 - `protocol?: string` - WebSocket 子协议
 - `idleTimeout?: number` - 空闲超时时间（秒）
 
 **返回值：**
-- `socket: WebSocket` - WebSocket 连接对象（支持标准的 `addEventListener`、`send`、`close` 等方法）
-- `response: Response | undefined` - HTTP 响应对象（Deno 环境返回 Response，Bun 环境返回 undefined，由 Bun 自动处理）
+
+- `socket: WebSocket` - WebSocket 连接对象（支持标准的
+  `addEventListener`、`send`、`close` 等方法）
+- `response: Response | undefined` - HTTP 响应对象（Deno 环境返回 Response，Bun
+  环境返回 undefined，由 Bun 自动处理）
 
 **使用说明：**
+
 - ✅ **跨运行时兼容**：Deno 和 Bun 环境都支持，使用统一的 API
 - ✅ **统一接口**：使用标准的 `addEventListener` API，无需关心底层实现差异
-- ✅ **自动适配**：Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置 `websocket` 处理器
-- ✅ **事件支持**：支持 `open`、`message`、`close`、`error` 等标准 WebSocket 事件
+- ✅ **自动适配**：Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置
+  `websocket` 处理器
+- ✅ **事件支持**：支持 `open`、`message`、`close`、`error` 等标准 WebSocket
+  事件
 
 **示例：**
+
 ```typescript
 import { serve, upgradeWebSocket } from "jsr:@dreamer/runtime-adapter";
 
@@ -864,20 +897,20 @@ const handle = serve({ port: 3000 }, (req) => {
 
 #### TCP/TLS 连接
 
-| API | 说明 | 选项 |
-|-----|------|------|
-| `connect(options: ConnectOptions)` | 建立 TCP 连接 | `host: string`<br>`port: number` |
-| `startTls(conn: TcpConn, options?: StartTlsOptions)` | 升级 TCP 连接到 TLS | `host?: string` |
+| API                                                  | 说明                | 选项                             |
+| ---------------------------------------------------- | ------------------- | -------------------------------- |
+| `connect(options: ConnectOptions)`                   | 建立 TCP 连接       | `host: string`<br>`port: number` |
+| `startTls(conn: TcpConn, options?: StartTlsOptions)` | 升级 TCP 连接到 TLS | `host?: string`                  |
 
 ### 环境变量 API
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `getEnv(key: string)` | 获取环境变量 | `string \| undefined` |
-| `setEnv(key: string, value: string)` | 设置环境变量 | `void` |
-| `deleteEnv(key: string)` | 删除环境变量 | `void` |
-| `getEnvAll()` | 获取所有环境变量 | `Record<string, string>` |
-| `hasEnv(key: string)` | 检查环境变量是否存在 | `boolean` |
+| API                                  | 说明                 | 返回值                   |
+| ------------------------------------ | -------------------- | ------------------------ |
+| `getEnv(key: string)`                | 获取环境变量         | `string \| undefined`    |
+| `setEnv(key: string, value: string)` | 设置环境变量         | `void`                   |
+| `deleteEnv(key: string)`             | 删除环境变量         | `void`                   |
+| `getEnvAll()`                        | 获取所有环境变量     | `Record<string, string>` |
+| `hasEnv(key: string)`                | 检查环境变量是否存在 | `boolean`                |
 
 ### 进程/命令 API
 
@@ -891,6 +924,7 @@ createCommand(
 ```
 
 **选项：**
+
 - `args?: string[]` - 命令参数数组
 - `cwd?: string` - 工作目录
 - `env?: Record<string, string>` - 环境变量对象
@@ -899,6 +933,7 @@ createCommand(
 - `stderr?: "inherit" \| "piped" \| "null"` - 标准错误输出模式
 
 **CommandProcess 方法：**
+
 - `output()` - 获取命令输出
 - `status()` - 获取命令状态
 - `kill(signo?)` - 终止命令
@@ -915,6 +950,7 @@ execCommandSync(
 ```
 
 **说明：**
+
 - 同步执行命令并返回输出
 - 如果命令执行失败，会抛出错误
 - Deno 使用 `Deno.Command.outputSync()`
@@ -922,17 +958,17 @@ execCommandSync(
 
 ### 终端 API
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `isTerminal()` | 检查标准输出是否为终端 | `boolean` |
-| `isStderrTerminal()` | 检查标准错误输出是否为终端 | `boolean` |
-| `isStdinTerminal()` | 检查标准输入是否为终端 | `boolean` |
-| `getStdout()` | 获取标准输出流（异步） | `WritableStream<Uint8Array>` |
-| `getStderr()` | 获取标准错误输出流（异步） | `WritableStream<Uint8Array>` |
-| `writeStdoutSync(data: Uint8Array)` | 同步写入标准输出 | `void` |
-| `writeStderrSync(data: Uint8Array)` | 同步写入标准错误输出 | `void` |
-| `readStdin(buffer: Uint8Array)` | 读取标准输入 | `Promise<number \| null>` |
-| `setStdinRaw(mode: boolean, options?)` | 设置标准输入为原始模式 | `boolean` |
+| API                                    | 说明                       | 返回值                       |
+| -------------------------------------- | -------------------------- | ---------------------------- |
+| `isTerminal()`                         | 检查标准输出是否为终端     | `boolean`                    |
+| `isStderrTerminal()`                   | 检查标准错误输出是否为终端 | `boolean`                    |
+| `isStdinTerminal()`                    | 检查标准输入是否为终端     | `boolean`                    |
+| `getStdout()`                          | 获取标准输出流（异步）     | `WritableStream<Uint8Array>` |
+| `getStderr()`                          | 获取标准错误输出流（异步） | `WritableStream<Uint8Array>` |
+| `writeStdoutSync(data: Uint8Array)`    | 同步写入标准输出           | `void`                       |
+| `writeStderrSync(data: Uint8Array)`    | 同步写入标准错误输出       | `void`                       |
+| `readStdin(buffer: Uint8Array)`        | 读取标准输入               | `Promise<number \| null>`    |
+| `setStdinRaw(mode: boolean, options?)` | 设置标准输入为原始模式     | `boolean`                    |
 
 ### 定时任务 API
 
@@ -945,30 +981,35 @@ cron(
 ```
 
 **Cron 表达式格式：**
+
 - 格式：`秒 分 时 日 月 周`（6 字段格式）
 - 示例：`"*/5 * * * * *"` - 每 5 秒执行一次
 - 示例：`"0 * * * * *"` - 每分钟执行
 - 示例：`"0 0 2 * * *"` - 每天凌晨 2 点执行
 
 **选项：**
+
 - `signal?: AbortSignal` - 用于取消任务
 
 **返回值：**
+
 - `CronHandle.close()` - 关闭定时任务
 - `CronHandle.stop()` - 停止定时任务（close 的别名）
 
-> 📌 **注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致。`stop()` 和 `close()` 方法功能相同，可以根据使用习惯选择。
+> 📌 **注意**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun
+> 环境下行为一致。`stop()` 和 `close()` 方法功能相同，可以根据使用习惯选择。
 
 ### 进程信息 API
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `pid()` | 获取当前进程 ID | `number` |
-| `platform()` | 获取操作系统平台 | `"linux" \| "darwin" \| "windows" \| "unknown"` |
-| `arch()` | 获取 CPU 架构 | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
-| `version()` | 获取运行时版本信息 | `RuntimeVersion` |
+| API          | 说明               | 返回值                                          |
+| ------------ | ------------------ | ----------------------------------------------- |
+| `pid()`      | 获取当前进程 ID    | `number`                                        |
+| `platform()` | 获取操作系统平台   | `"linux" \| "darwin" \| "windows" \| "unknown"` |
+| `arch()`     | 获取 CPU 架构      | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
+| `version()`  | 获取运行时版本信息 | `RuntimeVersion`                                |
 
 **RuntimeVersion 接口：**
+
 ```typescript
 interface RuntimeVersion {
   runtime: "deno" | "bun";
@@ -984,142 +1025,152 @@ interface RuntimeVersion {
 
 ### 进程工具 API
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `args()` | 获取命令行参数数组 | `string[]` |
-| `exit(code: number)` | 退出程序 | `never` |
+| API                  | 说明               | 返回值     |
+| -------------------- | ------------------ | ---------- |
+| `args()`             | 获取命令行参数数组 | `string[]` |
+| `exit(code: number)` | 退出程序           | `never`    |
 
 ### 信号处理 API
 
-| API | 说明 | 参数 |
-|-----|------|------|
-| `addSignalListener(signal: Signal, handler: () => void)` | 添加信号监听器 | `signal`: `"SIGTERM" \| "SIGINT" \| "SIGUSR1" \| "SIGUSR2" \| "SIGHUP"`<br>`handler`: 信号处理函数 |
-| `removeSignalListener(signal: Signal, handler: () => void)` | 移除信号监听器 | 同上 |
+| API                                                         | 说明           | 参数                                                                                               |
+| ----------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
+| `addSignalListener(signal: Signal, handler: () => void)`    | 添加信号监听器 | `signal`: `"SIGTERM" \| "SIGINT" \| "SIGUSR1" \| "SIGUSR2" \| "SIGHUP"`<br>`handler`: 信号处理函数 |
+| `removeSignalListener(signal: Signal, handler: () => void)` | 移除信号监听器 | 同上                                                                                               |
 
 ### 路径操作 API
 
-| API | 说明 | 返回值 |
-|-----|------|--------|
-| `join(...paths: string[])` | 拼接多个路径片段 | `string` |
-| `dirname(path: string)` | 获取目录名 | `string` |
-| `basename(path: string, ext?: string)` | 获取文件名 | `string` |
-| `extname(path: string)` | 获取扩展名 | `string` |
-| `resolve(...paths: string[])` | 解析路径为绝对路径 | `string` |
-| `relative(from: string, to: string)` | 计算相对路径 | `string` |
-| `normalize(path: string)` | 规范化路径 | `string` |
-| `isAbsolute(path: string)` | 判断是否为绝对路径 | `boolean` |
-| `isRelative(path: string)` | 判断是否为相对路径 | `boolean` |
+| API                                    | 说明               | 返回值    |
+| -------------------------------------- | ------------------ | --------- |
+| `join(...paths: string[])`             | 拼接多个路径片段   | `string`  |
+| `dirname(path: string)`                | 获取目录名         | `string`  |
+| `basename(path: string, ext?: string)` | 获取文件名         | `string`  |
+| `extname(path: string)`                | 获取扩展名         | `string`  |
+| `resolve(...paths: string[])`          | 解析路径为绝对路径 | `string`  |
+| `relative(from: string, to: string)`   | 计算相对路径       | `string`  |
+| `normalize(path: string)`              | 规范化路径         | `string`  |
+| `isAbsolute(path: string)`             | 判断是否为绝对路径 | `boolean` |
+| `isRelative(path: string)`             | 判断是否为相对路径 | `boolean` |
 
 ### 文件哈希 API
 
 #### 异步 API
 
-| API | 说明 | 参数 | 返回值 |
-|-----|------|------|--------|
-| `hashFile(path: string, algorithm?: HashAlgorithm)` | 计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
+| API                                                           | 说明           | 参数                                                                              | 返回值            |
+| ------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- | ----------------- |
+| `hashFile(path: string, algorithm?: HashAlgorithm)`           | 计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`）                    | `Promise<string>` |
 | `hash(data: Uint8Array \| string, algorithm?: HashAlgorithm)` | 计算数据哈希值 | `data`: 数据（Uint8Array 或字符串）<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
 
 #### 同步 API ⭐ 新增
 
-| API | 说明 | 参数 | 返回值 |
-|-----|------|------|--------|
-| `hashFileSync(path: string, algorithm?: HashAlgorithm)` | 同步计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `string` |
+| API                                                               | 说明               | 参数                                                                              | 返回值   |
+| ----------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------- | -------- |
+| `hashFileSync(path: string, algorithm?: HashAlgorithm)`           | 同步计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`）                    | `string` |
 | `hashSync(data: Uint8Array \| string, algorithm?: HashAlgorithm)` | 同步计算数据哈希值 | `data`: 数据（Uint8Array 或字符串）<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `string` |
 
 **HashAlgorithm 类型：**
+
 - `"SHA-256"`（默认）
 - `"SHA-512"`
 - `"SHA-1"`
 - `"MD5"`
 
-> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用 Node.js 兼容模式，Bun 原生支持。
+> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用
+> Node.js 兼容模式，Bun 原生支持。
 
 ### 系统信息 API
 
 #### 异步 API
 
-| API | 说明 | 参数 | 返回值 |
-|-----|------|------|--------|
-| `getMemoryInfo()` | 获取系统内存信息 | 无 | `Promise<MemoryInfo>` |
-| `getCpuUsage(interval?: number)` | 获取 CPU 使用率 | `interval`: 采样间隔（毫秒，默认：100） | `Promise<CpuUsage>` |
-| `getLoadAverage()` | 获取系统负载（Linux/macOS） | 无 | `Promise<LoadAverage \| undefined>` |
-| `getDiskUsage(path?: string)` | 获取磁盘使用情况 | `path`: 路径（默认：当前工作目录） | `Promise<DiskUsage>` |
-| `getSystemInfo()` | 获取系统信息 | 无 | `Promise<SystemInfo>` |
-| `getSystemStatus(cpuInterval?: number, diskPath?: string)` | 获取完整的系统状态 | `cpuInterval`: CPU 采样间隔（默认：100）<br>`diskPath`: 磁盘路径（可选） | `Promise<SystemStatus>` |
+| API                                                        | 说明                        | 参数                                                                     | 返回值                              |
+| ---------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------ | ----------------------------------- |
+| `getMemoryInfo()`                                          | 获取系统内存信息            | 无                                                                       | `Promise<MemoryInfo>`               |
+| `getCpuUsage(interval?: number)`                           | 获取 CPU 使用率             | `interval`: 采样间隔（毫秒，默认：100）                                  | `Promise<CpuUsage>`                 |
+| `getLoadAverage()`                                         | 获取系统负载（Linux/macOS） | 无                                                                       | `Promise<LoadAverage \| undefined>` |
+| `getDiskUsage(path?: string)`                              | 获取磁盘使用情况            | `path`: 路径（默认：当前工作目录）                                       | `Promise<DiskUsage>`                |
+| `getSystemInfo()`                                          | 获取系统信息                | 无                                                                       | `Promise<SystemInfo>`               |
+| `getSystemStatus(cpuInterval?: number, diskPath?: string)` | 获取完整的系统状态          | `cpuInterval`: CPU 采样间隔（默认：100）<br>`diskPath`: 磁盘路径（可选） | `Promise<SystemStatus>`             |
 
 #### 同步 API ⭐ 新增
 
-| API | 说明 | 参数 | 返回值 |
-|-----|------|------|--------|
-| `getMemoryInfoSync()` | 同步获取系统内存信息 | 无 | `MemoryInfo` |
-| `getLoadAverageSync()` | 同步获取系统负载（Linux/macOS） | 无 | `LoadAverage \| undefined` |
-| `getSystemInfoSync()` | 同步获取系统信息 | 无 | `SystemInfo` |
+| API                    | 说明                            | 参数 | 返回值                     |
+| ---------------------- | ------------------------------- | ---- | -------------------------- |
+| `getMemoryInfoSync()`  | 同步获取系统内存信息            | 无   | `MemoryInfo`               |
+| `getLoadAverageSync()` | 同步获取系统负载（Linux/macOS） | 无   | `LoadAverage \| undefined` |
+| `getSystemInfoSync()`  | 同步获取系统信息                | 无   | `SystemInfo`               |
 
 **MemoryInfo 接口：**
+
 ```typescript
 interface MemoryInfo {
-  total: number;           // 总内存（字节）
-  available: number;        // 可用内存（字节）
-  used: number;             // 已使用内存（字节）
-  free: number;             // 空闲内存（字节）
-  usagePercent: number;     // 内存使用率（百分比）
-  swapTotal?: number;       // 交换区总量（字节，可选）
-  swapFree?: number;        // 空闲交换区（字节，可选）
+  total: number; // 总内存（字节）
+  available: number; // 可用内存（字节）
+  used: number; // 已使用内存（字节）
+  free: number; // 空闲内存（字节）
+  usagePercent: number; // 内存使用率（百分比）
+  swapTotal?: number; // 交换区总量（字节，可选）
+  swapFree?: number; // 空闲交换区（字节，可选）
 }
 ```
 
 **CpuUsage 接口：**
+
 ```typescript
 interface CpuUsage {
-  usagePercent: number;     // 总 CPU 使用率（百分比）
-  userPercent: number;      // 用户态 CPU 使用率（百分比）
-  systemPercent: number;    // 系统态 CPU 使用率（百分比）
+  usagePercent: number; // 总 CPU 使用率（百分比）
+  userPercent: number; // 用户态 CPU 使用率（百分比）
+  systemPercent: number; // 系统态 CPU 使用率（百分比）
 }
 ```
 
 **LoadAverage 接口：**
+
 ```typescript
 interface LoadAverage {
-  load1: number;            // 1 分钟平均负载
-  load5: number;            // 5 分钟平均负载
-  load15: number;           // 15 分钟平均负载
+  load1: number; // 1 分钟平均负载
+  load5: number; // 5 分钟平均负载
+  load15: number; // 15 分钟平均负载
 }
 ```
 
 **DiskUsage 接口：**
+
 ```typescript
 interface DiskUsage {
-  total: number;            // 总空间（字节）
-  used: number;             // 已使用空间（字节）
-  available: number;        // 可用空间（字节）
-  usagePercent: number;     // 使用率（百分比）
+  total: number; // 总空间（字节）
+  used: number; // 已使用空间（字节）
+  available: number; // 可用空间（字节）
+  usagePercent: number; // 使用率（百分比）
 }
 ```
 
 **SystemInfo 接口：**
+
 ```typescript
 interface SystemInfo {
-  hostname: string;         // 主机名
-  platform: string;         // 操作系统平台
-  arch: string;             // CPU 架构
-  uptime: number;           // 系统运行时间（秒）
-  cpus?: number;            // CPU 核心数（可选）
+  hostname: string; // 主机名
+  platform: string; // 操作系统平台
+  arch: string; // CPU 架构
+  uptime: number; // 系统运行时间（秒）
+  cpus?: number; // CPU 核心数（可选）
 }
 ```
 
 **SystemStatus 接口：**
+
 ```typescript
 interface SystemStatus {
-  system: SystemInfo;       // 系统信息
-  memory: MemoryInfo;       // 内存信息
-  cpu: CpuUsage;            // CPU 使用率
+  system: SystemInfo; // 系统信息
+  memory: MemoryInfo; // 内存信息
+  cpu: CpuUsage; // CPU 使用率
   loadAverage?: LoadAverage; // 系统负载（可选）
-  disk?: DiskUsage;         // 磁盘使用信息（可选）
+  disk?: DiskUsage; // 磁盘使用信息（可选）
 }
 ```
 
 > 📌 **注意**：
-> - Windows 平台不支持系统负载，`getLoadAverage()` 和 `getLoadAverageSync()` 返回 `undefined`
+>
+> - Windows 平台不支持系统负载，`getLoadAverage()` 和 `getLoadAverageSync()`
+>   返回 `undefined`
 > - Deno 环境使用原生 API，Bun 环境通过系统命令获取
 > - 所有 API 在获取失败时会返回默认值，不会抛出异常
 
@@ -1127,7 +1178,8 @@ interface SystemStatus {
 
 ## ⚡ 性能优化
 
-- **类型安全访问**：所有运行时 API 访问都通过类型安全的工具函数，避免运行时类型检查开销
+- **类型安全访问**：所有运行时 API
+  访问都通过类型安全的工具函数，避免运行时类型检查开销
 - **自动适配**：在编译时确定运行时环境，减少运行时判断
 - **同步 API**：提供同步 API 用于需要阻塞等待的场景，避免异步开销
 - **批量操作**：文件系统操作支持批量处理，减少 I/O 操作
@@ -1152,6 +1204,7 @@ bun test tests/
 详细的测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 
 测试覆盖包括：
+
 - ✅ 211 个测试用例全部通过
 - ✅ 17 个功能模块完整测试
 - ✅ Deno 和 Bun 跨运行时兼容性验证
@@ -1162,16 +1215,29 @@ bun test tests/
 
 ## 📝 备注
 
-- **服务端和客户端分离**：通过 `/client` 子路径明确区分服务端和客户端代码（本库仅支持服务端）
+- **服务端和客户端分离**：通过 `/client`
+  子路径明确区分服务端和客户端代码（本库仅支持服务端）
 - **统一接口**：所有 API 在 Deno 和 Bun 环境下使用相同的接口，降低学习成本
-- **类型安全**：完全采用类型安全的实现方式，所有运行时 API 访问都通过类型安全的工具函数（`getDeno()`, `getBun()`, `getProcess()`），避免了 `(globalThis as any)` 的使用。所有 API 都有完整的 TypeScript 类型定义，零 `any` 类型。
-- **自动适配**：本库提供统一的 API 抽象层，在 Deno 和 Bun 环境下自动适配到对应的原生 API
-- **同步和异步 API**：提供同步和异步两种 API，同步 API 适合需要阻塞等待的场景（如 CLI 工具），异步 API 适合大多数场景
-- **文件监控**：`watchFs()` 在 Deno 和 Bun 环境下都已实现。Bun 环境使用 Node.js 的 `fs.watch` API，功能完整，支持递归监控、文件过滤和路径排除
-- **WebSocket 升级**：`upgradeWebSocket()` 在 Deno 和 Bun 环境下都支持，使用统一的 API。Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置 `websocket` 处理器。返回的 `socket` 对象支持标准的 `addEventListener`、`send`、`close` 等方法
-- **定时任务**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun 环境下行为一致
-- **TCP/TLS 连接**：Bun 环境下的 TCP/TLS 连接使用 Node.js 兼容 API，功能与 Deno 原生 API 基本一致
-- **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all` 标志来授予所有权限
+- **类型安全**：完全采用类型安全的实现方式，所有运行时 API
+  访问都通过类型安全的工具函数（`getDeno()`, `getBun()`,
+  `getProcess()`），避免了 `(globalThis as any)` 的使用。所有 API 都有完整的
+  TypeScript 类型定义，零 `any` 类型。
+- **自动适配**：本库提供统一的 API 抽象层，在 Deno 和 Bun
+  环境下自动适配到对应的原生 API
+- **同步和异步 API**：提供同步和异步两种 API，同步 API
+  适合需要阻塞等待的场景（如 CLI 工具），异步 API 适合大多数场景
+- **文件监控**：`watchFs()` 在 Deno 和 Bun 环境下都已实现。Bun 环境使用 Node.js
+  的 `fs.watch` API，功能完整，支持递归监控、文件过滤和路径排除
+- **WebSocket 升级**：`upgradeWebSocket()` 在 Deno 和 Bun
+  环境下都支持，使用统一的 API。Bun 环境下的 WebSocket
+  升级和事件处理完全自动化，无需手动配置 `websocket` 处理器。返回的 `socket`
+  对象支持标准的 `addEventListener`、`send`、`close` 等方法
+- **定时任务**：统一使用 `node-cron@3.0.3`，支持秒级 Cron 表达式，在 Deno 和 Bun
+  环境下行为一致
+- **TCP/TLS 连接**：Bun 环境下的 TCP/TLS 连接使用 Node.js 兼容 API，功能与 Deno
+  原生 API 基本一致
+- **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all`
+  标志来授予所有权限
 
 ---
 

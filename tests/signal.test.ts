@@ -3,10 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import {
-  addSignalListener,
-  removeSignalListener,
-} from "../src/signal.ts";
+import { addSignalListener, removeSignalListener } from "../src/signal.ts";
 
 describe("信号处理 API", () => {
   describe("addSignalListener", () => {

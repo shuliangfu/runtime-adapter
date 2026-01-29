@@ -5,9 +5,7 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
-import type { DenoSignal, BunSignal } from "./types.ts";
-
-
+import type { BunSignal, DenoSignal } from "./types.ts";
 
 /**
  * 信号处理器函数类型

@@ -402,66 +402,61 @@ export interface BunSocket {
   [key: string]: unknown;
 }
 
-
 /**
  * Deno 支持的系统信号类型
  * 参考自 Deno.Signal (不稳定 API 已在 1.x 中标准化)
  */
 export type DenoSignal =
-  | "SIGINT"   // 终端中断 (Ctrl+C)
-  | "SIGTERM"  // 终止信号 (默认杀死进程信号)
-  | "SIGHUP"   // 终端挂断
-  | "SIGQUIT"  // 终端退出
-  | "SIGUSR1"  // 用户自定义信号 1
-  | "SIGUSR2"  // 用户自定义信号 2
-  | "SIGALRM"  // 闹钟信号
-  | "SIGCHLD"  // 子进程状态改变
-  | "SIGCONT"  // 继续执行暂停的进程
-  | "SIGSTOP"  // 暂停执行 (不可捕获)
-  | "SIGTSTP"  // 终端停止信号 (Ctrl+Z)
-  | "SIGTTIN"  // 后台进程尝试读取终端
-  | "SIGTTOU"  // 后台进程尝试写入终端
-  | "SIGBUS"   // 总线错误
-  | "SIGFPE"   // 算术异常
-  | "SIGILL"   // 非法指令
-  | "SIGSEGV"  // 段错误
-  | "SIGTRAP"  // 跟踪断点
+  | "SIGINT" // 终端中断 (Ctrl+C)
+  | "SIGTERM" // 终止信号 (默认杀死进程信号)
+  | "SIGHUP" // 终端挂断
+  | "SIGQUIT" // 终端退出
+  | "SIGUSR1" // 用户自定义信号 1
+  | "SIGUSR2" // 用户自定义信号 2
+  | "SIGALRM" // 闹钟信号
+  | "SIGCHLD" // 子进程状态改变
+  | "SIGCONT" // 继续执行暂停的进程
+  | "SIGSTOP" // 暂停执行 (不可捕获)
+  | "SIGTSTP" // 终端停止信号 (Ctrl+Z)
+  | "SIGTTIN" // 后台进程尝试读取终端
+  | "SIGTTOU" // 后台进程尝试写入终端
+  | "SIGBUS" // 总线错误
+  | "SIGFPE" // 算术异常
+  | "SIGILL" // 非法指令
+  | "SIGSEGV" // 段错误
+  | "SIGTRAP" // 跟踪断点
   | "SIGWINCH"; // 窗口大小改变
 /**
  * 完整的 Bun 进程信号与事件类型定义
  */
 export type BunSignal =
   // --- 标准生命周期事件 ---
-  | 'exit'               // 进程即将退出（仅限同步操作）
-  | 'beforeExit'         // 事件循环为空，退出前（支持异步）
-
+  | "exit" // 进程即将退出（仅限同步操作）
+  | "beforeExit" // 事件循环为空，退出前（支持异步）
   // --- 错误处理事件 ---
-  | 'uncaughtException'  // 未捕获的异常
-  | 'unhandledRejection' // 未处理的 Promise 拒绝
-  | 'warning'            // 运行时警告
-  | 'rejectionHandled'   // 延迟处理的 Promise 拒绝
-
+  | "uncaughtException" // 未捕获的异常
+  | "unhandledRejection" // 未处理的 Promise 拒绝
+  | "warning" // 运行时警告
+  | "rejectionHandled" // 延迟处理的 Promise 拒绝
   // --- 常见的系统 POSIX 信号 ---
-  | 'SIGINT'             // Terminal 中断 (Ctrl+C)
-  | 'SIGTERM'            // 终止信号 (Docker/Kubernetes 停止信号)
-  | 'SIGHUP'             // 终端挂断
-  | 'SIGQUIT'            // 终端退出
-  | 'SIGILL'             // 非法指令
-  | 'SIGTRAP'            // 跟踪/断点陷阱
-  | 'SIGABRT'            // 中止信号
-  | 'SIGBUS'             // 总线错误
-  | 'SIGFPE'             // 算术异常
-  | 'SIGSEGV'            // 段错误
-  | 'SIGUSR1'            // 用户自定义信号 1
-  | 'SIGUSR2'            // 用户自定义信号 2
-
+  | "SIGINT" // Terminal 中断 (Ctrl+C)
+  | "SIGTERM" // 终止信号 (Docker/Kubernetes 停止信号)
+  | "SIGHUP" // 终端挂断
+  | "SIGQUIT" // 终端退出
+  | "SIGILL" // 非法指令
+  | "SIGTRAP" // 跟踪/断点陷阱
+  | "SIGABRT" // 中止信号
+  | "SIGBUS" // 总线错误
+  | "SIGFPE" // 算术异常
+  | "SIGSEGV" // 段错误
+  | "SIGUSR1" // 用户自定义信号 1
+  | "SIGUSR2" // 用户自定义信号 2
   // --- 其他特定平台信号 ---
-  | 'SIGBREAK'           // Windows Ctrl+Break
-  | 'SIGWINCH'           // 终端窗口大小改变
-
+  | "SIGBREAK" // Windows Ctrl+Break
+  | "SIGWINCH" // 终端窗口大小改变
   // --- 进程间通信 ---
-  | 'message'            // 收到父进程消息
-  | 'disconnect';        // IPC 通道断开
+  | "message" // 收到父进程消息
+  | "disconnect"; // IPC 通道断开
 
 /**
  * Node.js Process 接口（用于 Bun 环境）

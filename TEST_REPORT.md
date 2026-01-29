@@ -21,31 +21,32 @@
 
 ### 测试文件统计
 
-| 测试文件 | 测试数 | 状态 | 说明 |
-|---------|--------|------|------|
-| `detect.test.ts` | 7 | ✅ 全部通过 | 运行时检测 |
-| `file.test.ts` | 30 | ✅ 全部通过 | 异步文件系统 API（包含 ensureDir） |
-| `file-sync.test.ts` | 20 | ✅ 全部通过 | **新增** 同步文件系统 API（包含 ensureDirSync） |
-| `file-ext.test.ts` | 4 | ✅ 全部通过 | 文件扩展功能 |
-| `network.test.ts` | 5 | ✅ 全部通过 | 网络 API（HTTP 服务器） |
-| `websocket.test.ts` | 5 | ✅ 全部通过 | **新增** WebSocket API |
-| `env.test.ts` | 9 | ✅ 全部通过 | 环境变量 API |
-| `process.test.ts` | 12 | ✅ 全部通过 | 进程/命令 API（包含同步命令执行） |
-| `process-info.test.ts` | 4 | ✅ 全部通过 | 进程信息 API |
-| `process-utils.test.ts` | 2 | ✅ 全部通过 | 进程工具 API |
-| `signal.test.ts` | 2 | ✅ 全部通过 | 信号处理 API |
-| `terminal.test.ts` | 25 | ✅ 全部通过 | 终端 API |
-| `cron.test.ts` | 4 | ✅ 全部通过 | 定时任务 API |
-| `path.test.ts` | 63 | ✅ 全部通过 | 路径操作 API |
-| `hash.test.ts` | 10 | ✅ 全部通过 | 文件哈希 API（包含同步哈希） |
-| `system-info.test.ts` | 18 | ✅ 全部通过 | 系统信息 API（包含同步版本） |
-| `mod.test.ts` | 9 | ✅ 全部通过 | 模块导出 |
+| 测试文件                | 测试数 | 状态        | 说明                                            |
+| ----------------------- | ------ | ----------- | ----------------------------------------------- |
+| `detect.test.ts`        | 7      | ✅ 全部通过 | 运行时检测                                      |
+| `file.test.ts`          | 30     | ✅ 全部通过 | 异步文件系统 API（包含 ensureDir）              |
+| `file-sync.test.ts`     | 20     | ✅ 全部通过 | **新增** 同步文件系统 API（包含 ensureDirSync） |
+| `file-ext.test.ts`      | 4      | ✅ 全部通过 | 文件扩展功能                                    |
+| `network.test.ts`       | 5      | ✅ 全部通过 | 网络 API（HTTP 服务器）                         |
+| `websocket.test.ts`     | 5      | ✅ 全部通过 | **新增** WebSocket API                          |
+| `env.test.ts`           | 9      | ✅ 全部通过 | 环境变量 API                                    |
+| `process.test.ts`       | 12     | ✅ 全部通过 | 进程/命令 API（包含同步命令执行）               |
+| `process-info.test.ts`  | 4      | ✅ 全部通过 | 进程信息 API                                    |
+| `process-utils.test.ts` | 2      | ✅ 全部通过 | 进程工具 API                                    |
+| `signal.test.ts`        | 2      | ✅ 全部通过 | 信号处理 API                                    |
+| `terminal.test.ts`      | 25     | ✅ 全部通过 | 终端 API                                        |
+| `cron.test.ts`          | 4      | ✅ 全部通过 | 定时任务 API                                    |
+| `path.test.ts`          | 63     | ✅ 全部通过 | 路径操作 API                                    |
+| `hash.test.ts`          | 10     | ✅ 全部通过 | 文件哈希 API（包含同步哈希）                    |
+| `system-info.test.ts`   | 18     | ✅ 全部通过 | 系统信息 API（包含同步版本）                    |
+| `mod.test.ts`           | 9      | ✅ 全部通过 | 模块导出                                        |
 
 ## 功能测试详情
 
 ### 1. 运行时检测 (detect.test.ts)
 
 **测试场景**:
+
 - ✅ `detectRuntime()` 函数
   - 返回有效的运行时类型
   - 返回正确的 Runtime 类型
@@ -62,6 +63,7 @@
 ### 2. 文件系统 API (file.test.ts)
 
 **测试场景**:
+
 - ✅ 目录操作
   - `mkdir` - 创建目录
   - `mkdir` - 支持递归创建目录
@@ -101,6 +103,7 @@
 ### 3. 文件系统同步 API (file-sync.test.ts) ⭐ 新增
 
 **测试场景**:
+
 - ✅ 目录操作
   - `mkdirSync` - 同步创建目录
   - `mkdirSync` - 支持递归创建目录
@@ -129,6 +132,7 @@
 **测试结果**: 20 个测试全部通过
 
 **实现特点**:
+
 - ✅ 跨运行时兼容：Deno 使用原生同步 API，Bun 使用 Node.js 兼容的 `fs` 模块
 - ✅ 性能优化：同步 API 适合在需要阻塞等待的场景使用
 - ✅ 错误处理：完善的错误处理和类型检查
@@ -136,6 +140,7 @@
 ### 4. 文件扩展功能 (file-ext.test.ts)
 
 **测试场景**:
+
 - ✅ `exists` - 检查文件或目录是否存在
 - ✅ `isFile` - 检查路径是否为文件
 - ✅ `isDirectory` - 检查路径是否为目录
@@ -146,6 +151,7 @@
 ### 5. 网络 API (network.test.ts)
 
 **测试场景**:
+
 - ✅ `serve` - HTTP 服务器
   - 启动 HTTP 服务器
   - 处理不同的请求路径
@@ -158,6 +164,7 @@
 ### 6. WebSocket API (websocket.test.ts) ⭐ 新增
 
 **测试场景**:
+
 - ✅ `upgradeWebSocket` - WebSocket 升级
   - 应该升级 WebSocket 连接（Deno）
   - 应该升级 WebSocket 连接（Bun）
@@ -168,14 +175,17 @@
 **测试结果**: 5 个测试全部通过
 
 **实现特点**:
+
 - ✅ 跨运行时兼容：Deno 和 Bun 环境都正常工作
 - ✅ 统一 API：提供统一的 `addEventListener` 接口，自动适配 Deno 和 Bun 的差异
-- ✅ WebSocketAdapter：内部使用适配器模式，统一处理 Deno 和 Bun 的 WebSocket API 差异
+- ✅ WebSocketAdapter：内部使用适配器模式，统一处理 Deno 和 Bun 的 WebSocket API
+  差异
 - ✅ 自动处理：Bun 环境下的 WebSocket 升级和事件处理完全自动化，无需手动配置
 
 ### 7. 环境变量 API (env.test.ts)
 
 **测试场景**:
+
 - ✅ `setEnv` - 设置环境变量
 - ✅ `getEnv` - 获取环境变量
   - 获取已设置的环境变量
@@ -195,6 +205,7 @@
 ### 8. 进程/命令 API (process.test.ts)
 
 **测试场景**:
+
 - ✅ `createCommand` - 创建命令对象
   - 创建命令进程
   - 执行简单命令
@@ -213,6 +224,7 @@
 **测试结果**: 12 个测试全部通过
 
 **实现特点**:
+
 - ✅ Deno: 使用 `Deno.Command.outputSync()`
 - ✅ Bun: 使用 `child_process.execFileSync()`
 - ✅ 跨运行时兼容：统一的 API 接口
@@ -220,6 +232,7 @@
 ### 9. 进程信息 API (process-info.test.ts)
 
 **测试场景**:
+
 - ✅ `pid` - 获取当前进程 ID
 - ✅ `platform` - 获取操作系统平台
 - ✅ `arch` - 获取 CPU 架构
@@ -230,6 +243,7 @@
 ### 10. 进程工具 API (process-utils.test.ts)
 
 **测试场景**:
+
 - ✅ `args` - 获取命令行参数数组
 - ✅ `exit` - 退出程序（函数存在性测试）
 
@@ -238,6 +252,7 @@
 ### 11. 信号处理 API (signal.test.ts)
 
 **测试场景**:
+
 - ✅ `addSignalListener` - 添加信号监听器
 - ✅ `removeSignalListener` - 移除信号监听器
 
@@ -246,6 +261,7 @@
 ### 12. 终端 API (terminal.test.ts)
 
 **测试场景**:
+
 - ✅ `isTerminal` - 检查是否为终端
   - 返回布尔值
   - 检查标准输出是否为终端
@@ -286,6 +302,7 @@
 ### 13. 定时任务 API (cron.test.ts)
 
 **测试场景**:
+
 - ✅ `cron` - 创建定时任务
   - 创建定时任务
   - 支持关闭定时任务
@@ -297,6 +314,7 @@
 ### 14. 路径操作 API (path.test.ts)
 
 **测试场景**:
+
 - ✅ `join` - 拼接路径（9 个测试）
 - ✅ `dirname` - 获取目录名（5 个测试）
 - ✅ `basename` - 获取文件名（6 个测试）
@@ -313,6 +331,7 @@
 ### 15. 文件哈希 API (hash.test.ts)
 
 **测试场景**:
+
 - ✅ `hash` - 异步计算数据的哈希值
   - 计算字符串的哈希值
   - 计算二进制数据的哈希值
@@ -331,6 +350,7 @@
 **测试结果**: 10 个测试全部通过
 
 **实现特点**:
+
 - ✅ 跨运行时兼容：使用 `node:crypto` 模块（Deno 和 Bun 都支持）
 - ✅ 支持多种算法：MD5, SHA-1, SHA-256, SHA-512
 - ✅ 同步和异步版本：满足不同使用场景
@@ -338,6 +358,7 @@
 ### 16. 系统信息 API (system-info.test.ts)
 
 **测试场景**:
+
 - ✅ `getMemoryInfo` - 异步获取系统内存信息
   - 返回内存信息
   - 返回有效的内存使用率
@@ -367,17 +388,20 @@
 **测试结果**: 18 个测试全部通过
 
 **实现特点**:
+
 - ✅ 跨运行时兼容：Deno 和 Bun 自动适配
 - ✅ 资源管理：自动关闭命令流，避免资源泄漏
 - ✅ 错误处理：获取失败时返回默认值，不抛出异常
 - ✅ 平台适配：
-  - Deno: 使用原生 API（`Deno.systemMemoryInfo()`, `Deno.cpuUsage()`, `Deno.loadavg()`）
+  - Deno: 使用原生 API（`Deno.systemMemoryInfo()`, `Deno.cpuUsage()`,
+    `Deno.loadavg()`）
   - Bun: 通过系统命令获取（Windows: `wmic`, Linux: `free`, macOS: `sysctl`）
 - ✅ 同步版本：提供同步 API 用于需要阻塞等待的场景
 
 ### 17. 模块导出 (mod.test.ts)
 
 **测试场景**:
+
 - ✅ 导出运行时检测相关 API
 - ✅ 导出文件系统 API（包含 ensureDir 和 ensureDirSync）
 - ✅ 导出网络 API
@@ -395,11 +419,13 @@
 ### 1. WebSocket API 支持
 
 新增了完整的 WebSocket 支持，包括：
+
 - `upgradeWebSocket` - 统一的 WebSocket 升级接口
 - `WebSocketAdapter` - 内部适配器，统一处理 Deno 和 Bun 的 WebSocket API 差异
 - 支持 `addEventListener`、`send`、`close` 等标准 WebSocket API
 
 **优势**:
+
 - 跨运行时兼容：Deno 和 Bun 环境都正常工作
 - 统一 API：使用标准的 `addEventListener` 接口，无需关心底层实现
 - 自动适配：Bun 环境下的 WebSocket 升级和事件处理完全自动化
@@ -407,12 +433,14 @@
 ### 2. 同步文件系统 API
 
 新增了完整的同步文件系统 API，包括：
+
 - `mkdirSync`, `ensureDirSync`, `writeTextFileSync`, `readTextFileSync`
 - `writeFileSync`, `readFileSync`
 - `statSync`, `removeSync`, `existsSync`
 - `isFileSync`, `isDirectorySync`, `readdirSync`, `realPathSync`
 
 **优势**:
+
 - 适合在需要阻塞等待的场景使用
 - 简化了某些同步场景的代码
 - 完全兼容 Deno 和 Bun
@@ -420,6 +448,7 @@
 ### 3. 同步命令执行
 
 新增 `execCommandSync` 函数：
+
 - Deno: 使用 `Deno.Command.outputSync()`
 - Bun: 使用 `child_process.execFileSync()`
 - 统一的错误处理和输出格式
@@ -427,6 +456,7 @@
 ### 4. 同步哈希计算
 
 新增 `hashSync` 和 `hashFileSync` 函数：
+
 - 使用 `node:crypto` 模块（Deno 和 Bun 都支持）
 - 支持多种哈希算法
 - 适合需要同步计算的场景
@@ -434,6 +464,7 @@
 ### 5. 同步系统信息
 
 新增同步版本的系统信息 API：
+
 - `getMemoryInfoSync`
 - `getLoadAverageSync`
 - `getSystemInfoSync`
@@ -441,10 +472,12 @@
 ### 6. ensureDir 和 ensureDirSync ⭐ 新增
 
 新增目录确保功能，类似于 `mkdir -p` 命令：
+
 - `ensureDir` - 异步确保目录存在（如果不存在则创建，如果已存在则不做任何操作）
 - `ensureDirSync` - 同步确保目录存在
 
 **优势**:
+
 - 简化目录创建逻辑，无需手动检查目录是否存在
 - 支持嵌套目录的自动创建
 - 如果目录已存在，不会抛出错误
@@ -499,7 +532,8 @@
 
 ### 2. 系统负载
 
-- **Windows**: 不支持系统负载，`getLoadAverage()` 和 `getLoadAverageSync()` 返回 `undefined`
+- **Windows**: 不支持系统负载，`getLoadAverage()` 和 `getLoadAverageSync()` 返回
+  `undefined`
 - **Linux/macOS**: 正常支持
 
 ### 3. CPU 使用率
@@ -540,7 +574,8 @@
 1. **核心功能**: 运行时检测、文件系统、网络、WebSocket、环境变量、进程管理
 2. **扩展功能**: 路径操作、目录遍历、文件哈希、系统信息
 3. **工具功能**: 终端操作、定时任务、信号处理
-4. **新增功能**: WebSocket API、同步文件系统 API、同步命令执行、同步哈希计算、同步系统信息、ensureDir/ensureDirSync
+4. **新增功能**: WebSocket API、同步文件系统
+   API、同步命令执行、同步哈希计算、同步系统信息、ensureDir/ensureDirSync
 
 ### 质量保证
 
@@ -560,8 +595,5 @@
 
 ---
 
-**测试报告生成时间**: 2026-01-26
-**测试框架**: @dreamer/test@^1.0.0-beta.12
-**测试环境**: Bun 1.3.5, Deno 2.6.4
-**测试总数**: 211
-**通过率**: 100% ✅
+**测试报告生成时间**: 2026-01-26 **测试框架**: @dreamer/test@^1.0.0-beta.12
+**测试环境**: Bun 1.3.5, Deno 2.6.4 **测试总数**: 211 **通过率**: 100% ✅
