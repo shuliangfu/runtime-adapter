@@ -596,6 +596,12 @@ export function watchFs(
             pathExists = false;
           }
 
+          // 路径不存在时不调用 fs.watch，避免 Node/Bun 上抛出 ENOENT
+          if (!pathExists) {
+            watchers.push({ close: () => {} });
+            continue;
+          }
+
           const watcher = nodeFs.watch(
             resolvedPath,
             { recursive: options?.recursive ?? false },
