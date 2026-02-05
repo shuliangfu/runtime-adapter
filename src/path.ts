@@ -26,16 +26,17 @@ export function join(...paths: string[]): string {
 
   if (filteredPaths.length === 0) return ".";
   if (filteredPaths.length === 1) {
-    // 单个路径也需要规范化多个斜杠
-    return filteredPaths[0].replace(/\/+/g, "/");
+    // 单个路径也需要规范化：Windows 反斜杠转正斜杠，合并多个斜杠
+    return filteredPaths[0].replace(/\\/g, "/").replace(/\/+/g, "/");
   }
 
   // 处理第一个路径（可能包含协议或绝对路径）
-  let result = filteredPaths[0].replace(/\/+$/, ""); // 移除末尾斜杠
+  // Windows 兼容：先将反斜杠转为正斜杠
+  let result = filteredPaths[0].replace(/\\/g, "/").replace(/\/+$/, ""); // 移除末尾斜杠
 
   // 拼接后续路径
   for (let i = 1; i < filteredPaths.length; i++) {
-    const path = filteredPaths[i].replace(/^\/+/, ""); // 移除开头斜杠
+    const path = filteredPaths[i].replace(/\\/g, "/").replace(/^\/+/, ""); // 移除开头斜杠
     if (path) {
       result += `/${path}`;
     }
@@ -63,7 +64,8 @@ export function dirname(path: string): string {
     return path === "/" ? "/" : ".";
   }
 
-  const normalized = path.replace(/\/+$/, ""); // 移除末尾斜杠
+  // Windows 兼容：先将反斜杠转为正斜杠
+  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, ""); // 移除末尾斜杠
   // 如果移除斜杠后变成空字符串，说明是根目录
   if (normalized === "") {
     return "/";
@@ -91,7 +93,8 @@ export function dirname(path: string): string {
  * ```
  */
 export function basename(path: string, ext?: string): string {
-  const normalized = path.replace(/\/+$/, ""); // 移除末尾斜杠
+  // Windows 兼容：先将反斜杠转为正斜杠
+  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, ""); // 移除末尾斜杠
   const lastSlash = normalized.lastIndexOf("/");
   let name = lastSlash === -1
     ? normalized
@@ -151,7 +154,13 @@ export function resolve(...paths: string[]): string {
   }
 
   // 如果第一个路径是绝对路径，直接使用
+  // Unix 绝对路径：以 / 开头
   if (paths.length > 0 && paths[0].startsWith("/")) {
+    return join(...paths);
+  }
+
+  // Windows 绝对路径：如 C:\path 或 C:/path
+  if (paths.length > 0 && /^[A-Za-z]:[\\/]/.test(paths[0])) {
     return join(...paths);
   }
 
@@ -172,11 +181,10 @@ export function resolve(...paths: string[]): string {
  * ```
  */
 export function relative(from: string, to: string): string {
-  // 规范化路径（移除末尾斜杠，处理多个斜杠）
+  // 规范化路径（Windows 兼容：反斜杠转正斜杠，移除末尾斜杠，处理多个斜杠）
   const normalize = (path: string): string[] => {
-    return path.replace(/\/+$/, "").replace(/\/+/g, "/").split("/").filter(
-      Boolean,
-    );
+    return path.replace(/\\/g, "/").replace(/\/+$/, "").replace(/\/+/g, "/")
+      .split("/").filter(Boolean);
   };
 
   const fromParts = normalize(from);

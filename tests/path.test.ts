@@ -55,8 +55,8 @@ describe("路径操作 API", () => {
     });
 
     it("应该处理 Windows 风格的路径（如果传入）", () => {
-      // 注意：我们的实现使用 Unix 风格，但应该能处理
-      expect(join("dir\\subdir", "file.txt")).toBe("dir\\subdir/file.txt");
+      // Windows 兼容：反斜杠会转为正斜杠，输出统一为 Unix 风格
+      expect(join("dir\\subdir", "file.txt")).toBe("dir/subdir/file.txt");
     });
 
     it("应该处理末尾斜杠", () => {
