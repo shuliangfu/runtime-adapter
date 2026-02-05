@@ -1,10 +1,16 @@
 /**
  * 信号处理 API 适配模块
  * 提供统一的信号处理接口，兼容 Deno 和 Bun
+ *
+ * 平台兼容性说明：
+ * - Deno 在 Windows 上仅支持 SIGINT、SIGBREAK、SIGUP，不支持 SIGTERM
+ * - 在 Windows + Deno 环境下，SIGTERM 的监听会被静默跳过
+ * @see https://github.com/denoland/deno/issues/9995
  */
 
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
+import { platform } from "./process-info.ts";
 import type { BunSignal, DenoSignal } from "./types.ts";
 
 /**
@@ -34,6 +40,12 @@ export function addSignalListener(
 ): void {
   const deno = getDeno();
   if (deno) {
+    // Deno 在 Windows 上不支持 SIGTERM，仅支持 SIGINT、SIGBREAK、SIGUP
+    // 在 Windows 上静默跳过 SIGTERM 注册，避免抛出 TypeError
+    const plat = platform();
+    if (plat === "windows" && signal === "SIGTERM") {
+      return; // 静默跳过，不注册
+    }
     deno.addSignalListener(signal, handler);
   } else if (IS_BUN) {
     const process = getProcess();
@@ -67,6 +79,11 @@ export function removeSignalListener(
 ): void {
   const deno = getDeno();
   if (deno) {
+    // 与 addSignalListener 保持一致：Windows 上 SIGTERM 未注册，移除时也跳过
+    const plat = platform();
+    if (plat === "windows" && signal === "SIGTERM") {
+      return;
+    }
     deno.removeSignalListener(signal, handler);
   } else if (IS_BUN) {
     const process = getProcess();
