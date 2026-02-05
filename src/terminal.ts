@@ -195,6 +195,9 @@ export async function readStdin(
  * @param mode 是否启用原始模式
  * @param options 选项
  * @returns 是否成功设置
+ *
+ * 注意：Windows 上 Deno.stdin.setRaw 可能抛出 "The operation is not supported"，
+ * 此时捕获异常并返回 false，调用方将退化为非 raw 模式读取（仍可正常输入）。
  */
 export function setStdinRaw(
   mode: boolean,
@@ -207,8 +210,14 @@ export function setStdinRaw(
     };
     // Deno.stdin 可能没有 setRaw 方法，需要类型检查
     if (typeof stdin.setRaw === "function") {
-      stdin.setRaw(mode, options);
-      return true;
+      try {
+        stdin.setRaw(mode, options);
+        return true;
+      } catch {
+        // Windows 等环境下 setRaw 可能抛出 "The operation is not supported"
+        // 返回 false，调用方将使用非 raw 模式（仍可正常读取输入）
+        return false;
+      }
     }
     return false;
   }
