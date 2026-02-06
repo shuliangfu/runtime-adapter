@@ -3,7 +3,8 @@
 All notable changes to @dreamer/runtime-adapter are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
@@ -13,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Stable release**: First stable version with stable API
 - **Runtime auto-detection**: Auto-detect Deno / Bun runtime environment
-- **File system API**: readFile, writeFile, mkdir, remove, existsSync, makeTempDir, makeTempFile, etc.
+- **File system API**: readFile, writeFile, mkdir, remove, existsSync,
+  makeTempDir, makeTempFile, etc.
 - **Network API**: serve, upgradeWebSocket, TCP/TLS connections
 - **Environment variable API**: getEnv, setEnv, hasEnv, deleteEnv
 - **Process/command API**: spawn, exec, kill, etc.
