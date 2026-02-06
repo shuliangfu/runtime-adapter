@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/runtime-adapter",
-  "version": "1.0.0-beta.26",
+  "version": "1.0.0",
   "license": "MIT",
   "exports": {
     ".": "./src/mod.ts"
