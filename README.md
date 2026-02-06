@@ -1,6 +1,7 @@
 # @dreamer/runtime-adapter
 
-> Runtime adaptation layer providing a unified API abstraction compatible with Deno and Bun runtimes
+> Runtime adaptation layer providing a unified API abstraction compatible with
+> Deno and Bun runtimes
 
 English | [中文 (Chinese)](./README-zh.md)
 
@@ -12,7 +13,8 @@ English | [中文 (Chinese)](./README-zh.md)
 
 ## 🎯 Overview
 
-A runtime adaptation layer that enables other `@dreamer/*` libraries to use the same API across different runtime environments.
+A runtime adaptation layer that enables other `@dreamer/*` libraries to use the
+same API across different runtime environments.
 
 ---
 
@@ -115,12 +117,12 @@ bunx jsr add @dreamer/runtime-adapter
 
 ## 🌍 Compatibility
 
-| Environment | Version | Status |
-| ----------- | ------- | ------ |
-| **Deno** | 2.5+ | ✅ Fully supported |
-| **Bun** | 1.0+ | ✅ Fully supported |
-| **Server** | - | ✅ Supported (Deno and Bun) |
-| **Client** | - | ❌ Not supported (browser) |
+| Environment    | Version           | Status                                      |
+| -------------- | ----------------- | ------------------------------------------- |
+| **Deno**       | 2.5+              | ✅ Fully supported                          |
+| **Bun**        | 1.0+              | ✅ Fully supported                          |
+| **Server**     | -                 | ✅ Supported (Deno and Bun)                 |
+| **Client**     | -                 | ❌ Not supported (browser)                  |
 | **Dependency** | `node-cron@3.0.3` | 📦 For cron tasks, second-level expressions |
 
 ---
@@ -610,7 +612,8 @@ const sha512 = hashFileSync("./file.txt", "SHA-512");
 const md5 = hashSync("Hello, World!", "MD5");
 ```
 
-> 📌 **Note**: Sync hash requires `node:crypto`. Deno needs Node compat; Bun supports natively.
+> 📌 **Note**: Sync hash requires `node:crypto`. Deno needs Node compat; Bun
+> supports natively.
 
 ### System Info
 
@@ -644,7 +647,11 @@ console.log(`Disk usage: ${disk.usagePercent.toFixed(2)}%`);
 // Load average (Linux/macOS)
 const load = await getLoadAverage();
 if (load) {
-  console.log(`Load 1/5/15: ${load.load1.toFixed(2)} / ${load.load5.toFixed(2)} / ${load.load15.toFixed(2)}`);
+  console.log(
+    `Load 1/5/15: ${load.load1.toFixed(2)} / ${load.load5.toFixed(2)} / ${
+      load.load15.toFixed(2)
+    }`,
+  );
 }
 
 // System info
@@ -692,94 +699,94 @@ console.log(`Platform: ${system.platform}`);
 
 ### Runtime Detection
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `detectRuntime()` | Detect current runtime | `"deno" \| "bun" \| "unknown"` |
-| `RUNTIME` | Current runtime constant | `"deno" \| "bun"` |
-| `IS_BUN` | Is Bun | `boolean` |
-| `IS_DENO` | Is Deno | `boolean` |
-| `type Runtime` | Runtime type | `"deno" \| "bun" \| "unknown"` |
+| API               | Description              | Returns                        |
+| ----------------- | ------------------------ | ------------------------------ |
+| `detectRuntime()` | Detect current runtime   | `"deno" \| "bun" \| "unknown"` |
+| `RUNTIME`         | Current runtime constant | `"deno" \| "bun"`              |
+| `IS_BUN`          | Is Bun                   | `boolean`                      |
+| `IS_DENO`         | Is Deno                  | `boolean`                      |
+| `type Runtime`    | Runtime type             | `"deno" \| "bun" \| "unknown"` |
 
 ### File System API
 
 #### Async File Read/Write
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `readFile(path)` | Read file (binary) | `Promise<Uint8Array>` |
-| `readTextFile(path)` | Read text file | `Promise<string>` |
-| `writeFile(path, data, options?)` | Write file (binary) | `Promise<void>` |
-| `writeTextFile(path, data, options?)` | Write text file | `Promise<void>` |
-| `open(path, options?)` | Open file | `Promise<File>` |
-| `create(path)` | Create file | `Promise<File>` |
+| API                                   | Description         | Returns               |
+| ------------------------------------- | ------------------- | --------------------- |
+| `readFile(path)`                      | Read file (binary)  | `Promise<Uint8Array>` |
+| `readTextFile(path)`                  | Read text file      | `Promise<string>`     |
+| `writeFile(path, data, options?)`     | Write file (binary) | `Promise<void>`       |
+| `writeTextFile(path, data, options?)` | Write text file     | `Promise<void>`       |
+| `open(path, options?)`                | Open file           | `Promise<File>`       |
+| `create(path)`                        | Create file         | `Promise<File>`       |
 
 #### Sync File Read/Write ⭐ New
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `readFileSync(path)` | Sync read file | `Uint8Array` |
-| `readTextFileSync(path)` | Sync read text | `string` |
-| `writeFileSync(path, data, options?)` | Sync write file | `void` |
-| `writeTextFileSync(path, data, options?)` | Sync write text | `void` |
+| API                                       | Description     | Returns      |
+| ----------------------------------------- | --------------- | ------------ |
+| `readFileSync(path)`                      | Sync read file  | `Uint8Array` |
+| `readTextFileSync(path)`                  | Sync read text  | `string`     |
+| `writeFileSync(path, data, options?)`     | Sync write file | `void`       |
+| `writeTextFileSync(path, data, options?)` | Sync write text | `void`       |
 
 #### Async Directory Operations
 
-| API | Description | Options |
-| --- | ----------- | ------- |
-| `mkdir(path, options?)` | Create directory | `recursive?`, `mode?` |
-| `ensureDir(path, options?)` | Ensure dir exists | `mode?` |
-| `remove(path, options?)` | Remove file/dir | `recursive?` |
-| `readdir(path)` | Read directory | - |
-| `stat(path)` | Get file info | - |
-| `walk(dir, options?)` | Recursive walk | `maxDepth?`, `includeFiles?`, `includeDirs?`, `match?`, `skipSymlinks?` |
+| API                         | Description       | Options                                                                 |
+| --------------------------- | ----------------- | ----------------------------------------------------------------------- |
+| `mkdir(path, options?)`     | Create directory  | `recursive?`, `mode?`                                                   |
+| `ensureDir(path, options?)` | Ensure dir exists | `mode?`                                                                 |
+| `remove(path, options?)`    | Remove file/dir   | `recursive?`                                                            |
+| `readdir(path)`             | Read directory    | -                                                                       |
+| `stat(path)`                | Get file info     | -                                                                       |
+| `walk(dir, options?)`       | Recursive walk    | `maxDepth?`, `includeFiles?`, `includeDirs?`, `match?`, `skipSymlinks?` |
 
 #### Sync Directory Operations ⭐ New
 
-| API | Description | Options |
-| --- | ----------- | ------- |
-| `mkdirSync(path, options?)` | Sync create dir | `recursive?`, `mode?` |
-| `ensureDirSync(path, options?)` | Sync ensure dir | `mode?` |
-| `removeSync(path, options?)` | Sync remove | `recursive?` |
-| `readdirSync(path)` | Sync read dir | - |
-| `statSync(path)` | Sync stat | - |
-| `existsSync(path)` | Sync exists | - |
-| `isFileSync(path)` | Sync is file | - |
-| `isDirectorySync(path)` | Sync is dir | - |
-| `realPathSync(path)` | Sync real path | - |
+| API                             | Description     | Options               |
+| ------------------------------- | --------------- | --------------------- |
+| `mkdirSync(path, options?)`     | Sync create dir | `recursive?`, `mode?` |
+| `ensureDirSync(path, options?)` | Sync ensure dir | `mode?`               |
+| `removeSync(path, options?)`    | Sync remove     | `recursive?`          |
+| `readdirSync(path)`             | Sync read dir   | -                     |
+| `statSync(path)`                | Sync stat       | -                     |
+| `existsSync(path)`              | Sync exists     | -                     |
+| `isFileSync(path)`              | Sync is file    | -                     |
+| `isDirectorySync(path)`         | Sync is dir     | -                     |
+| `realPathSync(path)`            | Sync real path  | -                     |
 
 #### File Operations
 
-| API | Description |
-| --- | ----------- |
-| `copyFile(src, dest)` | Copy file |
-| `rename(oldPath, newPath)` | Rename or move |
-| `symlink(target, path, type?)` | Create symlink |
-| `realPath(path)` | Resolve real path |
-| `chmod(path, mode)` | Change permissions |
-| `chown(path, uid, gid)` | Change owner |
-| `exists(path)` | Check exists |
-| `isFile(path)` | Check is file |
-| `isDirectory(path)` | Check is dir |
-| `truncate(path, len)` | Truncate file |
+| API                            | Description        |
+| ------------------------------ | ------------------ |
+| `copyFile(src, dest)`          | Copy file          |
+| `rename(oldPath, newPath)`     | Rename or move     |
+| `symlink(target, path, type?)` | Create symlink     |
+| `realPath(path)`               | Resolve real path  |
+| `chmod(path, mode)`            | Change permissions |
+| `chown(path, uid, gid)`        | Change owner       |
+| `exists(path)`                 | Check exists       |
+| `isFile(path)`                 | Check is file      |
+| `isDirectory(path)`            | Check is dir       |
+| `truncate(path, len)`          | Truncate file      |
 
 #### Temp Files/Dirs
 
-| API | Description | Options |
-| --- | ----------- | ------- |
-| `makeTempDir(options?)` | Create temp dir | `prefix?`, `suffix?`, `dir?` |
+| API                      | Description      | Options                      |
+| ------------------------ | ---------------- | ---------------------------- |
+| `makeTempDir(options?)`  | Create temp dir  | `prefix?`, `suffix?`, `dir?` |
 | `makeTempFile(options?)` | Create temp file | `prefix?`, `suffix?`, `dir?` |
 
 #### Working Directory
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `cwd()` | Get CWD | `string` |
-| `chdir(path)` | Change CWD | `Promise<void>` |
+| API           | Description | Returns         |
+| ------------- | ----------- | --------------- |
+| `cwd()`       | Get CWD     | `string`        |
+| `chdir(path)` | Change CWD  | `Promise<void>` |
 
 #### File Watching
 
-| API | Description | Options |
-| --- | ----------- | ------- |
+| API                        | Description        | Options                                |
+| -------------------------- | ------------------ | -------------------------------------- |
 | `watchFs(paths, options?)` | Watch file changes | `recursive?`, `filesOnly?`, `exclude?` |
 
 **Options**:
@@ -825,7 +832,8 @@ serve(
 
 - `port?: number` - Port (default: random)
 - `host?: string` - Host (default: `"0.0.0.0"`)
-- `onListen?: (params: { host: string; port: number }) => void` - Listen callback
+- `onListen?: (params: { host: string; port: number }) => void` - Listen
+  callback
 
 **Returns**:
 
@@ -848,8 +856,10 @@ upgradeWebSocket(
 
 **Returns**:
 
-- `socket: WebSocket` - WebSocket object (standard `addEventListener`, `send`, `close`)
-- `response: Response | undefined` - HTTP response (Deno returns Response; Bun returns undefined)
+- `socket: WebSocket` - WebSocket object (standard `addEventListener`, `send`,
+  `close`)
+- `response: Response | undefined` - HTTP response (Deno returns Response; Bun
+  returns undefined)
 
 **Notes**:
 
@@ -880,20 +890,20 @@ const handle = serve({ port: 3000 }, (req) => {
 
 #### TCP/TLS
 
-| API | Description | Options |
-| --- | ----------- | ------- |
-| `connect(options)` | TCP connection | `host`, `port` |
-| `startTls(conn, options?)` | Upgrade to TLS | `host?` |
+| API                        | Description    | Options        |
+| -------------------------- | -------------- | -------------- |
+| `connect(options)`         | TCP connection | `host`, `port` |
+| `startTls(conn, options?)` | Upgrade to TLS | `host?`        |
 
 ### Environment Variable API
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `getEnv(key)` | Get env var | `string \| undefined` |
-| `setEnv(key, value)` | Set env var | `void` |
-| `deleteEnv(key)` | Delete env var | `void` |
-| `getEnvAll()` | Get all env vars | `Record<string, string>` |
-| `hasEnv(key)` | Check if exists | `boolean` |
+| API                  | Description      | Returns                  |
+| -------------------- | ---------------- | ------------------------ |
+| `getEnv(key)`        | Get env var      | `string \| undefined`    |
+| `setEnv(key, value)` | Set env var      | `void`                   |
+| `deleteEnv(key)`     | Delete env var   | `void`                   |
+| `getEnvAll()`        | Get all env vars | `Record<string, string>` |
+| `hasEnv(key)`        | Check if exists  | `boolean`                |
 
 ### Process/Command API
 
@@ -939,17 +949,17 @@ execCommandSync(
 
 ### Terminal API
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `isTerminal()` | Is stdout a terminal | `boolean` |
-| `isStderrTerminal()` | Is stderr a terminal | `boolean` |
-| `isStdinTerminal()` | Is stdin a terminal | `boolean` |
-| `getStdout()` | Get stdout stream | `WritableStream<Uint8Array>` |
-| `getStderr()` | Get stderr stream | `WritableStream<Uint8Array>` |
-| `writeStdoutSync(data)` | Sync write stdout | `void` |
-| `writeStderrSync(data)` | Sync write stderr | `void` |
-| `readStdin(buffer)` | Read stdin | `Promise<number \| null>` |
-| `setStdinRaw(mode, options?)` | Set raw mode | `boolean` |
+| API                           | Description          | Returns                      |
+| ----------------------------- | -------------------- | ---------------------------- |
+| `isTerminal()`                | Is stdout a terminal | `boolean`                    |
+| `isStderrTerminal()`          | Is stderr a terminal | `boolean`                    |
+| `isStdinTerminal()`           | Is stdin a terminal  | `boolean`                    |
+| `getStdout()`                 | Get stdout stream    | `WritableStream<Uint8Array>` |
+| `getStderr()`                 | Get stderr stream    | `WritableStream<Uint8Array>` |
+| `writeStdoutSync(data)`       | Sync write stdout    | `void`                       |
+| `writeStderrSync(data)`       | Sync write stderr    | `void`                       |
+| `readStdin(buffer)`           | Read stdin           | `Promise<number \| null>`    |
+| `setStdinRaw(mode, options?)` | Set raw mode         | `boolean`                    |
 
 ### Cron API
 
@@ -976,16 +986,17 @@ cron(
 - `CronHandle.close()` - Close task
 - `CronHandle.stop()` - Alias for close
 
-> 📌 Uses `node-cron@3.0.3`, second-level expressions. `stop()` and `close()` are equivalent.
+> 📌 Uses `node-cron@3.0.3`, second-level expressions. `stop()` and `close()`
+> are equivalent.
 
 ### Process Info API
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `pid()` | Current process ID | `number` |
-| `platform()` | OS platform | `"linux" \| "darwin" \| "windows" \| "unknown"` |
-| `arch()` | CPU architecture | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
-| `version()` | Runtime version | `RuntimeVersion` |
+| API          | Description        | Returns                                         |
+| ------------ | ------------------ | ----------------------------------------------- |
+| `pid()`      | Current process ID | `number`                                        |
+| `platform()` | OS platform        | `"linux" \| "darwin" \| "windows" \| "unknown"` |
+| `arch()`     | CPU architecture   | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
+| `version()`  | Runtime version    | `RuntimeVersion`                                |
 
 **RuntimeVersion**:
 
@@ -1004,47 +1015,47 @@ interface RuntimeVersion {
 
 ### Process Utils API
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `args()` | Command-line arguments | `string[]` |
-| `exit(code)` | Exit program | `never` |
+| API          | Description            | Returns    |
+| ------------ | ---------------------- | ---------- |
+| `args()`     | Command-line arguments | `string[]` |
+| `exit(code)` | Exit program           | `never`    |
 
 ### Signal Handling API
 
-| API | Description | Params |
-| --- | ----------- | ------ |
-| `addSignalListener(signal, handler)` | Add listener | `signal`: SIGTERM, SIGINT, etc. |
-| `removeSignalListener(signal, handler)` | Remove listener | Same |
+| API                                     | Description     | Params                          |
+| --------------------------------------- | --------------- | ------------------------------- |
+| `addSignalListener(signal, handler)`    | Add listener    | `signal`: SIGTERM, SIGINT, etc. |
+| `removeSignalListener(signal, handler)` | Remove listener | Same                            |
 
 ### Path API
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `join(...paths)` | Join path segments | `string` |
-| `dirname(path)` | Get dirname | `string` |
-| `basename(path, ext?)` | Get basename | `string` |
-| `extname(path)` | Get extension | `string` |
-| `resolve(...paths)` | Resolve to absolute | `string` |
-| `relative(from, to)` | Relative path | `string` |
-| `normalize(path)` | Normalize path | `string` |
-| `isAbsolute(path)` | Is absolute | `boolean` |
-| `isRelative(path)` | Is relative | `boolean` |
+| API                    | Description         | Returns   |
+| ---------------------- | ------------------- | --------- |
+| `join(...paths)`       | Join path segments  | `string`  |
+| `dirname(path)`        | Get dirname         | `string`  |
+| `basename(path, ext?)` | Get basename        | `string`  |
+| `extname(path)`        | Get extension       | `string`  |
+| `resolve(...paths)`    | Resolve to absolute | `string`  |
+| `relative(from, to)`   | Relative path       | `string`  |
+| `normalize(path)`      | Normalize path      | `string`  |
+| `isAbsolute(path)`     | Is absolute         | `boolean` |
+| `isRelative(path)`     | Is relative         | `boolean` |
 
 ### File Hash API
 
 #### Async
 
-| API | Description | Params | Returns |
-| --- | ----------- | ------ | ------- |
-| `hashFile(path, algorithm?)` | File hash | `path`, `algorithm` (default: SHA-256) | `Promise<string>` |
-| `hash(data, algorithm?)` | Data hash | `data`, `algorithm` | `Promise<string>` |
+| API                          | Description | Params                                 | Returns           |
+| ---------------------------- | ----------- | -------------------------------------- | ----------------- |
+| `hashFile(path, algorithm?)` | File hash   | `path`, `algorithm` (default: SHA-256) | `Promise<string>` |
+| `hash(data, algorithm?)`     | Data hash   | `data`, `algorithm`                    | `Promise<string>` |
 
 #### Sync ⭐ New
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
+| API                              | Description    | Returns  |
+| -------------------------------- | -------------- | -------- |
 | `hashFileSync(path, algorithm?)` | Sync file hash | `string` |
-| `hashSync(data, algorithm?)` | Sync data hash | `string` |
+| `hashSync(data, algorithm?)`     | Sync data hash | `string` |
 
 **HashAlgorithm**:
 
@@ -1053,28 +1064,29 @@ interface RuntimeVersion {
 - `"SHA-1"`
 - `"MD5"`
 
-> 📌 Sync hash requires `node:crypto`. Deno needs Node compat; Bun supports natively.
+> 📌 Sync hash requires `node:crypto`. Deno needs Node compat; Bun supports
+> natively.
 
 ### System Info API
 
 #### Async
 
-| API | Description | Params | Returns |
-| --- | ----------- | ------ | ------- |
-| `getMemoryInfo()` | Memory info | - | `Promise<MemoryInfo>` |
-| `getCpuUsage(interval?)` | CPU usage | `interval` (ms, default: 100) | `Promise<CpuUsage>` |
-| `getLoadAverage()` | System load (Linux/macOS) | - | `Promise<LoadAverage \| undefined>` |
-| `getDiskUsage(path?)` | Disk usage | `path` (default: CWD) | `Promise<DiskUsage>` |
-| `getSystemInfo()` | System info | - | `Promise<SystemInfo>` |
-| `getSystemStatus(cpuInterval?, diskPath?)` | Full status | - | `Promise<SystemStatus>` |
+| API                                        | Description               | Params                        | Returns                             |
+| ------------------------------------------ | ------------------------- | ----------------------------- | ----------------------------------- |
+| `getMemoryInfo()`                          | Memory info               | -                             | `Promise<MemoryInfo>`               |
+| `getCpuUsage(interval?)`                   | CPU usage                 | `interval` (ms, default: 100) | `Promise<CpuUsage>`                 |
+| `getLoadAverage()`                         | System load (Linux/macOS) | -                             | `Promise<LoadAverage \| undefined>` |
+| `getDiskUsage(path?)`                      | Disk usage                | `path` (default: CWD)         | `Promise<DiskUsage>`                |
+| `getSystemInfo()`                          | System info               | -                             | `Promise<SystemInfo>`               |
+| `getSystemStatus(cpuInterval?, diskPath?)` | Full status               | -                             | `Promise<SystemStatus>`             |
 
 #### Sync ⭐ New
 
-| API | Description | Returns |
-| --- | ----------- | ------- |
-| `getMemoryInfoSync()` | Sync memory info | `MemoryInfo` |
+| API                    | Description             | Returns                    |
+| ---------------------- | ----------------------- | -------------------------- |
+| `getMemoryInfoSync()`  | Sync memory info        | `MemoryInfo`               |
 | `getLoadAverageSync()` | Sync load (Linux/macOS) | `LoadAverage \| undefined` |
-| `getSystemInfoSync()` | Sync system info | `SystemInfo` |
+| `getSystemInfoSync()`  | Sync system info        | `SystemInfo`               |
 
 **MemoryInfo**:
 
@@ -1100,7 +1112,8 @@ interface MemoryInfo {
 
 **SystemStatus**: `system`, `memory`, `cpu`, `loadAverage?`, `disk?`
 
-> 📌 Windows: `getLoadAverage()` returns `undefined`. Deno uses native API; Bun uses system commands. APIs return defaults on failure, no errors.
+> 📌 Windows: `getLoadAverage()` returns `undefined`. Deno uses native API; Bun
+> uses system commands. APIs return defaults on failure, no errors.
 
 ---
 
@@ -1142,7 +1155,8 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 - **Server/client separation**: `/client` subpath (this lib is server-only)
 - **Unified API**: Same interface on Deno and Bun
-- **Type safety**: Full TypeScript, zero `any`, type-safe `getDeno()`, `getBun()`, `getProcess()`
+- **Type safety**: Full TypeScript, zero `any`, type-safe `getDeno()`,
+  `getBun()`, `getProcess()`
 - **Auto-adapt**: Unified abstraction over native APIs
 - **Sync/async**: Sync for CLI, async for most cases
 - **File watching**: `watchFs()` on Deno and Bun (Bun uses `fs.watch`)
