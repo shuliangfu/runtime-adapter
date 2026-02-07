@@ -4,7 +4,7 @@
 
 - **Test library version**: @dreamer/test@^1.0.0-beta.12
 - **Test framework**: @dreamer/test (compatible with Deno and Bun)
-- **Test date**: 2026-01-13
+- **Test date**: 2026-02-07
 - **Test environment**:
   - Bun 1.3.5
   - Deno 2.6.4
@@ -13,33 +13,34 @@
 
 ### Overall Statistics
 
-- **Total tests**: 211
-- **Passed**: 211 ✅
+- **Total tests**: 266
+- **Passed**: 266 ✅
 - **Failed**: 0
 - **Pass rate**: 100% ✅
-- **Test execution time**: ~20 seconds
+- **Test execution time**: ~51 seconds
 
 ### Test File Statistics
 
 | Test File               | Test Count | Status        | Description                                           |
 | ----------------------- | ---------- | ------------- | ----------------------------------------------------- |
 | `detect.test.ts`        | 7          | ✅ All passed | Runtime detection                                     |
-| `file.test.ts`          | 30         | ✅ All passed | Async file system API (includes ensureDir)            |
-| `file-sync.test.ts`     | 20         | ✅ All passed | **New** Sync file system API (includes ensureDirSync) |
+| `file.test.ts`          | 35         | ✅ All passed | Async file system API (open, create, watchFs, ensureDir) |
+| `file-sync.test.ts`     | 21         | ✅ All passed | Sync file system API (includes ensureDirSync)          |
 | `file-ext.test.ts`      | 4          | ✅ All passed | File extension utilities                              |
 | `network.test.ts`       | 5          | ✅ All passed | Network API (HTTP server)                             |
-| `websocket.test.ts`     | 5          | ✅ All passed | **New** WebSocket API                                 |
-| `env.test.ts`           | 9          | ✅ All passed | Environment variable API                              |
+| `websocket.test.ts`     | 6          | ✅ All passed | WebSocket API (upgradeWebSocket)                       |
+| `websocket-test.test.ts`| 36         | ✅ All passed | WebSocket Server (rooms, events, heartbeat)            |
+| `env.test.ts`           | 10         | ✅ All passed | Environment variable API                             |
 | `process.test.ts`       | 12         | ✅ All passed | Process/command API (includes sync command execution) |
-| `process-info.test.ts`  | 4          | ✅ All passed | Process info API                                      |
+| `process-info.test.ts`  | 5          | ✅ All passed | Process info API (includes execPath)                  |
 | `process-utils.test.ts` | 2          | ✅ All passed | Process utils API                                     |
 | `signal.test.ts`        | 2          | ✅ All passed | Signal handling API                                   |
 | `terminal.test.ts`      | 25         | ✅ All passed | Terminal API                                          |
 | `cron.test.ts`          | 4          | ✅ All passed | Cron/scheduled task API                               |
-| `path.test.ts`          | 63         | ✅ All passed | Path operation API                                    |
+| `path.test.ts`          | 52         | ✅ All passed | Path operation API (includes cross-drive relative)     |
 | `hash.test.ts`          | 10         | ✅ All passed | File hash API (includes sync hash)                    |
-| `system-info.test.ts`   | 18         | ✅ All passed | System info API (includes sync version)               |
-| `mod.test.ts`           | 9          | ✅ All passed | Module exports                                        |
+| `system-info.test.ts`   | 16         | ✅ All passed | System info API (includes sync version)               |
+| `mod.test.ts`           | 14         | ✅ All passed | Module exports (includes utils: getDeno, getBun, getProcess, getBuffer) |
 
 ## Feature Test Details
 
@@ -93,12 +94,18 @@
 - ✅ Working directory
   - `cwd` - Get current working directory
   - `chdir` - Change working directory
+- ✅ File handles
+  - `open` - Open file for read/write (stream-based)
+  - `create` - Create and write file
+- ✅ File watcher
+  - `watchFs` - Watch directory for file create events
+  - Supports close method
 - ✅ Directory traversal
   - `walk` - Recursively traverse directory
     - Traverse all files in directory
     - Supports path matching
 
-**Test result**: All 30 tests passed
+**Test result**: All 35 tests passed
 
 ### 3. Sync File System API (file-sync.test.ts) ⭐ New
 
@@ -242,8 +249,9 @@
 - ✅ `platform` - Get operating system platform
 - ✅ `arch` - Get CPU architecture
 - ✅ `version` - Get runtime version info
+- ✅ `execPath` - Get executable path
 
-**Test result**: All 4 tests passed
+**Test result**: All 5 tests passed
 
 ### 10. Process Utils API (process-utils.test.ts)
 
@@ -325,13 +333,13 @@
 - ✅ `basename` - Get file name (6 tests)
 - ✅ `extname` - Get extension (5 tests)
 - ✅ `resolve` - Resolve path (7 tests)
-- ✅ `relative` - Calculate relative path (7 tests)
+- ✅ `relative` - Calculate relative path (includes cross-drive on Windows)
 - ✅ `normalize` - Normalize path (5 tests)
 - ✅ `isAbsolute` - Check if absolute path (3 tests)
 - ✅ `isRelative` - Check if relative path (2 tests)
 - ✅ Comprehensive tests (2 tests)
 
-**Test result**: All 63 tests passed
+**Test result**: All 52 tests passed
 
 ### 15. File Hash API (hash.test.ts)
 
@@ -391,7 +399,7 @@
   - Sync return system info
   - Return valid platform info
 
-**Test result**: All 18 tests passed
+**Test result**: All 16 tests passed
 
 **Implementation characteristics**:
 
@@ -410,16 +418,21 @@
 **Test scenarios**:
 
 - ✅ Export runtime detection related API
-- ✅ Export file system API (includes ensureDir and ensureDirSync)
+- ✅ Export file system API (includes open, create, watchFs)
 - ✅ Export network API
 - ✅ Export environment variable API
 - ✅ Export process/command API
+- ✅ Export process info API (execPath, pid, platform, arch)
+- ✅ Export process utils API (args, exit)
+- ✅ Export signal handling API
+- ✅ Export path API
 - ✅ Export terminal API
 - ✅ Export cron/scheduled task API
 - ✅ Export system info API
 - ✅ Export hash API
+- ✅ Export utils (getDeno, getBun, getProcess, getBuffer)
 
-**Test result**: All 9 tests passed
+**Test result**: All 14 tests passed
 
 ## New Feature Highlights ⭐
 
@@ -561,29 +574,11 @@ Added directory ensure functionality, similar to `mkdir -p` command:
 - Deno requires Node.js compatibility mode enabled
 - Bun has native support
 
-## Test Coverage Analysis
-
-### Code Coverage
-
-- **Feature coverage**: 100%
-- **API coverage**: 100%
-- **Edge cases**: Covered
-- **Error handling**: Covered
-
-### Test Quality
-
-- ✅ All public APIs have tests
-- ✅ Both async and sync versions have tests
-- ✅ Error handling tested
-- ✅ Edge cases tested
-- ✅ Cross-runtime compatibility verified
-- ✅ Resource cleanup verified
-
 ## Conclusion
 
 ### ✅ Test Pass Rate: 100%
 
-All 211 test cases passed, including:
+All 266 test cases passed, including:
 
 1. **Core features**: Runtime detection, file system, network, WebSocket,
    environment variables, process management
@@ -616,6 +611,4 @@ All 211 test cases passed, including:
 
 ---
 
-**Test report generated**: 2026-01-26 **Test framework**:
-@dreamer/test@^1.0.0-beta.12 **Test environment**: Bun 1.3.5, Deno 2.6.4 **Total
-tests**: 211 **Pass rate**: 100% ✅
+**Test report generated**: 2026-02-07 | **Test framework**: @dreamer/test@^1.0.0-beta.12 | **Test environment**: Bun 1.3.5, Deno 2.6.4 | **Total tests**: 266 | **Pass rate**: 100% ✅
