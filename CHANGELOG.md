@@ -10,6 +10,24 @@ and this project adheres to
 
 ---
 
+## [1.0.3] - 2025-02-07
+
+### Added
+
+- **CI workflow**: GitHub Actions CI on Linux, macOS, Windows (deno check, lint, test)
+
+### Fixed
+
+- **Windows chmod**: Wrap chmod in try-catch (Windows may not support)
+- **Windows chdir**: Path assertion normalized for backslash
+- **Windows path resolve**: Platform-aware assertions for Unix/Windows path formats
+- **Windows process**: `cd` requires `cmd /c cd` (shell built-in); use `sort`/`cat` for spawn; `set`/`printenv` for env; `cmd /c cd` for cwd
+- **Deno check**: crypto-comparison/performance use `(globalThis as any).require`; file.test use `globalThis.process` for getuid/getgid
+- **watchFs test**: Accept both `create` and `modify` events (Bun/Node fs.watch may report modify)
+- **WebSocket tests**: Try-catch around `ws.send()`; `cmd /c cd` for Windows; port counter + delay to avoid AddrInUse
+
+---
+
 ## [1.0.2] - 2025-02-07
 
 ### Fixed

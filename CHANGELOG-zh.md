@@ -9,6 +9,24 @@
 
 ---
 
+## [1.0.3] - 2025-02-07
+
+### 新增
+
+- **CI 工作流**：GitHub Actions 在 Linux、macOS、Windows 上运行 CI（deno check、lint、test）
+
+### 修复
+
+- **Windows chmod**：chmod 包裹 try-catch（Windows 可能不支持）
+- **Windows chdir**：路径断言兼容反斜杠
+- **Windows path resolve**：按平台区分 Unix/Windows 路径断言
+- **Windows 进程**：cd 需通过 `cmd /c cd` 调用；spawn 用 sort/cat；env 用 set/printenv；cwd 用 cmd /c cd
+- **Deno check**：crypto 脚本用 globalThis.require；file.test 用 globalThis.process
+- **watchFs 测试**：接受 create 或 modify 事件（Bun/Node fs.watch 可能报告 modify）
+- **WebSocket 测试**：ws.send 包裹 try-catch；Windows cd 修复；端口计数器+延迟避免 AddrInUse
+
+---
+
 ## [1.0.2] - 2025-02-07
 
 ### 修复

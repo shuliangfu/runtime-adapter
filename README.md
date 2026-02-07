@@ -1190,9 +1190,9 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.2] - 2025-02-07
+### [1.0.3] - 2025-02-07
 
-**Fixed**: Bun createCommand stdin getWriter, Bun stdio mapBunStdio, Bun execPath export resolution; package.json exports for workspace resolution
+**Added**: CI workflow (Linux/macOS/Windows). **Fixed**: Windows compatibility (chmod, chdir, path, process cd/spawn/env, WebSocket); Deno check; watchFs test; WebSocket send race.
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
