@@ -6,12 +6,13 @@ const testData =
   "Hello, World! This is a test string for crypto performance comparison.";
 const iterations = 50000;
 
-// Bun 测试
+// Bun 测试（使用 globalThis 避免 Deno 类型检查报错）
 if (typeof (globalThis as any).Bun !== "undefined") {
   console.log("=== Bun 环境详细测试 ===\n");
 
-  const nodeCrypto = require("node:crypto");
-  const crypto = require("crypto");
+  const requireFn = (globalThis as any).require;
+  const nodeCrypto = requireFn("node:crypto");
+  const crypto = requireFn("crypto");
 
   console.log("1. 模块关系:");
   console.log("   node:crypto === crypto:", nodeCrypto === crypto);
