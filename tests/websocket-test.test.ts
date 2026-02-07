@@ -804,10 +804,11 @@ describe("WebSocket Server", () => {
         `ws://localhost:${testPort}/ws`,
       );
 
-      // 等待连接建立
-      await delay(200);
-      // 发送消息来触发服务器的 message 事件，这样适配器的 _ws 会被设置
-      ws.send(JSON.stringify({ type: "ping" }));
+      // 在服务器 100ms 断开前发送，且仅在 OPEN 时发送，避免 InvalidStateError
+      await delay(50);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "ping" }));
+      }
       await delay(50);
 
       // 等待服务器断开连接，并监听客户端的关闭事件

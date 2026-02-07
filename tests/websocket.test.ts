@@ -474,13 +474,11 @@ describe("WebSocket API", () => {
               try {
                 const { socket, response } = upgradeWebSocket(request);
 
-                // 在连接建立后关闭连接
-                // 使用标志避免重复关闭
+                // 仅在收到第一条消息时关闭，避免客户端 send 时连接已关闭（InvalidStateError）
                 let closed = false;
                 const closeConnection = () => {
                   if (closed) return;
                   closed = true;
-                  // 等待一小段时间确保连接完全建立
                   setTimeout(() => {
                     try {
                       if (socket.readyState === WebSocket.OPEN) {
@@ -492,16 +490,6 @@ describe("WebSocket API", () => {
                   }, 300);
                 };
 
-                // 使用 addEventListener("open", ...) 确保在连接完全建立后关闭
-                socket.addEventListener("open", closeConnection);
-
-                // 如果 socket 已经处于 OPEN 状态，open 事件可能不会触发
-                // 所以我们需要直接关闭
-                if (socket.readyState === WebSocket.OPEN) {
-                  closeConnection();
-                }
-
-                // 在收到第一条消息时也关闭（作为备选，处理 open 事件未触发的情况）
                 socket.addEventListener("message", () => {
                   if (!closed) {
                     closeConnection();
@@ -532,10 +520,12 @@ describe("WebSocket API", () => {
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
 
         // 等待连接建立
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        await new Promise((resolve) => setTimeout(resolve, 200));
 
         // 发送消息触发服务器的 message 事件（这样服务器才会关闭连接）
-        ws.send("trigger");
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send("trigger");
+        }
 
         // 等待服务器关闭连接（服务器在收到消息后 300ms 关闭）
         // 我们需要等待足够的时间让服务器处理消息并关闭连接
