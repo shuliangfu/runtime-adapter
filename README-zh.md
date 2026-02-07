@@ -175,7 +175,7 @@ console.log("当前运行时:", RUNTIME);
 
 ### 文件系统操作
 
-#### 异步 API
+#### 文件系统 - 异步 API
 
 ```typescript
 import {
@@ -297,7 +297,7 @@ for await (const event of watcher) {
 }
 ```
 
-#### 同步 API ⭐ 新增
+#### 文件系统 - 同步 API ⭐ 新增
 
 ```typescript
 import {
@@ -445,7 +445,7 @@ deleteEnv("DEBUG");
 
 ### 命令执行
 
-#### 异步执行
+#### 命令 - 异步执行
 
 ```typescript
 import { createCommand } from "jsr:@dreamer/runtime-adapter";
@@ -482,7 +482,7 @@ console.log("进程状态:", status);
 // child.kill(15); // SIGTERM
 ```
 
-#### 同步执行 ⭐ 新增
+#### 命令 - 同步执行 ⭐ 新增
 
 ```typescript
 import { execCommandSync } from "jsr:@dreamer/runtime-adapter";
@@ -610,7 +610,7 @@ setTimeout(() => {
 
 ### 文件哈希
 
-#### 异步 API
+#### 文件哈希 - 异步 API
 
 ```typescript
 import { hash, hashFile } from "jsr:@dreamer/runtime-adapter";
@@ -628,7 +628,7 @@ const sha512 = await hashFile("./file.txt", "SHA-512");
 const md5 = await hash("Hello, World!", "MD5");
 ```
 
-#### 同步 API ⭐ 新增
+#### 文件哈希 - 同步 API ⭐ 新增
 
 ```typescript
 import { hashFileSync, hashSync } from "jsr:@dreamer/runtime-adapter";
@@ -651,7 +651,7 @@ const md5 = hashSync("Hello, World!", "MD5");
 
 ### 系统信息
 
-#### 异步 API
+#### 系统信息 - 异步 API
 
 ```typescript
 import {
@@ -704,7 +704,7 @@ const status = await getSystemStatus();
 console.log("系统状态:", status);
 ```
 
-#### 同步 API ⭐ 新增
+#### 系统信息 - 同步 API ⭐ 新增
 
 ```typescript
 import {
@@ -733,7 +733,7 @@ console.log(`平台: ${system.platform}`);
 
 ## 📚 API 文档
 
-### 运行时检测
+### 运行时检测 API
 
 | API               | 说明               | 返回值                         |
 | ----------------- | ------------------ | ------------------------------ |
@@ -945,7 +945,7 @@ const handle = serve({ port: 3000 }, (req) => {
 
 ### 进程/命令 API
 
-#### 异步执行
+#### 进程/命令 API - 异步执行
 
 ```typescript
 createCommand(
@@ -970,7 +970,7 @@ createCommand(
 - `kill(signo?)` - 终止命令
 - `pid` - 进程 ID
 
-#### 同步执行 ⭐ 新增
+#### 进程/命令 API - 同步执行 ⭐ 新增
 
 ```typescript
 execCommandSync(
@@ -1085,14 +1085,14 @@ interface RuntimeVersion {
 
 ### 文件哈希 API
 
-#### 异步 API
+#### 文件哈希 API - 异步
 
 | API                                                           | 说明           | 参数                                                                              | 返回值            |
 | ------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- | ----------------- |
 | `hashFile(path: string, algorithm?: HashAlgorithm)`           | 计算文件哈希值 | `path`: 文件路径<br>`algorithm`: 哈希算法（默认：`"SHA-256"`）                    | `Promise<string>` |
 | `hash(data: Uint8Array \| string, algorithm?: HashAlgorithm)` | 计算数据哈希值 | `data`: 数据（Uint8Array 或字符串）<br>`algorithm`: 哈希算法（默认：`"SHA-256"`） | `Promise<string>` |
 
-#### 同步 API ⭐ 新增
+#### 文件哈希 API - 同步 ⭐ 新增
 
 | API                                                               | 说明               | 参数                                                                              | 返回值   |
 | ----------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------- | -------- |
@@ -1111,7 +1111,7 @@ interface RuntimeVersion {
 
 ### 系统信息 API
 
-#### 异步 API
+#### 系统信息 API - 异步
 
 | API                                                        | 说明                        | 参数                                                                     | 返回值                              |
 | ---------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------ | ----------------------------------- |
@@ -1122,7 +1122,7 @@ interface RuntimeVersion {
 | `getSystemInfo()`                                          | 获取系统信息                | 无                                                                       | `Promise<SystemInfo>`               |
 | `getSystemStatus(cpuInterval?: number, diskPath?: string)` | 获取完整的系统状态          | `cpuInterval`: CPU 采样间隔（默认：100）<br>`diskPath`: 磁盘路径（可选） | `Promise<SystemStatus>`             |
 
-#### 同步 API ⭐ 新增
+#### 系统信息 API - 同步 ⭐ 新增
 
 | API                    | 说明                            | 参数 | 返回值                     |
 | ---------------------- | ------------------------------- | ---- | -------------------------- |
@@ -1279,9 +1279,9 @@ bun test tests/
 
 **新增**：execPath、Windows 兼容性文档
 
-**修复**：path.relative() 跨盘符、process-info execPath 类型
+**修复**：path.relative() 跨盘符、process-info execPath 类型、open/create/watchFs 测试 BadResource、watchFs timer 泄漏
 
-**变更**：System Info 增加 PowerShell 备选（wmic 不可用时）、README 平台支持说明
+**变更**：System Info 增加 PowerShell 备选（wmic 不可用时）、README 平台支持说明、MD024 重复标题修复、TEST_REPORT（266 测试）
 
 完整历史详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 

@@ -21,12 +21,14 @@ and this project adheres to
 
 - **path.relative() cross-drive**: On Windows, `relative("C:/a/b", "D:/x/y")` now correctly returns `D:/x/y` (matches Node.js)
 - **process-info execPath**: Fixed Deno/Bun type assertions for `execPath` type errors
+- **Tests**: open/create/watchFs BadResource errors when stream closes resource; watchFs timer leak (clearTimeout)
 
 ### Changed
 
 - **System Info wmic fallback**: `getMemoryInfo`, `getDiskUsage`, and CPU core count now fall back to PowerShell `Get-CimInstance` when wmic is unavailable (e.g. Windows 11 24H2+)
 - **README**: Added platform support table (Linux/macOS/Windows) and Windows platform notes
 - **Platform support**: Added `execPath()` to process info API table in README
+- **Docs**: README/README-zh MD024 duplicate heading fixes; TEST_REPORT updated (266 tests); removed TEST_COVERAGE_ANALYSIS.md
 
 ---
 
