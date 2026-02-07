@@ -73,10 +73,11 @@ describe("进程/命令 API", () => {
     }, { sanitizeResources: false }); // 避免 Deno 泄漏检测误报
 
     it("应该支持工作目录", async () => {
-      const cmd = createCommand(platform() === "windows" ? "cd" : "pwd", {
-        args: [],
-        cwd: ".",
-      });
+      // Windows 上 cd 是 shell 内置命令，需通过 cmd /c 调用
+      const cmd =
+        platform() === "windows"
+          ? createCommand("cmd", { args: ["/c", "cd"], cwd: "." })
+          : createCommand("pwd", { args: [], cwd: "." });
       const output = await cmd.output();
       expect(output.success).toBe(true);
     });
@@ -130,11 +131,10 @@ describe("进程/命令 API", () => {
     });
 
     it("应该支持工作目录", () => {
-      const output = execCommandSync(
-        platform() === "windows" ? "cd" : "pwd",
-        [],
-        { cwd: "." },
-      );
+      const output =
+        platform() === "windows"
+          ? execCommandSync("cmd", ["/c", "cd"], { cwd: "." })
+          : execCommandSync("pwd", [], { cwd: "." });
       expect(typeof output).toBe("string");
       expect(output.trim().length).toBeGreaterThan(0);
     });
