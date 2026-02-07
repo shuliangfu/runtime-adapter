@@ -34,6 +34,28 @@ export interface RuntimeVersion {
 }
 
 /**
+ * 获取当前运行时可执行文件路径
+ * @returns Deno 为 deno 可执行文件路径，Bun 为 bun 可执行文件路径
+ *
+ * @example
+ * ```typescript
+ * import { execPath } from "@dreamer/runtime-adapter";
+ * const path = execPath(); // "/usr/bin/deno" or "/usr/local/bin/bun"
+ * ```
+ */
+export function execPath(): string {
+  const deno = getDeno();
+  if (deno && "execPath" in deno && typeof (deno as { execPath?: () => string }).execPath === "function") {
+    return (deno as { execPath: () => string }).execPath();
+  }
+  const proc = getProcess();
+  if (proc && "execPath" in proc && typeof (proc as { execPath?: unknown }).execPath === "string") {
+    return (proc as { execPath: string }).execPath;
+  }
+  return "deno"; // fallback
+}
+
+/**
  * 获取当前进程 ID
  * @returns 进程 ID
  *

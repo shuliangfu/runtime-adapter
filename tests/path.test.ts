@@ -264,6 +264,12 @@ describe("路径操作 API", () => {
       expect(relative("/", "/file.txt")).toBe("file.txt");
       expect(relative("/path/to", "/")).toBe("../..");
     });
+
+    it("应该处理 Windows 跨盘符（返回目标路径）", () => {
+      // C:\a\b 与 D:\x\y 无法用相对路径表示，应返回 D:/x/y
+      expect(relative("C:/a/b", "D:/x/y")).toBe("D:/x/y");
+      expect(relative("C:\\a\\b", "D:\\x\\y")).toBe("D:/x/y");
+    });
   });
 
   describe("normalize", () => {

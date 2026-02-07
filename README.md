@@ -125,6 +125,26 @@ bunx jsr add @dreamer/runtime-adapter
 | **Client**     | -                 | ❌ Not supported (browser)                  |
 | **Dependency** | `node-cron@3.0.3` | 📦 For cron tasks, second-level expressions |
 
+### Platform Support
+
+| Platform | Deno | Bun | Notes |
+| -------- | ---- | --- | ----- |
+| **Linux** | ✅ | ✅ | Full support |
+| **macOS** | ✅ | ✅ | Full support |
+| **Windows** | ✅ | ✅ | Full support; some APIs have platform differences (see below) |
+
+**Windows platform notes**:
+
+- **Path API**: Supports `C:\` style absolute paths; backslashes are normalized to forward slashes; `relative()` returns target path when across drives (e.g. `C:\` to `D:\`)
+- **Signal API**: SIGTERM listener is silently skipped on Windows (Deno); Bun works normally
+- **Terminal API**: `setStdinRaw` may return `false` on Windows (Deno throws "The operation is not supported", caught and fallback)
+- **System Info API**: `getLoadAverage()` returns `undefined` on Windows; memory/disk uses `wmic`
+- **Temp directory**: Bun uses `os.tmpdir()` (e.g. `C:\Users\xxx\AppData\Local\Temp`); Deno uses native API
+- **File API**: `chown` throws EPERM on Windows (not supported); `symlink` requires admin or Developer Mode
+- **System Info**: Uses `wmic` first; falls back to PowerShell `Get-CimInstance` when wmic is unavailable (e.g. Windows 11 24H2+)
+
+For detailed analysis, see [WINDOWS_COMPATIBILITY_ANALYSIS.md](./WINDOWS_COMPATIBILITY_ANALYSIS.md).
+
 ---
 
 ## 🚀 Quick Start
@@ -993,6 +1013,7 @@ cron(
 
 | API          | Description        | Returns                                         |
 | ------------ | ------------------ | ----------------------------------------------- |
+| `execPath()` | Runtime executable path | `string` (e.g. `/usr/bin/deno` or `C:\path\to\bun.exe`) |
 | `pid()`      | Current process ID | `number`                                        |
 | `platform()` | OS platform        | `"linux" \| "darwin" \| "windows" \| "unknown"` |
 | `arch()`     | CPU architecture   | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
@@ -1164,6 +1185,20 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 - **Cron**: `node-cron@3.0.3`, second-level expressions
 - **TCP/TLS**: Bun uses Node compat API
 - **Permissions**: Deno tests need `-A` or `--allow-all`
+
+---
+
+## 📋 Changelog
+
+### [1.0.1] - 2025-02-07
+
+**Added**: execPath, Windows compatibility docs
+
+**Fixed**: path.relative() cross-drive, process-info execPath types
+
+**Changed**: PowerShell fallback for System Info when wmic unavailable, README platform support
+
+See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
 ---
 

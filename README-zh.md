@@ -124,6 +124,26 @@ bunx jsr add @dreamer/runtime-adapter
 | **客户端** | -                 | ❌ 不支持（浏览器环境）               |
 | **依赖**   | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
 
+### 平台支持
+
+| 平台       | Deno | Bun | 说明                                 |
+| ---------- | ---- | --- | ------------------------------------ |
+| **Linux**  | ✅   | ✅  | 完全支持                             |
+| **macOS**  | ✅   | ✅  | 完全支持                             |
+| **Windows**| ✅   | ✅  | 完全支持；部分 API 有平台差异（见下方） |
+
+**Windows 平台说明**：
+
+- **Path API**：支持 `C:\` 风格绝对路径，反斜杠自动规范化为正斜杠；跨盘符时 `relative()` 返回目标路径
+- **Signal API**：Windows 上 SIGTERM 在 Deno 中不注册（静默跳过），Bun 正常
+- **Terminal API**：`setStdinRaw` 在 Windows 可能返回 `false`（Deno 抛出 "The operation is not supported" 时捕获并回退）
+- **System Info API**：`getLoadAverage()` 在 Windows 返回 `undefined`；内存/磁盘使用 `wmic` 获取
+- **Temp 目录**：Bun 使用 `os.tmpdir()`（如 `C:\Users\xxx\AppData\Local\Temp`），Deno 使用原生 API
+- **File API**：`chown` 在 Windows 上会抛出 EPERM（不支持）；`symlink` 需管理员或开发者模式
+- **System Info**：优先使用 `wmic`，不可用时自动回退到 PowerShell `Get-CimInstance`（如 Windows 11 24H2+）
+
+详细分析见 [WINDOWS_COMPATIBILITY_ANALYSIS-zh.md](./WINDOWS_COMPATIBILITY_ANALYSIS-zh.md)。
+
 ---
 
 ## 🚀 快速开始
@@ -1012,12 +1032,13 @@ cron(
 
 ### 进程信息 API
 
-| API          | 说明               | 返回值                                          |
-| ------------ | ------------------ | ----------------------------------------------- |
-| `pid()`      | 获取当前进程 ID    | `number`                                        |
-| `platform()` | 获取操作系统平台   | `"linux" \| "darwin" \| "windows" \| "unknown"` |
-| `arch()`     | 获取 CPU 架构      | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
-| `version()`  | 获取运行时版本信息 | `RuntimeVersion`                                |
+| API          | 说明                     | 返回值                                          |
+| ------------ | ------------------------ | ----------------------------------------------- |
+| `execPath()` | 运行时可执行文件路径     | `string`（如 `/usr/bin/deno` 或 `C:\path\to\bun.exe`） |
+| `pid()`      | 获取当前进程 ID          | `number`                                        |
+| `platform()` | 获取操作系统平台         | `"linux" \| "darwin" \| "windows" \| "unknown"` |
+| `arch()`     | 获取 CPU 架构            | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
+| `version()`  | 获取运行时版本信息       | `RuntimeVersion`                                |
 
 **RuntimeVersion 接口：**
 
@@ -1249,6 +1270,20 @@ bun test tests/
   原生 API 基本一致
 - **权限要求**：在 Deno 环境下运行测试时，需要使用 `-A` 或 `--allow-all`
   标志来授予所有权限
+
+---
+
+## 📋 变更日志
+
+### [1.0.1] - 2025-02-07
+
+**新增**：execPath、Windows 兼容性文档
+
+**修复**：path.relative() 跨盘符、process-info execPath 类型
+
+**变更**：System Info 增加 PowerShell 备选（wmic 不可用时）、README 平台支持说明
+
+完整历史详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 
 ---
 

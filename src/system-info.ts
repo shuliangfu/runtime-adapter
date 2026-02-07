@@ -25,6 +25,229 @@ async function execCommand(
   return new TextDecoder().decode(output.stdout);
 }
 
+// ==================== Windows PowerShell 备选（wmic 弃用后的替代） ====================
+
+/**
+ * 解析 wmic/PowerShell 输出的 Key=Value 格式
+ * 兼容 TotalVisibleMemorySize=12345 与 "TotalVisibleMemorySize=12345"
+ */
+function parseKeyValue(text: string, key: string): number | null {
+  const match = text.match(new RegExp(`${key}=(\\d+)`, "i"));
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Windows 内存信息：优先 wmic，失败则用 PowerShell Get-CimInstance
+ */
+async function getWindowsMemoryAsync(): Promise<MemoryInfo | null> {
+  try {
+    const text = await execCommand("wmic", [
+      "OS",
+      "get",
+      "TotalVisibleMemorySize,FreePhysicalMemory",
+      "/format:value",
+    ]);
+    const totalKb = parseKeyValue(text, "TotalVisibleMemorySize");
+    const freeKb = parseKeyValue(text, "FreePhysicalMemory");
+    if (totalKb != null && freeKb != null) {
+      const total = totalKb * 1024;
+      const free = freeKb * 1024;
+      const used = total - free;
+      const usagePercent = total > 0 ? (used / total) * 100 : 0;
+      return {
+        total,
+        available: free,
+        used,
+        free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+      };
+    }
+  } catch {
+    // wmic 失败（如 Windows 11 24H2+ 未安装）
+  }
+
+  try {
+    const ps = `$o=Get-CimInstance Win32_OperatingSystem;"TotalVisibleMemorySize="+$o.TotalVisibleMemorySize;"FreePhysicalMemory="+$o.FreePhysicalMemory`;
+    const text = await execCommand("powershell", ["-NoProfile", "-Command", ps]);
+    const totalKb = parseKeyValue(text, "TotalVisibleMemorySize");
+    const freeKb = parseKeyValue(text, "FreePhysicalMemory");
+    if (totalKb != null && freeKb != null) {
+      const total = totalKb * 1024;
+      const free = freeKb * 1024;
+      const used = total - free;
+      const usagePercent = total > 0 ? (used / total) * 100 : 0;
+      return {
+        total,
+        available: free,
+        used,
+        free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+      };
+    }
+  } catch {
+    // PowerShell 也失败
+  }
+  return null;
+}
+
+/**
+ * Windows 内存信息（同步）：优先 wmic，失败则用 PowerShell
+ */
+function getWindowsMemorySync(): MemoryInfo | null {
+  try {
+    const text = execCommandSync("wmic", [
+      "OS",
+      "get",
+      "TotalVisibleMemorySize,FreePhysicalMemory",
+      "/format:value",
+    ]);
+    const totalKb = parseKeyValue(text, "TotalVisibleMemorySize");
+    const freeKb = parseKeyValue(text, "FreePhysicalMemory");
+    if (totalKb != null && freeKb != null) {
+      const total = totalKb * 1024;
+      const free = freeKb * 1024;
+      const used = total - free;
+      const usagePercent = total > 0 ? (used / total) * 100 : 0;
+      return {
+        total,
+        available: free,
+        used,
+        free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+      };
+    }
+  } catch {
+    // wmic 失败
+  }
+
+  try {
+    const ps = `$o=Get-CimInstance Win32_OperatingSystem;"TotalVisibleMemorySize="+$o.TotalVisibleMemorySize;"FreePhysicalMemory="+$o.FreePhysicalMemory`;
+    const text = execCommandSync("powershell", ["-NoProfile", "-Command", ps]);
+    const totalKb = parseKeyValue(text, "TotalVisibleMemorySize");
+    const freeKb = parseKeyValue(text, "FreePhysicalMemory");
+    if (totalKb != null && freeKb != null) {
+      const total = totalKb * 1024;
+      const free = freeKb * 1024;
+      const used = total - free;
+      const usagePercent = total > 0 ? (used / total) * 100 : 0;
+      return {
+        total,
+        available: free,
+        used,
+        free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+      };
+    }
+  } catch {
+    // PowerShell 也失败
+  }
+  return null;
+}
+
+/**
+ * Windows 磁盘信息：优先 wmic，失败则用 PowerShell
+ */
+async function getWindowsDiskAsync(): Promise<DiskUsage | null> {
+  try {
+    const text = await execCommand("wmic", [
+      "logicaldisk",
+      "get",
+      "Size,FreeSpace,DeviceID",
+      "/format:value",
+    ]);
+    const size = parseKeyValue(text, "Size");
+    const free = parseKeyValue(text, "FreeSpace");
+    if (size != null && free != null) {
+      const used = size - free;
+      const usagePercent = size > 0 ? (used / size) * 100 : 0;
+      return {
+        total: size,
+        used,
+        available: free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+      };
+    }
+  } catch {
+    // wmic 失败
+  }
+
+  try {
+    const ps = `$d=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|Select-Object -First 1;"Size="+$d.Size;"FreeSpace="+$d.FreeSpace`;
+    const text = await execCommand("powershell", ["-NoProfile", "-Command", ps]);
+    const size = parseKeyValue(text, "Size");
+    const free = parseKeyValue(text, "FreeSpace");
+    if (size != null && free != null) {
+      const used = size - free;
+      const usagePercent = size > 0 ? (used / size) * 100 : 0;
+      return {
+        total: size,
+        used,
+        available: free,
+        usagePercent: Math.round(usagePercent * 100) / 100,
+      };
+    }
+  } catch {
+    // PowerShell 也失败
+  }
+  return null;
+}
+
+/**
+ * Windows CPU 核心数：优先 wmic，失败则用 PowerShell
+ */
+async function getWindowsCpuCoresAsync(): Promise<number | null> {
+  try {
+    const text = await execCommand("wmic", [
+      "cpu",
+      "get",
+      "NumberOfCores",
+      "/format:value",
+    ]);
+    const val = parseKeyValue(text, "NumberOfCores");
+    if (val != null && val > 0) return val;
+  } catch {
+    // wmic 失败
+  }
+
+  try {
+    const ps = `(Get-CimInstance Win32_Processor|Measure-Object -Property NumberOfCores -Sum).Sum`;
+    const text = await execCommand("powershell", ["-NoProfile", "-Command", ps]);
+    const val = parseInt(text.trim().match(/\d+/)?.[0] ?? "0", 10);
+    if (val > 0) return val;
+  } catch {
+    // PowerShell 也失败
+  }
+  return null;
+}
+
+/**
+ * Windows CPU 核心数（同步）：优先 wmic，失败则用 PowerShell
+ */
+function getWindowsCpuCoresSync(): number | null {
+  try {
+    const text = execCommandSync("wmic", [
+      "cpu",
+      "get",
+      "NumberOfCores",
+      "/format:value",
+    ]);
+    const val = parseKeyValue(text, "NumberOfCores");
+    if (val != null && val > 0) return val;
+  } catch {
+    // wmic 失败
+  }
+
+  try {
+    const ps = `(Get-CimInstance Win32_Processor|Measure-Object -Property NumberOfCores -Sum).Sum`;
+    const text = execCommandSync("powershell", ["-NoProfile", "-Command", ps]);
+    const val = parseInt(text.trim().match(/\d+/)?.[0] ?? "0", 10);
+    if (val > 0) return val;
+  } catch {
+    // PowerShell 也失败
+  }
+  return null;
+}
+
 /**
  * 内存信息
  */
@@ -166,31 +389,9 @@ export async function getMemoryInfo(): Promise<MemoryInfo> {
       const process = getProcess();
       const platform = process?.platform;
       if (platform === "win32") {
-        // Windows: 使用 wmic
-        const text = await execCommand("wmic", [
-          "OS",
-          "get",
-          "TotalVisibleMemorySize,FreePhysicalMemory",
-          "/format:value",
-        ]);
-
-        const totalMatch = text.match(/TotalVisibleMemorySize=(\d+)/);
-        const freeMatch = text.match(/FreePhysicalMemory=(\d+)/);
-
-        if (totalMatch && freeMatch) {
-          const total = parseInt(totalMatch[1]) * 1024; // KB 转字节
-          const free = parseInt(freeMatch[1]) * 1024;
-          const used = total - free;
-          const usagePercent = total > 0 ? (used / total) * 100 : 0;
-
-          return {
-            total,
-            available: free,
-            used,
-            free,
-            usagePercent: Math.round(usagePercent * 100) / 100,
-          };
-        }
+        // Windows: 优先 wmic，失败则用 PowerShell（wmic 在 Windows 11 24H2+ 已弃用）
+        const mem = await getWindowsMemoryAsync();
+        if (mem) return mem;
       } else {
         // Linux/macOS: 使用 free 命令（Linux）或 sysctl（macOS）
         if (platform === "darwin") {
@@ -425,32 +626,9 @@ export async function getDiskUsage(
     const platform = deno?.build?.os || process?.platform;
 
     if (platform === "win32" || platform === "windows") {
-      // Windows: 使用 wmic
-      const text = await execCommand("wmic", [
-        "logicaldisk",
-        "get",
-        "Size,FreeSpace,DeviceID",
-        "/format:value",
-      ]);
-
-      // 解析输出，找到对应路径的磁盘
-      // 这里简化处理，返回第一个磁盘的信息
-      const sizeMatch = text.match(/Size=(\d+)/);
-      const freeMatch = text.match(/FreeSpace=(\d+)/);
-
-      if (sizeMatch && freeMatch) {
-        const total = parseInt(sizeMatch[1]);
-        const free = parseInt(freeMatch[1]);
-        const used = total - free;
-        const usagePercent = total > 0 ? (used / total) * 100 : 0;
-
-        return {
-          total,
-          used,
-          available: free,
-          usagePercent: Math.round(usagePercent * 100) / 100,
-        };
-      }
+      // Windows: 优先 wmic，失败则用 PowerShell（wmic 在 Windows 11 24H2+ 已弃用）
+      const disk = await getWindowsDiskAsync();
+      if (disk) return disk;
     } else {
       // Linux/macOS: 使用 df 命令
       const text = await execCommand("df", ["-B1", path]); // -B1 表示以字节为单位
@@ -518,17 +696,13 @@ export async function getSystemInfo(): Promise<SystemInfo> {
       // Deno 可能没有直接获取 CPU 核心数的 API
       // 可以通过系统命令获取
       try {
-        const text = platform === "windows"
-          ? await execCommand("wmic", [
-            "cpu",
-            "get",
-            "NumberOfCores",
-            "/format:value",
-          ])
-          : await execCommand("nproc");
-        const cores = parseInt(text.match(/\d+/)?.[0] || "0");
-        if (cores > 0) {
-          cpus = cores;
+        if (platform === "windows") {
+          const cores = await getWindowsCpuCoresAsync();
+          if (cores != null) cpus = cores;
+        } else {
+          const text = await execCommand("nproc");
+          const cores = parseInt(text.match(/\d+/)?.[0] || "0", 10);
+          if (cores > 0) cpus = cores;
         }
       } catch {
         // 忽略错误
@@ -655,31 +829,9 @@ export function getMemoryInfoSync(): MemoryInfo {
       const process = getProcess();
       const platform = process?.platform;
       if (platform === "win32") {
-        // Windows: 使用 wmic
-        const text = execCommandSync("wmic", [
-          "OS",
-          "get",
-          "TotalVisibleMemorySize,FreePhysicalMemory",
-          "/format:value",
-        ]);
-
-        const totalMatch = text.match(/TotalVisibleMemorySize=(\d+)/);
-        const freeMatch = text.match(/FreePhysicalMemory=(\d+)/);
-
-        if (totalMatch && freeMatch) {
-          const total = parseInt(totalMatch[1]) * 1024; // KB 转字节
-          const free = parseInt(freeMatch[1]) * 1024;
-          const used = total - free;
-          const usagePercent = total > 0 ? (used / total) * 100 : 0;
-
-          return {
-            total,
-            available: free,
-            used,
-            free,
-            usagePercent: Math.round(usagePercent * 100) / 100,
-          };
-        }
+        // Windows: 优先 wmic，失败则用 PowerShell
+        const mem = getWindowsMemorySync();
+        if (mem) return mem;
       } else {
         // Linux/macOS: 使用 free 命令（Linux）或 sysctl（macOS）
         if (platform === "darwin") {
@@ -824,17 +976,13 @@ export function getSystemInfoSync(): SystemInfo {
       // Deno 可能没有直接获取 CPU 核心数的 API
       // 可以通过系统命令获取（同步）
       try {
-        const text = platform === "windows"
-          ? execCommandSync("wmic", [
-            "cpu",
-            "get",
-            "NumberOfCores",
-            "/format:value",
-          ])
-          : execCommandSync("nproc");
-        const cores = parseInt(text.match(/\d+/)?.[0] || "0");
-        if (cores > 0) {
-          cpus = cores;
+        if (platform === "windows") {
+          const cores = getWindowsCpuCoresSync();
+          if (cores != null) cpus = cores;
+        } else {
+          const text = execCommandSync("nproc");
+          const cores = parseInt(text.match(/\d+/)?.[0] || "0", 10);
+          if (cores > 0) cpus = cores;
         }
       } catch {
         // 忽略错误

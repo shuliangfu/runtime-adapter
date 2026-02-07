@@ -3,9 +3,23 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import { arch, pid, platform, version } from "../src/process-info.ts";
+import {
+  arch,
+  execPath,
+  pid,
+  platform,
+  version,
+} from "../src/process-info.ts";
 
 describe("进程信息 API", () => {
+  describe("execPath", () => {
+    it("应该返回运行时可执行文件路径", () => {
+      const path = execPath();
+      expect(typeof path).toBe("string");
+      expect(path.length).toBeGreaterThan(0);
+    });
+  });
+
   describe("pid", () => {
     it("应该返回进程 ID", () => {
       const processId = pid();
