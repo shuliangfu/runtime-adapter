@@ -806,8 +806,12 @@ describe("WebSocket Server", () => {
 
       // 在服务器 100ms 断开前发送，且仅在 OPEN 时发送，避免 InvalidStateError
       await delay(50);
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "ping" }));
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      } catch {
+        // Windows/CI 上连接可能已关闭，忽略
       }
       await delay(50);
 

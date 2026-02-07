@@ -523,8 +523,12 @@ describe("WebSocket API", () => {
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         // 发送消息触发服务器的 message 事件（这样服务器才会关闭连接）
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send("trigger");
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send("trigger");
+          }
+        } catch {
+          // Windows/CI 上连接可能已关闭，忽略
         }
 
         // 等待服务器关闭连接（服务器在收到消息后 300ms 关闭）

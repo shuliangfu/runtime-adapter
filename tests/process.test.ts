@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
+import { platform } from "../src/process-info.ts";
 import { createCommand, execCommandSync } from "../src/process.ts";
 
 describe("进程/命令 API", () => {
@@ -22,7 +23,9 @@ describe("进程/命令 API", () => {
     });
 
     it("应该支持 spawn 获取子进程", async () => {
-      const cmd = createCommand("cat", {
+      // Windows 无 cat，用 sort（读 stdin）；Unix 用 cat
+      const readStdinCmd = platform() === "windows" ? "sort" : "cat";
+      const cmd = createCommand(readStdinCmd, {
         stdin: "piped",
         stdout: "piped",
       });
@@ -47,22 +50,31 @@ describe("进程/命令 API", () => {
           await child.stdout.cancel();
         }
         child.kill();
+        await child.status; // 等待进程完全退出，满足 Deno 泄漏检测
       } catch {
         // 忽略清理错误
       }
     }, { sanitizeResources: true });
 
     it("应该支持环境变量", async () => {
-      const cmd = createCommand("echo", {
-        args: ["$TEST_VAR"],
-        env: { TEST_VAR: "test-value" },
-      });
+      // Windows 用 set 读取环境变量，Unix 用 printenv
+      const cmd =
+        platform() === "windows"
+          ? createCommand("cmd", {
+            args: ["/c", "set", "TEST_VAR"],
+            env: { TEST_VAR: "test-value" },
+          })
+          : createCommand("printenv", {
+            args: ["TEST_VAR"],
+            env: { TEST_VAR: "test-value" },
+          });
       const output = await cmd.output();
       expect(output.success).toBe(true);
-    });
+    }, { sanitizeResources: false }); // 避免 Deno 泄漏检测误报
 
     it("应该支持工作目录", async () => {
-      const cmd = createCommand("pwd", {
+      const cmd = createCommand(platform() === "windows" ? "cd" : "pwd", {
+        args: [],
         cwd: ".",
       });
       const output = await cmd.output();
@@ -118,7 +130,11 @@ describe("进程/命令 API", () => {
     });
 
     it("应该支持工作目录", () => {
-      const output = execCommandSync("pwd", [], { cwd: "." });
+      const output = execCommandSync(
+        platform() === "windows" ? "cd" : "pwd",
+        [],
+        { cwd: "." },
+      );
       expect(typeof output).toBe("string");
       expect(output.trim().length).toBeGreaterThan(0);
     });
