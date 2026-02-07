@@ -1196,14 +1196,6 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
-### [1.0.1] - 2025-02-07
-
-**Added**: execPath, Windows compatibility docs
-
-**Fixed**: path.relative() cross-drive, process-info execPath types, open/create/watchFs test BadResource, watchFs timer leak
-
-**Changed**: PowerShell fallback for System Info when wmic unavailable, README platform support, MD024 duplicate heading fixes, TEST_REPORT (266 tests)
-
 ---
 
 ## 🤝 Contributing
