@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
+import { platform } from "../src/process-info.ts";
 import {
   basename,
   dirname,
@@ -164,13 +165,26 @@ describe("路径操作 API", () => {
   describe("resolve", () => {
     it("应该解析相对路径为绝对路径", () => {
       const result = resolve("dir", "file.txt");
-      expect(result).toContain("dir/file.txt");
-      expect(result).toMatch(/^\/.*dir\/file\.txt$/);
+      expect(result).toContain("dir");
+      expect(result).toContain("file.txt");
+      // Unix: /.../dir/file.txt，Windows: D:\...\dir\file.txt
+      if (platform() === "windows") {
+        expect(result).toMatch(/[a-zA-Z]:.*[\\/]dir[\\/]file\.txt$/);
+      } else {
+        expect(result).toMatch(/^\/.*dir\/file\.txt$/);
+      }
     });
 
     it("应该处理绝对路径", () => {
       const result = resolve("/absolute", "path", "file.txt");
-      expect(result).toBe("/absolute/path/file.txt");
+      if (platform() === "windows") {
+        // Windows 上以 / 开头的路径会解析为当前盘根
+        expect(result).toContain("absolute");
+        expect(result).toContain("path");
+        expect(result).toContain("file.txt");
+      } else {
+        expect(result).toBe("/absolute/path/file.txt");
+      }
     });
 
     it("应该处理单个路径", () => {
