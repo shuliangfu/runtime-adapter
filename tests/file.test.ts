@@ -8,6 +8,7 @@ import {
   chmod,
   chown,
   copyFile,
+  create,
   cwd,
   ensureDir,
   exists,
@@ -15,6 +16,7 @@ import {
   makeTempDir,
   makeTempFile,
   mkdir,
+  open,
   readdir,
   readFile,
   readTextFile,
@@ -24,6 +26,7 @@ import {
   stat,
   symlink,
   walk,
+  watchFs,
   writeFile,
   writeTextFile,
 } from "../src/file.ts";
@@ -626,6 +629,115 @@ describe("文件系统 API", () => {
           return;
         }
         throw error;
+      }
+    });
+  });
+
+  describe("open 与 create", () => {
+    it("应该打开文件并读取内容", async () => {
+      await mkdir(TEST_DIR, { recursive: true });
+      const testFilePath = `${TEST_DIR}/open-read.txt`;
+      await writeTextFile(testFilePath, TEST_CONTENT);
+      try {
+        const file = await open(testFilePath, { read: true });
+        const reader = file.readable.getReader();
+        const chunks: Uint8Array[] = [];
+        let result;
+        while (!(result = await reader.read()).done) {
+          chunks.push(result.value);
+        }
+        reader.releaseLock();
+        // 流消费完成后资源可能已关闭，close() 可能抛出 BadResource
+        try {
+          file.close();
+        } catch {
+          // 忽略，资源可能已被流消费自动关闭
+        }
+        const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+        const combined = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const c of chunks) {
+          combined.set(c, offset);
+          offset += c.length;
+        }
+        expect(new TextDecoder().decode(combined)).toBe(TEST_CONTENT);
+      } finally {
+        await remove(testFilePath).catch(() => {});
+      }
+    });
+
+    it("应该使用 create 创建并写入文件", async () => {
+      const testFilePath = `${TEST_DIR}/open-create.txt`;
+      await mkdir(TEST_DIR, { recursive: true });
+      await remove(testFilePath).catch(() => {});
+      try {
+        const file = await create(testFilePath);
+        const writer = file.writable.getWriter();
+        await writer.write(new TextEncoder().encode(TEST_CONTENT));
+        await writer.close();
+        // writer.close() 后底层资源可能已关闭
+        try {
+          file.close();
+        } catch {
+          // 忽略 BadResource
+        }
+        const content = await readTextFile(testFilePath);
+        expect(content).toBe(TEST_CONTENT);
+      } finally {
+        await remove(testFilePath).catch(() => {});
+      }
+    });
+  });
+
+  describe("watchFs", () => {
+    it("应该监控目录并收到文件创建事件", async () => {
+      await mkdir(TEST_DIR, { recursive: true });
+      const watchDir = await makeTempDir({ prefix: "test-watch-", dir: TEST_DIR });
+      try {
+        const watcher = watchFs(watchDir);
+        const events: Array<{ kind: string; paths: string[] }> = [];
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const collectPromise = (async () => {
+          for await (const event of watcher) {
+            events.push(event);
+            if (event.kind === "create" && event.paths.some((p) => p.includes("watched.txt"))) {
+              break;
+            }
+          }
+        })();
+        await new Promise((r) => setTimeout(r, 150));
+        await writeTextFile(`${watchDir}/watched.txt`, "watch me");
+        try {
+          await Promise.race([
+            collectPromise,
+            new Promise<void>((_, rej) => {
+              timeoutId = setTimeout(() => rej(new Error("timeout")), 4000);
+            }),
+          ]);
+        } catch {
+          // 超时也可接受，部分环境下事件可能延迟
+        } finally {
+          if (timeoutId != null) clearTimeout(timeoutId);
+        }
+        try {
+          watcher.close();
+        } catch {
+          // 忽略 BadResource，迭代器结束时 watcher 可能已关闭
+        }
+        expect(events.some((e) => e.kind === "create")).toBe(true);
+      } finally {
+        await remove(watchDir, { recursive: true });
+      }
+    });
+
+    it("应该支持 close 方法", async () => {
+      await mkdir(TEST_DIR, { recursive: true });
+      const watchDir = await makeTempDir({ prefix: "test-watch-close-", dir: TEST_DIR });
+      try {
+        const watcher = watchFs(watchDir);
+        expect(() => watcher.close()).not.toThrow();
+      } finally {
+        await remove(watchDir, { recursive: true });
       }
     });
   });

@@ -190,6 +190,19 @@ export function relative(from: string, to: string): string {
   const fromParts = normalize(from);
   const toParts = normalize(to);
 
+  // Windows 跨盘符：C:\a\b 与 D:\x\y 无法用相对路径表示，返回 to 的规范化路径
+  const fromDrive = fromParts[0];
+  const toDrive = toParts[0];
+  if (
+    fromDrive &&
+    toDrive &&
+    /^[A-Za-z]:$/.test(fromDrive) &&
+    /^[A-Za-z]:$/.test(toDrive) &&
+    fromDrive.toUpperCase() !== toDrive.toUpperCase()
+  ) {
+    return join(...toParts);
+  }
+
   // 找到共同的前缀
   let commonLength = 0;
   const minLength = Math.min(fromParts.length, toParts.length);

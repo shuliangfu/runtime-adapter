@@ -16,6 +16,9 @@ describe("主模块导出", () => {
   it("应该导出文件系统 API", () => {
     expect(runtimeAdapter.readFile).toBeDefined();
     expect(runtimeAdapter.writeFile).toBeDefined();
+    expect(runtimeAdapter.open).toBeDefined();
+    expect(runtimeAdapter.create).toBeDefined();
+    expect(runtimeAdapter.watchFs).toBeDefined();
     expect(runtimeAdapter.readTextFile).toBeDefined();
     expect(runtimeAdapter.writeTextFile).toBeDefined();
     expect(runtimeAdapter.mkdir).toBeDefined();
@@ -59,6 +62,36 @@ describe("主模块导出", () => {
     expect(runtimeAdapter.execCommandSync).toBeDefined();
   });
 
+  it("应该导出进程信息 API", () => {
+    expect(runtimeAdapter.execPath).toBeDefined();
+    expect(runtimeAdapter.pid).toBeDefined();
+    expect(runtimeAdapter.platform).toBeDefined();
+    expect(runtimeAdapter.arch).toBeDefined();
+    expect(runtimeAdapter.version).toBeDefined();
+  });
+
+  it("应该导出进程工具 API", () => {
+    expect(runtimeAdapter.args).toBeDefined();
+    expect(runtimeAdapter.exit).toBeDefined();
+  });
+
+  it("应该导出信号处理 API", () => {
+    expect(runtimeAdapter.addSignalListener).toBeDefined();
+    expect(runtimeAdapter.removeSignalListener).toBeDefined();
+  });
+
+  it("应该导出路径 API", () => {
+    expect(runtimeAdapter.join).toBeDefined();
+    expect(runtimeAdapter.resolve).toBeDefined();
+    expect(runtimeAdapter.relative).toBeDefined();
+    expect(runtimeAdapter.dirname).toBeDefined();
+    expect(runtimeAdapter.basename).toBeDefined();
+    expect(runtimeAdapter.extname).toBeDefined();
+    expect(runtimeAdapter.normalize).toBeDefined();
+    expect(runtimeAdapter.isAbsolute).toBeDefined();
+    expect(runtimeAdapter.isRelative).toBeDefined();
+  });
+
   it("应该导出终端 API", () => {
     expect(runtimeAdapter.isTerminal).toBeDefined();
     expect(runtimeAdapter.isStderrTerminal).toBeDefined();
@@ -74,6 +107,9 @@ describe("主模块导出", () => {
     expect(runtimeAdapter.getMemoryInfo).toBeDefined();
     expect(runtimeAdapter.getSystemInfo).toBeDefined();
     expect(runtimeAdapter.getLoadAverage).toBeDefined();
+    expect(runtimeAdapter.getDiskUsage).toBeDefined();
+    expect(runtimeAdapter.getCpuUsage).toBeDefined();
+    expect(runtimeAdapter.getSystemStatus).toBeDefined();
     // 同步 API
     expect(runtimeAdapter.getMemoryInfoSync).toBeDefined();
     expect(runtimeAdapter.getSystemInfoSync).toBeDefined();
@@ -86,5 +122,12 @@ describe("主模块导出", () => {
     // 同步 API
     expect(runtimeAdapter.hashSync).toBeDefined();
     expect(runtimeAdapter.hashFileSync).toBeDefined();
+  });
+
+  it("应该导出 utils 工具函数", () => {
+    expect(runtimeAdapter.getDeno).toBeDefined();
+    expect(runtimeAdapter.getBun).toBeDefined();
+    expect(runtimeAdapter.getProcess).toBeDefined();
+    expect(runtimeAdapter.getBuffer).toBeDefined();
   });
 });
