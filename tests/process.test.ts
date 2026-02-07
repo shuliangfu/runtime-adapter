@@ -32,6 +32,12 @@ describe("进程/命令 API", () => {
       expect(child.stdin).toBeTruthy();
       expect(child.stdout).toBeTruthy();
 
+      // 验证 stdin 支持 Web Streams getWriter（Bun FileSink 需包装）
+      if (child.stdin && typeof (child.stdin as WritableStream).getWriter === "function") {
+        const writer = (child.stdin as WritableStream<Uint8Array>).getWriter();
+        await writer.write(new TextEncoder().encode("test\n"));
+        writer.releaseLock();
+      }
       // 清理资源，避免泄漏
       try {
         if (child.stdin) {

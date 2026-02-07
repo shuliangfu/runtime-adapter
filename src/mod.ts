@@ -62,6 +62,8 @@ export * from "./cron.ts";
 
 // 导出进程信息 API
 export * from "./process-info.ts";
+// 显式导出 execPath，便于 Bun 等运行时正确解析（避免 export * 解析问题）
+export { execPath } from "./process-info.ts";
 
 // 导出进程工具 API
 export * from "./process-utils.ts";

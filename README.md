@@ -1190,6 +1190,12 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 ## 📋 Changelog
 
+### [1.0.2] - 2025-02-07
+
+**Fixed**: Bun createCommand stdin getWriter, Bun stdio mapBunStdio, Bun execPath export resolution; package.json exports for workspace resolution
+
+See [CHANGELOG.md](./CHANGELOG.md) for full history.
+
 ### [1.0.1] - 2025-02-07
 
 **Added**: execPath, Windows compatibility docs
@@ -1197,8 +1203,6 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 **Fixed**: path.relative() cross-drive, process-info execPath types, open/create/watchFs test BadResource, watchFs timer leak
 
 **Changed**: PowerShell fallback for System Info when wmic unavailable, README platform support, MD024 duplicate heading fixes, TEST_REPORT (266 tests)
-
-See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
 ---
 

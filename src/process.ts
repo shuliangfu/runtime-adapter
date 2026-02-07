@@ -9,6 +9,41 @@ import { getBun, getDeno } from "./utils.ts";
 import * as nodeChildProcess from "node:child_process";
 
 /**
+ * 将 Bun FileSink（write/end 接口）包装为 Web Streams WritableStream，以兼容 getWriter()
+ */
+function toWritableStream(sink: {
+  write(
+    chunk: string | ArrayBufferView | ArrayBuffer,
+  ): number | Promise<number>;
+  end(error?: Error): number | Promise<number>;
+}): WritableStream<Uint8Array> {
+  return new WritableStream<Uint8Array>({
+    write(chunk) {
+      const result = sink.write(chunk);
+      const p = result instanceof Promise ? result : Promise.resolve(result);
+      return p.then(() => {});
+    },
+    close() {
+      const result = sink.end();
+      const p = result instanceof Promise ? result : Promise.resolve(result);
+      return p.then(() => {});
+    },
+  });
+}
+
+/**
+ * 将 CommandOptions 的 stdio 值映射为 Bun 接受的格式
+ * Bun 不接受字符串 "null"，需转为 null 或 "ignore"
+ */
+function mapBunStdio(
+  v: "inherit" | "piped" | "null" | undefined,
+): "inherit" | "pipe" | "ignore" | undefined {
+  if (v === "null") return "ignore";
+  if (v === "piped") return "pipe";
+  return v;
+}
+
+/**
  * 命令执行选项
  */
 export interface CommandOptions {
@@ -162,14 +197,26 @@ export function createCommand(
         const proc = bun.spawn([command, ...(options?.args || [])], {
           cwd: options?.cwd,
           env: options?.env,
-          stdin: options?.stdin === "piped" ? "pipe" : options?.stdin,
-          stdout: options?.stdout === "piped" ? "pipe" : options?.stdout,
-          stderr: options?.stderr === "piped" ? "pipe" : options?.stderr,
+          stdin: mapBunStdio(options?.stdin) as "inherit" | "pipe" | undefined,
+          stdout: mapBunStdio(options?.stdout) as "inherit" | "pipe" | undefined,
+          stderr: mapBunStdio(options?.stderr) as "inherit" | "pipe" | undefined,
         });
 
         return {
           get stdin() {
-            return proc.stdin || null;
+            const s = proc.stdin;
+            if (!s) return null;
+            // 若已是 Web Streams（有 getWriter），直接返回
+            if (typeof (s as WritableStream).getWriter === "function") {
+              return s as WritableStream<Uint8Array>;
+            }
+            // Bun FileSink 用 write/end，包装为 WritableStream
+            return toWritableStream(
+              s as unknown as {
+                write(chunk: unknown): number | Promise<number>;
+                end(error?: Error): number | Promise<number>;
+              },
+            );
           },
           get stdout() {
             return proc.stdout || null;
@@ -201,9 +248,9 @@ export function createCommand(
         const proc = bun.spawn([command, ...(options?.args || [])], {
           cwd: options?.cwd,
           env: options?.env,
-          stdin: options?.stdin === "piped" ? "pipe" : options?.stdin,
-          stdout: options?.stdout === "piped" ? "pipe" : options?.stdout,
-          stderr: options?.stderr === "piped" ? "pipe" : options?.stderr,
+          stdin: mapBunStdio(options?.stdin) as "inherit" | "pipe" | undefined,
+          stdout: mapBunStdio(options?.stdout) as "inherit" | "pipe" | undefined,
+          stderr: mapBunStdio(options?.stderr) as "inherit" | "pipe" | undefined,
         });
 
         const exitCode = await proc.exited;
