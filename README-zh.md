@@ -6,7 +6,7 @@
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-211%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -1237,7 +1237,7 @@ bun test tests/
 
 测试覆盖包括：
 
-- ✅ 211 个测试用例全部通过
+- ✅ 266 个测试用例全部通过
 - ✅ 17 个功能模块完整测试
 - ✅ Deno 和 Bun 跨运行时兼容性验证
 - ✅ 同步和异步 API 完整测试

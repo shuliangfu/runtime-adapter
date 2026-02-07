@@ -7,7 +7,7 @@ English | [中文 (Chinese)](./README-zh.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-211%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -1164,7 +1164,7 @@ bun test tests/
 
 See [TEST_REPORT.md](./TEST_REPORT.md).
 
-- ✅ 211 tests passed
+- ✅ 266 tests passed
 - ✅ 17 modules covered
 - ✅ Deno and Bun compatibility
 - ✅ Sync and async API tests
