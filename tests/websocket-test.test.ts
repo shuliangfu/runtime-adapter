@@ -6,12 +6,15 @@
 import { afterAll, beforeAll, describe, expect, it } from "@dreamer/test";
 import { Server, Socket } from "./websocket.ts";
 
+/** 端口计数器，避免 Windows 上快速复用导致 AddrInUse */
+let _portCounter = 0;
+
 /**
  * 获取可用端口
  */
 function getAvailablePort(): number {
-  // 使用随机端口避免冲突
-  return 30000 + Math.floor(Math.random() * 30000);
+  _portCounter++;
+  return 30000 + (_portCounter % 26000) + Math.floor(Math.random() * 100);
 }
 
 /**
@@ -266,7 +269,7 @@ describe("WebSocket Server", () => {
       await delay(100);
 
       await server.close();
-      await delay(100);
+      await delay(300); // Windows 上端口释放较慢，避免 AddrInUse
     });
 
     it("应该创建握手信息", async () => {
