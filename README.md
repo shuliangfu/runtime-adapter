@@ -176,7 +176,7 @@ console.log("Current runtime:", RUNTIME);
 
 ### File System Operations
 
-#### Async API
+#### File System - Async API
 
 ```typescript
 import {
@@ -298,7 +298,7 @@ for await (const event of watcher) {
 }
 ```
 
-#### Sync API ⭐ New
+#### File System - Sync API ⭐ New
 
 ```typescript
 import {
@@ -441,7 +441,7 @@ deleteEnv("DEBUG");
 
 ### Command Execution
 
-#### Async
+#### Command - Async
 
 ```typescript
 import { createCommand } from "jsr:@dreamer/runtime-adapter";
@@ -476,7 +476,7 @@ console.log("Status:", status);
 // child.kill(15); // SIGTERM
 ```
 
-#### Sync ⭐ New
+#### Command - Sync ⭐ New
 
 ```typescript
 import { execCommandSync } from "jsr:@dreamer/runtime-adapter";
@@ -596,7 +596,7 @@ setTimeout(() => controller.abort(), 60000);
 
 ### File Hashing
 
-#### Async API
+#### File Hash - Async API
 
 ```typescript
 import { hash, hashFile } from "jsr:@dreamer/runtime-adapter";
@@ -614,7 +614,7 @@ const sha512 = await hashFile("./file.txt", "SHA-512");
 const md5 = await hash("Hello, World!", "MD5");
 ```
 
-#### Sync API ⭐ New
+#### File Hash - Sync API ⭐ New
 
 ```typescript
 import { hashFileSync, hashSync } from "jsr:@dreamer/runtime-adapter";
@@ -637,7 +637,7 @@ const md5 = hashSync("Hello, World!", "MD5");
 
 ### System Info
 
-#### Async API
+#### System Info - Async API
 
 ```typescript
 import {
@@ -688,7 +688,7 @@ const status = await getSystemStatus();
 console.log("System status:", status);
 ```
 
-#### Sync API ⭐ New
+#### System Info - Sync API ⭐ New
 
 ```typescript
 import {
@@ -717,7 +717,7 @@ console.log(`Platform: ${system.platform}`);
 
 ## 📚 API Reference
 
-### Runtime Detection
+### Runtime Detection API
 
 | API               | Description              | Returns                        |
 | ----------------- | ------------------------ | ------------------------------ |
@@ -927,7 +927,7 @@ const handle = serve({ port: 3000 }, (req) => {
 
 ### Process/Command API
 
-#### Async
+#### Process/Command API - Async
 
 ```typescript
 createCommand(
@@ -950,7 +950,7 @@ createCommand(
 - `kill(signo?)` - Kill process
 - `pid` - Process ID
 
-#### Sync ⭐ New
+#### Process/Command API - Sync ⭐ New
 
 ```typescript
 execCommandSync(
@@ -1064,14 +1064,14 @@ interface RuntimeVersion {
 
 ### File Hash API
 
-#### Async
+#### File Hash API - Async
 
 | API                          | Description | Params                                 | Returns           |
 | ---------------------------- | ----------- | -------------------------------------- | ----------------- |
 | `hashFile(path, algorithm?)` | File hash   | `path`, `algorithm` (default: SHA-256) | `Promise<string>` |
 | `hash(data, algorithm?)`     | Data hash   | `data`, `algorithm`                    | `Promise<string>` |
 
-#### Sync ⭐ New
+#### File Hash API - Sync ⭐ New
 
 | API                              | Description    | Returns  |
 | -------------------------------- | -------------- | -------- |
@@ -1090,7 +1090,7 @@ interface RuntimeVersion {
 
 ### System Info API
 
-#### Async
+#### System Info API - Async
 
 | API                                        | Description               | Params                        | Returns                             |
 | ------------------------------------------ | ------------------------- | ----------------------------- | ----------------------------------- |
@@ -1101,7 +1101,7 @@ interface RuntimeVersion {
 | `getSystemInfo()`                          | System info               | -                             | `Promise<SystemInfo>`               |
 | `getSystemStatus(cpuInterval?, diskPath?)` | Full status               | -                             | `Promise<SystemStatus>`             |
 
-#### Sync ⭐ New
+#### System Info API - Sync ⭐ New
 
 | API                    | Description             | Returns                    |
 | ---------------------- | ----------------------- | -------------------------- |
@@ -1194,9 +1194,9 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 **Added**: execPath, Windows compatibility docs
 
-**Fixed**: path.relative() cross-drive, process-info execPath types
+**Fixed**: path.relative() cross-drive, process-info execPath types, open/create/watchFs test BadResource, watchFs timer leak
 
-**Changed**: PowerShell fallback for System Info when wmic unavailable, README platform support
+**Changed**: PowerShell fallback for System Info when wmic unavailable, README platform support, MD024 duplicate heading fixes, TEST_REPORT (266 tests)
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 

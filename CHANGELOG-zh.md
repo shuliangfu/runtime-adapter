@@ -20,12 +20,14 @@
 
 - **path.relative() 跨盘符**：Windows 上 `relative("C:/a/b", "D:/x/y")` 现正确返回 `D:/x/y`（与 Node.js 一致）
 - **process-info execPath**：修复 Deno/Bun 类型断言，解决 `execPath` 类型错误
+- **测试**：修复 open/create/watchFs 的 BadResource 错误；修复 watchFs 的 timer 泄漏（clearTimeout）
 
 ### 变更
 
 - **System Info 的 wmic 备选**：Windows 上 `getMemoryInfo`、`getDiskUsage`、CPU 核心数在 wmic 不可用时自动回退到 PowerShell `Get-CimInstance`（兼容 Windows 11 24H2+）
 - **README**：补充平台支持说明（Linux/macOS/Windows）及 Windows 平台注意事项
 - **平台支持**：README 进程信息 API 表格中新增 `execPath()` 说明
+- **文档**：README/README-zh 修复 MD024 重复标题；TEST_REPORT 更新（266 测试）；删除 TEST_COVERAGE_ANALYSIS.md
 
 ---
 
