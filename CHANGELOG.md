@@ -10,6 +10,20 @@ and this project adheres to
 
 ---
 
+## [1.0.2] - 2025-02-07
+
+### Fixed
+
+- **Bun createCommand stdin**: Wrapped Bun FileSink to Web Streams WritableStream so `proc.stdin.getWriter()` works (Bun returns FileSink with write/end, not getWriter)
+- **Bun createCommand stdio**: Map `"null"` to `"ignore"` and `"piped"` to `"pipe"` for Bun spawn options (Bun does not accept string `"null"`)
+- **Bun export resolution**: Explicit `execPath` export in mod.ts for Bun workspace/local dependency resolution
+
+### Added
+
+- **package.json exports**: Added `exports` field for Bun workspace and local file: dependency resolution
+
+---
+
 ## [1.0.1] - 2025-02-07
 
 ### Added

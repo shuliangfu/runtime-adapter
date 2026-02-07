@@ -1275,6 +1275,12 @@ bun test tests/
 
 ## 📋 变更日志
 
+### [1.0.2] - 2025-02-07
+
+**修复**：Bun createCommand stdin getWriter、Bun stdio mapBunStdio、Bun execPath 导出解析；package.json exports 支持 workspace 解析
+
+完整历史详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
+
 ### [1.0.1] - 2025-02-07
 
 **新增**：execPath、Windows 兼容性文档
@@ -1282,8 +1288,6 @@ bun test tests/
 **修复**：path.relative() 跨盘符、process-info execPath 类型、open/create/watchFs 测试 BadResource、watchFs timer 泄漏
 
 **变更**：System Info 增加 PowerShell 备选（wmic 不可用时）、README 平台支持说明、MD024 重复标题修复、TEST_REPORT（266 测试）
-
-完整历史详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 
 ---
 

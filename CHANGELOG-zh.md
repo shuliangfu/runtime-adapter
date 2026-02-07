@@ -9,6 +9,20 @@
 
 ---
 
+## [1.0.2] - 2025-02-07
+
+### 修复
+
+- **Bun createCommand stdin**：将 Bun FileSink 包装为 Web Streams WritableStream，使 `proc.stdin.getWriter()` 可用（Bun 返回 write/end 接口的 FileSink，不含 getWriter）
+- **Bun createCommand stdio**：将 `"null"` 映射为 `"ignore"`、`"piped"` 映射为 `"pipe"`，以符合 Bun spawn 选项（Bun 不接受字符串 `"null"`）
+- **Bun 导出解析**：在 mod.ts 中显式导出 `execPath`，便于 Bun workspace/本地依赖解析
+
+### 新增
+
+- **package.json exports**：增加 `exports` 字段，支持 Bun workspace 与本地 file: 依赖解析
+
+---
+
 ## [1.0.1] - 2025-02-07
 
 ### 新增
