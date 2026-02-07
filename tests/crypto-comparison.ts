@@ -46,12 +46,13 @@ if (typeof Deno !== "undefined") {
   }
 }
 
-// Bun 测试
+// Bun 测试（使用 globalThis 避免 Deno 类型检查报错）
 if (typeof (globalThis as any).Bun !== "undefined") {
   console.log("\n=== Bun 环境测试 ===");
 
-  const nodeCrypto = require("node:crypto");
-  const crypto = require("crypto");
+  const requireFn = (globalThis as any).require;
+  const nodeCrypto = requireFn("node:crypto");
+  const crypto = requireFn("crypto");
 
   console.log("node:crypto 类型:", typeof nodeCrypto);
   console.log("crypto 类型:", typeof crypto);

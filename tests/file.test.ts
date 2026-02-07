@@ -481,8 +481,10 @@ describe("文件系统 API", () => {
       try {
         // 使用当前用户 ID（如果可用）
         // 注意：在某些系统上可能需要 root 权限
-        const currentUid = process?.getuid?.() || 1000;
-        const currentGid = process?.getgid?.() || 1000;
+        // 使用 globalThis 访问 process，兼容 Deno/Bun 类型检查
+        const proc = (globalThis as { process?: { getuid?: () => number; getgid?: () => number } }).process;
+        const currentUid = proc?.getuid?.() || 1000;
+        const currentGid = proc?.getgid?.() || 1000;
         await chown(testFile, currentUid, currentGid);
       } catch (error) {
         // 如果权限不足，这是预期的，我们只验证函数存在
