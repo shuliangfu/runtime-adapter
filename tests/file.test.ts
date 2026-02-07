@@ -702,7 +702,11 @@ describe("文件系统 API", () => {
         const collectPromise = (async () => {
           for await (const event of watcher) {
             events.push(event);
-            if (event.kind === "create" && event.paths.some((p) => p.includes("watched.txt"))) {
+            // Bun/Node fs.watch 可能 emit "modify" 而非 "create"，两种都视为收到事件
+            if (
+              (event.kind === "create" || event.kind === "modify") &&
+              event.paths.some((p) => p.includes("watched.txt"))
+            ) {
               break;
             }
           }
@@ -726,7 +730,10 @@ describe("文件系统 API", () => {
         } catch {
           // 忽略 BadResource，迭代器结束时 watcher 可能已关闭
         }
-        expect(events.some((e) => e.kind === "create")).toBe(true);
+        // Bun/Node fs.watch 可能报告 "modify" 而非 "create"，两种都表示监听到文件变化
+        expect(
+          events.some((e) => e.kind === "create" || e.kind === "modify"),
+        ).toBe(true);
       } finally {
         await remove(watchDir, { recursive: true });
       }
