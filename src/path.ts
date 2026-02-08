@@ -3,6 +3,7 @@
  * 提供统一的路径操作接口，兼容 Deno 和 Bun
  */
 
+import { pathToFileURL as nodePathToFileURL } from "node:url";
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
 
@@ -362,4 +363,25 @@ export function isAbsolute(path: string): boolean {
  */
 export function isRelative(path: string): boolean {
   return !isAbsolute(path);
+}
+
+/**
+ * 将文件系统路径转为 file:// URL
+ *
+ * 用于动态 import() 时正确编码路径中的特殊字符（空格、#、? 等），
+ * 确保 Deno 和 Bun 在 Windows 等平台下正确解析。
+ *
+ * @param path 文件系统路径（绝对或相对）
+ * @returns file:// URL 字符串（.href 格式）
+ *
+ * @example
+ * ```typescript
+ * import { pathToFileUrl } from "@dreamer/runtime-adapter";
+ * const url = pathToFileUrl("/home/user/config.ts");
+ * // => "file:///home/user/config.ts"
+ * const mod = await import(url);
+ * ```
+ */
+export function pathToFileUrl(path: string): string {
+  return nodePathToFileURL(path).href;
 }

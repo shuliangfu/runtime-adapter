@@ -550,13 +550,20 @@ export class Server {
   }
 
   /**
+   * 获取实际监听端口（port: 0 时由系统分配，listen 后可从 httpServer.port 获取）
+   */
+  get port(): number | undefined {
+    return this.httpServer?.port ?? (this.options.port !== 0 ? this.options.port : undefined);
+  }
+
+  /**
    * 启动服务器
    * @param host 主机地址（可选）
-   * @param port 端口号（可选）
+   * @param port 端口号（可选，传 0 则使用系统分配端口）
    */
   listen(host?: string, port?: number): void {
     const serverHost = host || this.options.host || "0.0.0.0";
-    const serverPort = port || this.options.port || 8080;
+    const serverPort = port ?? this.options.port ?? 8080;
 
     // 使用 runtime-adapter 的 serve API，兼容 Deno 和 Bun
     this.httpServer = serve(

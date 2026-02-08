@@ -6,15 +6,24 @@
 import { afterAll, beforeAll, describe, expect, it } from "@dreamer/test";
 import { Server, Socket } from "./websocket.ts";
 
-/** 端口计数器，避免 Windows 上快速复用导致 AddrInUse */
-let _portCounter = 0;
-
 /**
- * 获取可用端口
+ * 使用系统分配端口创建服务器，返回服务器实例和实际端口
+ * @param path WebSocket 路径
+ * @param setup 可选，在 listen 前注册事件等
  */
-function getAvailablePort(): number {
-  _portCounter++;
-  return 30000 + (_portCounter % 26000) + Math.floor(Math.random() * 100);
+async function createServerWithSystemPort(
+  path = "/ws",
+  setup?: (server: Server) => void,
+): Promise<{ server: Server; port: number }> {
+  const server = new Server({ port: 0, path });
+  if (setup) setup(server);
+  server.listen();
+  await delay(50);
+  const port = server.port;
+  if (!port || port === 0) {
+    throw new Error("系统未分配端口，请稍后重试");
+  }
+  return { server, port };
 }
 
 /**
@@ -168,9 +177,10 @@ describe("WebSocket Server", () => {
     let server: Server;
     let testPort: number;
 
-    beforeAll(() => {
-      testPort = getAvailablePort();
-      server = new Server({ port: testPort, path: "/ws" });
+    beforeAll(async () => {
+      const result = await createServerWithSystemPort("/ws");
+      server = result.server;
+      testPort = result.port;
     });
 
     afterAll(async () => {
@@ -181,42 +191,33 @@ describe("WebSocket Server", () => {
 
     it("应该启动服务器", () => {
       expect(() => {
-        server.listen();
       }).not.toThrow();
     }, { sanitizeOps: false, sanitizeResources: false });
 
-    it("应该支持自定义 host 和 port", () => {
-      const customPort = getAvailablePort();
-      const customServer = new Server({ port: customPort });
+    it("应该支持自定义 host 和 port", async () => {
+      const { server: customServer } = await createServerWithSystemPort("/");
+      const customPort = customServer.port!;
 
       expect(() => {
-        customServer.listen("127.0.0.1", customPort);
+        customServer.close();
       }).not.toThrow();
-
-      // 清理
-      customServer.close();
+      new Server({ port: 0 }).listen("127.0.0.1", 0);
     });
 
     it("应该关闭服务器", async () => {
-      const testServer = new Server({ port: getAvailablePort() });
-      testServer.listen();
-
+      const { server: testServer } = await createServerWithSystemPort("/");
       expect(async () => {
         await testServer.close();
       }).not.toThrow();
     });
 
     it("应该关闭所有连接", async () => {
-      const testServer = new Server({
-        port: getAvailablePort(),
-        path: "/test",
-      });
-      testServer.listen();
+      const { server: testServer, port } = await createServerWithSystemPort("/test");
 
       // 创建一个连接
       try {
         const ws = await createWebSocketClient(
-          `ws://localhost:${testServer.options.port}/test`,
+          `ws://localhost:${port}/test`,
         );
         await delay(100);
         // 发送消息来触发服务器的 message 事件，这样适配器的 _ws 会被设置
@@ -245,22 +246,20 @@ describe("WebSocket Server", () => {
 
   describe("WebSocket 连接和消息", () => {
     it("应该接受 WebSocket 连接", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
       let socketConnected = false;
-
-      server.on("connection", (socket) => {
-        socketConnected = true;
-        expect(socket).toBeTruthy();
-        expect(socket.id).toBeTruthy();
-        expect(socket.connected).toBe(true);
+      const { server, port } = await createServerWithSystemPort("/ws", (s) => {
+        s.on("connection", (socket) => {
+          socketConnected = true;
+          expect(socket).toBeTruthy();
+          expect(socket.id).toBeTruthy();
+          expect(socket.connected).toBe(true);
+        });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -273,23 +272,21 @@ describe("WebSocket Server", () => {
     });
 
     it("应该创建握手信息", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
       let handshakeReceived = false;
-
-      server.on("connection", (socket) => {
-        expect(socket.handshake).toBeTruthy();
-        expect(socket.handshake.url).toBeTruthy();
-        expect(socket.handshake.headers).toBeTruthy();
-        expect(socket.handshake.query).toBeTruthy();
-        handshakeReceived = true;
+      const { server, port } = await createServerWithSystemPort("/ws", (s) => {
+        s.on("connection", (socket) => {
+          expect(socket.handshake).toBeTruthy();
+          expect(socket.handshake.url).toBeTruthy();
+          expect(socket.handshake.headers).toBeTruthy();
+          expect(socket.handshake.query).toBeTruthy();
+          handshakeReceived = true;
+        });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws?token=abc123`,
+        `ws://localhost:${port}/ws?token=abc123`,
       );
 
       await delay(300);
@@ -302,23 +299,21 @@ describe("WebSocket Server", () => {
     });
 
     it("应该处理文本消息", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
       let messageReceived = false;
       let receivedData: any = null;
-
-      server.on("connection", (socket) => {
-        socket.on("test-event", (data) => {
-          messageReceived = true;
-          receivedData = data;
+      const { server, port } = await createServerWithSystemPort("/ws", (s) => {
+        s.on("connection", (socket) => {
+          socket.on("test-event", (data) => {
+            messageReceived = true;
+            receivedData = data;
+          });
         });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -343,8 +338,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该发送消息到客户端", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       // 设置消息监听器（在连接建立之前）
       let messageReceived = false;
@@ -358,12 +352,11 @@ describe("WebSocket Server", () => {
         }, 100);
       });
 
-      server.listen();
       await delay(300);
 
       // 在创建 WebSocket 之前设置消息监听器
       const wsPromise = new Promise<WebSocket>((resolve, reject) => {
-        const ws = new WebSocket(`ws://localhost:${testPort}/ws`);
+        const ws = new WebSocket(`ws://localhost:${port}/ws`);
         ws.onopen = () => resolve(ws);
         ws.onerror = (error) => reject(error);
         // 在连接建立之前就设置消息监听器
@@ -403,18 +396,16 @@ describe("WebSocket Server", () => {
     }, { sanitizeOps: false, sanitizeResources: false });
 
     it("应该处理心跳消息", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         // 心跳处理是自动的
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -434,8 +425,7 @@ describe("WebSocket Server", () => {
 
   describe("Socket 事件系统", () => {
     it("应该支持多个事件监听器", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
       let callCount = 0;
 
       server.on("connection", (socket) => {
@@ -448,11 +438,10 @@ describe("WebSocket Server", () => {
         });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -472,8 +461,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该支持移除事件监听器", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
       let callCount = 0;
 
       server.on("connection", (socket) => {
@@ -485,11 +473,10 @@ describe("WebSocket Server", () => {
         socket.off("test", handler);
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -509,8 +496,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该支持移除所有事件监听器", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
       let callCount = 0;
 
       server.on("connection", (socket) => {
@@ -525,11 +511,10 @@ describe("WebSocket Server", () => {
         socket.off("test");
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -549,8 +534,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该支持回调函数", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         socket.on("test-with-callback", (data, callback) => {
@@ -560,11 +544,10 @@ describe("WebSocket Server", () => {
         });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -598,8 +581,7 @@ describe("WebSocket Server", () => {
 
   describe("Socket 房间管理", () => {
     it("应该支持加入房间", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
       let socketJoined = false;
 
       server.on("connection", (socket) => {
@@ -607,11 +589,10 @@ describe("WebSocket Server", () => {
         socketJoined = true;
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -625,19 +606,17 @@ describe("WebSocket Server", () => {
     });
 
     it("应该支持离开房间", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         socket.join("room1");
         socket.leave("room1");
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -649,8 +628,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该向房间发送消息", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
       let messageReceived = false;
       let socket1: Socket | null = null;
 
@@ -667,11 +645,10 @@ describe("WebSocket Server", () => {
         }
       });
 
-      server.listen();
       await delay(200);
 
       const ws1 = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -679,7 +656,7 @@ describe("WebSocket Server", () => {
       ws1.send(JSON.stringify({ type: "ping" }));
 
       const ws2 = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -706,8 +683,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该支持广播消息", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
       let broadcastReceived = false;
       let socket1: Socket | null = null;
 
@@ -722,11 +698,10 @@ describe("WebSocket Server", () => {
         }
       });
 
-      server.listen();
       await delay(200);
 
       const ws1 = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -734,7 +709,7 @@ describe("WebSocket Server", () => {
       ws1.send(JSON.stringify({ type: "ping" }));
 
       const ws2 = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -763,8 +738,7 @@ describe("WebSocket Server", () => {
 
   describe("Socket 断开连接", () => {
     it("应该处理客户端断开连接", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         socket.on("disconnect", () => {
@@ -772,11 +746,10 @@ describe("WebSocket Server", () => {
         });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -790,8 +763,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该支持服务器主动断开连接", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         // 确保连接完全建立后再断开
@@ -800,11 +772,10 @@ describe("WebSocket Server", () => {
         }, 100);
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       // 在服务器 100ms 断开前发送，且仅在 OPEN 时发送，避免 InvalidStateError
@@ -846,19 +817,17 @@ describe("WebSocket Server", () => {
     }, { sanitizeOps: false, sanitizeResources: false });
 
     it("应该清理房间成员", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         socket.join("room1");
         socket.disconnect();
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -873,8 +842,7 @@ describe("WebSocket Server", () => {
 
   describe("Socket 数据存储", () => {
     it("应该支持数据存储", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         socket.data.userId = "user123";
@@ -884,11 +852,10 @@ describe("WebSocket Server", () => {
         expect(socket.data.username).toBe("testuser");
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -903,15 +870,13 @@ describe("WebSocket Server", () => {
 
   describe("错误处理", () => {
     it("应该处理无效路径的请求", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
-      server.listen();
       await delay(200);
 
       try {
         const ws = await createWebSocketClient(
-          `ws://localhost:${testPort}/invalid`,
+          `ws://localhost:${port}/invalid`,
         );
         ws.close();
       } catch (error) {
@@ -924,8 +889,7 @@ describe("WebSocket Server", () => {
     });
 
     it("应该处理无效 JSON 消息", async () => {
-      const testPort = getAvailablePort();
-      const server = new Server({ port: testPort, path: "/ws" });
+      const { server, port } = await createServerWithSystemPort("/ws");
 
       server.on("connection", (socket) => {
         socket.on("error", () => {
@@ -933,11 +897,10 @@ describe("WebSocket Server", () => {
         });
       });
 
-      server.listen();
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -958,23 +921,21 @@ describe("WebSocket Server", () => {
 
   describe("心跳检测", () => {
     it("应该发送心跳消息", async () => {
-      const testPort = getAvailablePort();
       const server = new Server({
-        port: testPort,
+        port: 0,
         path: "/ws",
         pingInterval: 1000,
         pingTimeout: 2000,
       });
-
-      server.on("connection", (socket) => {
-        // 心跳由服务器自动发送
-      });
-
+      server.on("connection", () => {});
       server.listen();
+      await delay(50);
+      const port = server.port!;
+
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
@@ -999,23 +960,21 @@ describe("WebSocket Server", () => {
     });
 
     it("应该处理心跳响应", async () => {
-      const testPort = getAvailablePort();
       const server = new Server({
-        port: testPort,
+        port: 0,
         path: "/ws",
         pingInterval: 1000,
         pingTimeout: 2000,
       });
-
-      server.on("connection", (socket) => {
-        // 心跳处理是自动的
-      });
-
+      server.on("connection", () => {});
       server.listen();
+      await delay(50);
+      const port = server.port!;
+
       await delay(200);
 
       const ws = await createWebSocketClient(
-        `ws://localhost:${testPort}/ws`,
+        `ws://localhost:${port}/ws`,
       );
 
       await delay(300);
