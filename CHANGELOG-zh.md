@@ -9,6 +9,18 @@
 
 ---
 
+## [1.0.4] - 2025-02-07
+
+### 修复
+
+- **pathToFileUrl 测试（Windows）**：POSIX 绝对路径的平台特定断言；Windows 上 pathToFileURL 会解析为当前驱动器路径（如 `file:///D:/home/user/config.ts`）
+
+### 变更
+
+- **WebSocket 测试**：改用系统分配端口（`port: 0`）替代固定端口，避免 AddrInUse 冲突
+
+---
+
 ## [1.0.3] - 2025-02-07
 
 ### 新增

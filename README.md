@@ -1190,9 +1190,9 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.3] - 2025-02-07
+### [1.0.4] - 2025-02-07
 
-**Added**: CI workflow (Linux/macOS/Windows). **Fixed**: Windows compatibility (chmod, chdir, path, process cd/spawn/env, WebSocket); Deno check; watchFs test; WebSocket send race.
+**Fixed**: pathToFileUrl test on Windows (platform-specific assertion). **Changed**: WebSocket tests use system-assigned port.
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
