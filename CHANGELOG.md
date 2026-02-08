@@ -10,6 +10,18 @@ and this project adheres to
 
 ---
 
+## [1.0.4] - 2025-02-07
+
+### Fixed
+
+- **pathToFileUrl test on Windows**: Platform-specific assertion for POSIX absolute path (`/home/user/config.ts`); on Windows, Node's pathToFileURL resolves it as current-drive path (e.g. `file:///D:/home/user/config.ts`)
+
+### Changed
+
+- **WebSocket tests**: Use system-assigned port (`port: 0`) instead of fixed port to avoid AddrInUse conflicts
+
+---
+
 ## [1.0.3] - 2025-02-07
 
 ### Added

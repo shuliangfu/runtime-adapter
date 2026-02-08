@@ -1275,9 +1275,9 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.3] - 2025-02-07
+### [1.0.4] - 2025-02-07
 
-**新增**：CI 工作流（Linux/macOS/Windows）。**修复**：Windows 兼容性（chmod、chdir、path、process cd/spawn/env、WebSocket）；Deno check；watchFs 测试；WebSocket send 竞态。
+**修复**：pathToFileUrl 测试在 Windows 上的平台特定断言。**变更**：WebSocket 测试改用系统分配端口。
 
 完整历史详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
 
