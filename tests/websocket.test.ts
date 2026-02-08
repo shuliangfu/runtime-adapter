@@ -4,13 +4,21 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import { IS_BUN, IS_DENO } from "../src/detect.ts";
-import { serve, upgradeWebSocket } from "../src/network.ts";
+import { serve, upgradeWebSocket, type ServeHandle } from "../src/network.ts";
 
 /**
- * 获取可用端口
+ * 使用系统分配端口启动 serve，返回 handle 和实际端口
  */
-function getAvailablePort(): number {
-  return 30000 + Math.floor(Math.random() * 30000);
+async function serveWithSystemPort(
+  handler: (req: Request) => Response | Promise<Response> | Promise<Response | undefined> | undefined,
+): Promise<{ handle: ServeHandle; port: number }> {
+  const handle = serve({ port: 0 }, handler);
+  await new Promise((r) => setTimeout(r, 100));
+  const port = handle.port;
+  if (!port || port === 0) {
+    throw new Error("系统未分配端口");
+  }
+  return { handle, port };
 }
 
 /**
@@ -51,12 +59,10 @@ describe("WebSocket API", () => {
         return;
       }
 
-      const testPort = getAvailablePort();
       let serverHandle: any = null;
 
       try {
-        serverHandle = serve(
-          { port: testPort },
+        const { handle, port: testPort } = await serveWithSystemPort(
           async (request: Request) => {
             const url = new URL(request.url);
             if (url.pathname === "/ws") {
@@ -102,9 +108,7 @@ describe("WebSocket API", () => {
             return new Response("Not Found", { status: 404 });
           },
         );
-
-        // 等待服务器启动
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        serverHandle = handle;
 
         // 创建客户端连接
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
@@ -145,12 +149,10 @@ describe("WebSocket API", () => {
         return;
       }
 
-      const testPort = getAvailablePort();
       let serverHandle: any = null;
 
       try {
-        serverHandle = serve(
-          { port: testPort },
+        const { handle, port: testPort } = await serveWithSystemPort(
           async (request: Request) => {
             const url = new URL(request.url);
             if (url.pathname === "/ws") {
@@ -196,9 +198,7 @@ describe("WebSocket API", () => {
             return new Response("Not Found", { status: 404 });
           },
         );
-
-        // 等待服务器启动
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        serverHandle = handle;
 
         // 创建客户端连接
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
@@ -231,12 +231,10 @@ describe("WebSocket API", () => {
     });
 
     it("应该支持 addEventListener API", async () => {
-      const testPort = getAvailablePort();
       let serverHandle: any = null;
 
       try {
-        serverHandle = serve(
-          { port: testPort },
+        const { handle, port: testPort } = await serveWithSystemPort(
           async (request: Request) => {
             const url = new URL(request.url);
             if (url.pathname === "/ws") {
@@ -298,9 +296,7 @@ describe("WebSocket API", () => {
             return new Response("Not Found", { status: 404 });
           },
         );
-
-        // 等待服务器启动
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        serverHandle = handle;
 
         // 创建客户端连接
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
@@ -338,12 +334,10 @@ describe("WebSocket API", () => {
     });
 
     it("应该支持 send 方法", async () => {
-      const testPort = getAvailablePort();
       let serverHandle: any = null;
 
       try {
-        serverHandle = serve(
-          { port: testPort },
+        const { handle, port: testPort } = await serveWithSystemPort(
           async (request: Request) => {
             const url = new URL(request.url);
             if (url.pathname === "/ws") {
@@ -414,9 +408,7 @@ describe("WebSocket API", () => {
             return new Response("Not Found", { status: 404 });
           },
         );
-
-        // 等待服务器启动
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        serverHandle = handle;
 
         // 创建客户端连接
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
@@ -462,12 +454,10 @@ describe("WebSocket API", () => {
     });
 
     it("应该支持 close 方法", async () => {
-      const testPort = getAvailablePort();
       let serverHandle: any = null;
 
       try {
-        serverHandle = serve(
-          { port: testPort },
+        const { handle, port: testPort } = await serveWithSystemPort(
           async (request: Request) => {
             const url = new URL(request.url);
             if (url.pathname === "/ws") {
@@ -512,9 +502,7 @@ describe("WebSocket API", () => {
             return new Response("Not Found", { status: 404 });
           },
         );
-
-        // 等待服务器启动
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        serverHandle = handle;
 
         // 创建客户端连接
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
@@ -567,12 +555,10 @@ describe("WebSocket API", () => {
         return;
       }
 
-      const testPort = getAvailablePort();
       let serverHandle: any = null;
 
       try {
-        serverHandle = serve(
-          { port: testPort },
+        const { handle, port: testPort } = await serveWithSystemPort(
           async (request: Request) => {
             const url = new URL(request.url);
             if (url.pathname === "/ws") {
@@ -622,6 +608,7 @@ describe("WebSocket API", () => {
             return new Response("Not Found", { status: 404 });
           },
         );
+        serverHandle = handle;
 
         await new Promise((resolve) => setTimeout(resolve, 200));
 

@@ -2,6 +2,7 @@
  * @fileoverview 路径操作 API 测试
  */
 
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "@dreamer/test";
 import { platform } from "../src/process-info.ts";
 import {
@@ -12,6 +13,7 @@ import {
   isRelative,
   join,
   normalize,
+  pathToFileUrl,
   relative,
   resolve,
 } from "../src/path.ts";
@@ -340,6 +342,55 @@ describe("路径操作 API", () => {
     it("应该识别绝对路径", () => {
       expect(isRelative("/path/to/file")).toBe(false);
       expect(isRelative("C:/path/to/file")).toBe(false);
+    });
+  });
+
+  describe("pathToFileUrl", () => {
+    it("应将 POSIX 绝对路径转为 file:// URL", () => {
+      const url = pathToFileUrl("/home/user/config.ts");
+      expect(url).toBe("file:///home/user/config.ts");
+    });
+
+    it("应将相对路径转为 file:// URL（基于 cwd 解析）", () => {
+      const url = pathToFileUrl("config.ts");
+      expect(url).toMatch(/^file:\/\//);
+      expect(url).toContain("config.ts");
+    });
+
+    it("应正确编码特殊字符（空格、#、?）", () => {
+      const url = pathToFileUrl("/path/to/file name#1.ts");
+      expect(url).toMatch(/^file:\/\//);
+      expect(url).toContain("%23"); // # 编码为 %23
+      expect(url).toContain("%20"); // 空格编码为 %20
+    });
+
+    it("应处理 Windows 风格路径（正斜杠）", () => {
+      const url = pathToFileUrl("C:/Users/test/file.ts");
+      if (platform() === "windows") {
+        expect(url).toBe("file:///C:/Users/test/file.ts");
+      } else {
+        // 非 Windows 上 pathToFileURL 可能将 C:/ 解析为相对路径
+        expect(url).toMatch(/^file:\/\//);
+      }
+    });
+
+    it("应处理 Windows 风格路径（反斜杠）", () => {
+      const url = pathToFileUrl("C:\\Users\\test\\file.ts");
+      if (platform() === "windows") {
+        expect(url).toBe("file:///C:/Users/test/file.ts");
+      } else {
+        expect(url).toMatch(/^file:\/\//);
+      }
+    });
+
+    it("应返回可用于 import() 的 URL 字符串", async () => {
+      // 使用 path.ts 的路径验证：fileURLToPath 取出路径，pathToFileUrl 转回 URL，import 应成功
+      const currentPath = fileURLToPath(import.meta.url);
+      const pathTsPath = resolve(dirname(currentPath), "..", "src", "path.ts");
+      const url = pathToFileUrl(pathTsPath);
+      expect(url.startsWith("file://")).toBe(true);
+      const mod = await import(url);
+      expect(mod.pathToFileUrl).toBeDefined();
     });
   });
 });
