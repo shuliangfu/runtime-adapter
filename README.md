@@ -3,11 +3,11 @@
 > Runtime adaptation layer providing a unified API abstraction compatible with
 > Deno and Bun runtimes
 
-English | [中文 (Chinese)](./README-zh.md)
+English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
 
 ---
 
@@ -143,7 +143,7 @@ bunx jsr add @dreamer/runtime-adapter
 - **File API**: `chown` throws EPERM on Windows (not supported); `symlink` requires admin or Developer Mode
 - **System Info**: Uses `wmic` first; falls back to PowerShell `Get-CimInstance` when wmic is unavailable (e.g. Windows 11 24H2+)
 
-For detailed analysis, see [WINDOWS_COMPATIBILITY_ANALYSIS.md](./WINDOWS_COMPATIBILITY_ANALYSIS.md).
+For detailed analysis, see [WIN_COMPAT.md](./docs/en-US/WIN_COMPAT.md).
 
 ---
 
@@ -1162,7 +1162,7 @@ bun test tests/
 
 ### Test Report
 
-See [TEST_REPORT.md](./TEST_REPORT.md).
+See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 - ✅ 266 tests passed
 - ✅ 17 modules covered
@@ -1194,7 +1194,7 @@ See [TEST_REPORT.md](./TEST_REPORT.md).
 
 **Fixed**: pathToFileUrl test on Windows (platform-specific assertion). **Changed**: WebSocket tests use system-assigned port.
 
-See [CHANGELOG.md](./CHANGELOG.md) for full history.
+See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

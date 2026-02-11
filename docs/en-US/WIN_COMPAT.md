@@ -1,6 +1,6 @@
 # @dreamer/runtime-adapter Windows Compatibility Analysis
 
-[English](./WINDOWS_COMPATIBILITY_ANALYSIS.md) | [中文 (Chinese)](./WINDOWS_COMPATIBILITY_ANALYSIS-zh.md)
+[English](./WIN_COMPAT.md) | [中文 (Chinese)](../zh-CN/WIN_COMPAT.md)
 
 > Analysis date: 2025-02-07  
 > Scope: All runtime-adapter source modules

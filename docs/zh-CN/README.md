@@ -1,18 +1,18 @@
 # @dreamer/runtime-adapter
 
-> 运行时适配层库，提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境
+> 运行时适配层包，提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境
 
-[English](./README.md) | 中文 (Chinese)
+[English](../../README.md) | 中文 (Chinese)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE.md)
 [![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
 ## 🎯 功能
 
-运行时适配层，让其他 `@dreamer/*` 库可以在不同运行时环境中使用相同的 API。
+运行时适配层，让其他 `@dreamer/*` 包可以在不同运行时环境中使用相同的 API。
 
 ---
 
@@ -76,7 +76,7 @@
 
 ## 🎨 设计原则
 
-__所有 @dreamer/_ 库都遵循以下原则_*：
+**所有 @dreamer/* 包都遵循以下原则**：
 
 - **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
@@ -92,9 +92,9 @@ __所有 @dreamer/_ 库都遵循以下原则_*：
 
 ## 🎯 使用场景
 
-- **跨运行时库开发**：Bun 和 Deno 兼容的库开发
+- **跨运行时包开发**：Bun 和 Deno 兼容的包开发
 - **运行时 API 统一抽象**：统一不同运行时的 API 差异
-- **基础依赖库**：其他 `@dreamer/*` 库的基础依赖
+- **基础依赖包**：其他 `@dreamer/*` 包的基础依赖
 
 ---
 
@@ -142,7 +142,7 @@ bunx jsr add @dreamer/runtime-adapter
 - **File API**：`chown` 在 Windows 上会抛出 EPERM（不支持）；`symlink` 需管理员或开发者模式
 - **System Info**：优先使用 `wmic`，不可用时自动回退到 PowerShell `Get-CimInstance`（如 Windows 11 24H2+）
 
-详细分析见 [WINDOWS_COMPATIBILITY_ANALYSIS-zh.md](./WINDOWS_COMPATIBILITY_ANALYSIS-zh.md)。
+详细分析见 [WIN_COMPAT.md](./WIN_COMPAT.md)。
 
 ---
 
@@ -1248,13 +1248,13 @@ bun test tests/
 ## 📝 备注
 
 - **服务端和客户端分离**：通过 `/client`
-  子路径明确区分服务端和客户端代码（本库仅支持服务端）
+  子路径明确区分服务端和客户端代码（本包仅支持服务端）
 - **统一接口**：所有 API 在 Deno 和 Bun 环境下使用相同的接口，降低学习成本
 - **类型安全**：完全采用类型安全的实现方式，所有运行时 API
   访问都通过类型安全的工具函数（`getDeno()`, `getBun()`,
   `getProcess()`），避免了 `(globalThis as any)` 的使用。所有 API 都有完整的
   TypeScript 类型定义，零 `any` 类型。
-- **自动适配**：本库提供统一的 API 抽象层，在 Deno 和 Bun
+- **自动适配**：本包提供统一的 API 抽象层，在 Deno 和 Bun
   环境下自动适配到对应的原生 API
 - **同步和异步 API**：提供同步和异步两种 API，同步 API
   适合需要阻塞等待的场景（如 CLI 工具），异步 API 适合大多数场景
@@ -1279,7 +1279,7 @@ bun test tests/
 
 **修复**：pathToFileUrl 测试在 Windows 上的平台特定断言。**变更**：WebSocket 测试改用系统分配端口。
 
-完整历史详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
+完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 
@@ -1291,7 +1291,7 @@ bun test tests/
 
 ## 📄 许可证
 
-MIT License - 详见 [LICENSE.md](./LICENSE.md)
+MIT License - 详见 [LICENSE.md](../../LICENSE.md)
 
 ---
 
