@@ -7,7 +7,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@dreamer/test": "jsr:@dreamer/test@^1.0.5",
+    "@dreamer/test": "npm:@jsr/dreamer__test@^1.0.5",
     "node-cron": "npm:node-cron@3.0.3"
   }
 }
