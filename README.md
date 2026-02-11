@@ -1190,11 +1190,9 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.4] - 2025-02-07
+### [1.0.5] - 2026-02-10
 
-**Fixed**: pathToFileUrl test on Windows (platform-specific assertion). **Changed**: WebSocket tests use system-assigned port.
-
-See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Changed**: CI remove Bun test jobs; restore package.json to gitignore; reorder jobs (test-windows last). See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

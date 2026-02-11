@@ -1275,11 +1275,9 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.4] - 2025-02-07
+### [1.0.5] - 2026-02-10
 
-**修复**：pathToFileUrl 测试在 Windows 上的平台特定断言。**变更**：WebSocket 测试改用系统分配端口。
-
-完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
+**变更**：CI 移除 Bun 测试 job；package.json 恢复至 gitignore；调整 job 顺序（test-windows 放最后）。完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 
