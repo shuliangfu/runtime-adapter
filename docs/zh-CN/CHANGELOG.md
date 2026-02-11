@@ -9,6 +9,16 @@
 
 ---
 
+## [1.0.5] - 2026-02-10
+
+### 变更
+
+- **CI**：移除 Bun 测试 job（CI 中 JSR 依赖解析问题）；CI 仅在 Linux、macOS、Windows 上运行 Deno 测试
+- **CI**：将 package.json 恢复至 .gitignore（不再提交）
+- **CI**：调整 job 顺序，将 test-windows 放最后（Linux → macOS → Windows）
+
+---
+
 ## [1.0.4] - 2025-02-07
 
 ### 修复

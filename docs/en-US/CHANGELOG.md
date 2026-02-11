@@ -10,6 +10,16 @@ and this project adheres to
 
 ---
 
+## [1.0.5] - 2026-02-10
+
+### Changed
+
+- **CI**: Remove Bun test jobs (JSR dependency resolution issues in CI); CI runs Deno-only on Linux, macOS, Windows
+- **CI**: Restore package.json to .gitignore (no longer committed)
+- **CI**: Reorder jobs - put test-windows last (Linux → macOS → Windows)
+
+---
+
 ## [1.0.4] - 2025-02-07
 
 ### Fixed
