@@ -47,7 +47,7 @@
     }
   },
   "imports": {
-    "@dreamer/test": "jsr:@dreamer/test@^1.0.0",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.5",
     "node-cron": "npm:node-cron@3.0.3"
   },
   "allowScripts": {

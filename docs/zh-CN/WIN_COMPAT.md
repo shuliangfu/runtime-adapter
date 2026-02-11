@@ -1,6 +1,6 @@
 # @dreamer/runtime-adapter Windows 兼容性深度分析
 
-[English](./WINDOWS_COMPATIBILITY_ANALYSIS.md) | 中文 (Chinese)
+[English](../en-US/WIN_COMPAT.md) | 中文 (Chinese)
 
 > 分析日期：2025-02-07  
 > 分析范围：runtime-adapter 全部源码模块

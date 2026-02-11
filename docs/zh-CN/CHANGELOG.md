@@ -1,6 +1,6 @@
 # 变更日志
 
-[English](./CHANGELOG.md) | 中文 (Chinese)
+[English](../en-US/CHANGELOG.md) | 中文 (Chinese)
 
 本文件记录 @dreamer/runtime-adapter 的所有重要变更。
 

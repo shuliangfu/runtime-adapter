@@ -1,6 +1,6 @@
 # Changelog
 
-[English](./CHANGELOG.md) | [中文 (Chinese)](./CHANGELOG-zh.md)
+[English](./CHANGELOG.md) | [中文 (Chinese)](../zh-CN/CHANGELOG.md)
 
 All notable changes to @dreamer/runtime-adapter are documented in this file.
 
