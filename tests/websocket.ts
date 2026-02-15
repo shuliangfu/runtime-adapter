@@ -553,7 +553,8 @@ export class Server {
    * 获取实际监听端口（port: 0 时由系统分配，listen 后可从 httpServer.port 获取）
    */
   get port(): number | undefined {
-    return this.httpServer?.port ?? (this.options.port !== 0 ? this.options.port : undefined);
+    return this.httpServer?.port ??
+      (this.options.port !== 0 ? this.options.port : undefined);
   }
 
   /**

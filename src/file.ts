@@ -4,14 +4,13 @@
  */
 
 import { IS_BUN } from "./detect.ts";
-import { join } from "./path.ts";
+import { dirname, join, resolve } from "./path.ts";
 import { getBuffer, getBun, getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeCrypto from "node:crypto";
 import * as nodeFs from "node:fs";
 import * as nodeFsPromises from "node:fs/promises";
 import * as nodeOs from "node:os";
-import * as nodePath from "node:path";
 
 /**
  * 文件打开选项
@@ -582,7 +581,7 @@ export function watchFs(
       initPromise = (async () => {
         // 为每个路径创建 watcher
         for (const path of pathArray) {
-          const resolvedPath = nodePath.resolve(path);
+          const resolvedPath = resolve(path);
           let lastEventType: string | null = null;
           let lastEventTime = 0;
           const debounceTime = 100; // 防抖时间（毫秒）
@@ -610,7 +609,7 @@ export function watchFs(
 
               const now = Date.now();
               const fullPath = filename
-                ? nodePath.resolve(resolvedPath, filename)
+                ? resolve(resolvedPath, filename)
                 : resolvedPath;
 
               // 防抖处理：相同事件在短时间内只触发一次
@@ -864,7 +863,7 @@ export async function rename(
     // Bun 使用 Node.js 兼容的 fs API
     try {
       // 确保目标目录存在
-      const destDir = nodePath.dirname(newPath);
+      const destDir = dirname(newPath);
       try {
         await nodeFsPromises.mkdir(destDir, { recursive: true });
       } catch (error: unknown) {
@@ -923,7 +922,7 @@ export async function rename(
       if (nodeError?.code === "ENOENT") {
         throw new Error(
           `重命名失败: 源路径不存在 "${oldPath}" 或目标目录不存在 "${
-            nodePath.dirname(newPath)
+            dirname(newPath)
           }"`,
         );
       }
@@ -1053,7 +1052,7 @@ export async function makeTempDir(
     const tmpDir = options?.dir || nodeOs.tmpdir();
     const prefix = options?.prefix || "tmp-";
     // mkdtemp 需要 XXXXXX 占位符，会被替换为随机字符
-    const template = nodePath.join(tmpDir, prefix + "XXXXXX");
+    const template = join(tmpDir, prefix + "XXXXXX");
 
     const tempDirPath = await nodeFsPromises.mkdtemp(template);
     return tempDirPath;
@@ -1086,7 +1085,7 @@ export async function makeTempFile(
 
     // 生成随机文件名
     const randomStr = nodeCrypto.randomBytes(6).toString("hex");
-    const tempFile = nodePath.join(tmpDir, `${prefix}${randomStr}${suffix}`);
+    const tempFile = join(tmpDir, `${prefix}${randomStr}${suffix}`);
 
     // 创建空文件
     await nodeFsPromises.writeFile(tempFile, "");
@@ -1114,7 +1113,7 @@ export function cwd(): string {
       return process.cwd();
     }
     // 如果 process.cwd 不可用，使用 path.resolve
-    return nodePath.resolve(".");
+    return resolve(".");
   }
 
   throw new Error("不支持的运行时环境");

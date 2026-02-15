@@ -212,7 +212,9 @@ describe("WebSocket Server", () => {
     });
 
     it("应该关闭所有连接", async () => {
-      const { server: testServer, port } = await createServerWithSystemPort("/test");
+      const { server: testServer, port } = await createServerWithSystemPort(
+        "/test",
+      );
 
       // 创建一个连接
       try {

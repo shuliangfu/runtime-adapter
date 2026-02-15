@@ -36,7 +36,10 @@ describe("进程/命令 API", () => {
       expect(child.stdout).toBeTruthy();
 
       // 验证 stdin 支持 Web Streams getWriter（Bun FileSink 需包装）
-      if (child.stdin && typeof (child.stdin as WritableStream).getWriter === "function") {
+      if (
+        child.stdin &&
+        typeof (child.stdin as WritableStream).getWriter === "function"
+      ) {
         const writer = (child.stdin as WritableStream<Uint8Array>).getWriter();
         await writer.write(new TextEncoder().encode("test\n"));
         writer.releaseLock();
@@ -58,26 +61,24 @@ describe("进程/命令 API", () => {
 
     it("应该支持环境变量", async () => {
       // Windows 用 set 读取环境变量，Unix 用 printenv
-      const cmd =
-        platform() === "windows"
-          ? createCommand("cmd", {
-            args: ["/c", "set", "TEST_VAR"],
-            env: { TEST_VAR: "test-value" },
-          })
-          : createCommand("printenv", {
-            args: ["TEST_VAR"],
-            env: { TEST_VAR: "test-value" },
-          });
+      const cmd = platform() === "windows"
+        ? createCommand("cmd", {
+          args: ["/c", "set", "TEST_VAR"],
+          env: { TEST_VAR: "test-value" },
+        })
+        : createCommand("printenv", {
+          args: ["TEST_VAR"],
+          env: { TEST_VAR: "test-value" },
+        });
       const output = await cmd.output();
       expect(output.success).toBe(true);
     }, { sanitizeResources: false }); // 避免 Deno 泄漏检测误报
 
     it("应该支持工作目录", async () => {
       // Windows 上 cd 是 shell 内置命令，需通过 cmd /c 调用
-      const cmd =
-        platform() === "windows"
-          ? createCommand("cmd", { args: ["/c", "cd"], cwd: "." })
-          : createCommand("pwd", { args: [], cwd: "." });
+      const cmd = platform() === "windows"
+        ? createCommand("cmd", { args: ["/c", "cd"], cwd: "." })
+        : createCommand("pwd", { args: [], cwd: "." });
       const output = await cmd.output();
       expect(output.success).toBe(true);
     });
@@ -131,10 +132,9 @@ describe("进程/命令 API", () => {
     });
 
     it("应该支持工作目录", () => {
-      const output =
-        platform() === "windows"
-          ? execCommandSync("cmd", ["/c", "cd"], { cwd: "." })
-          : execCommandSync("pwd", [], { cwd: "." });
+      const output = platform() === "windows"
+        ? execCommandSync("cmd", ["/c", "cd"], { cwd: "." })
+        : execCommandSync("pwd", [], { cwd: "." });
       expect(typeof output).toBe("string");
       expect(output.trim().length).toBeGreaterThan(0);
     });

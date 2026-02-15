@@ -1,12 +1,9 @@
 /**
  * 文件哈希 API 适配模块
- * 提供统一的文件哈希接口，兼容 Deno 和 Bun
+ * 统一使用 node:crypto，Deno 与 Bun 均兼容
  */
 
-import { IS_BUN, IS_DENO } from "./detect.ts";
 import { readFile, readFileSync } from "./file.ts";
-import type { CryptoModule, RequireFunction } from "./types.ts";
-// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeCrypto from "node:crypto";
 
 /**
@@ -36,17 +33,8 @@ export async function hashFile(
   path: string,
   algorithm: HashAlgorithm = "SHA-256",
 ): Promise<string> {
-  // 读取文件内容
   const data = await readFile(path);
-
-  // 使用 Web Crypto API 计算哈希
-  // 创建一个新的 ArrayBuffer 来确保类型正确
-  const buffer = new Uint8Array(data).buffer;
-  const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
-
-  // 转换为十六进制字符串
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hash(data, algorithm);
 }
 
 /**
@@ -68,23 +56,11 @@ export async function hashFile(
  * const dataHash = await hash(data);
  * ```
  */
-export async function hash(
+export function hash(
   data: Uint8Array | string,
   algorithm: HashAlgorithm = "SHA-256",
 ): Promise<string> {
-  // 如果是字符串，转换为 Uint8Array
-  const bytes = typeof data === "string"
-    ? new TextEncoder().encode(data)
-    : data;
-
-  // 使用 Web Crypto API 计算哈希
-  // 创建一个新的 ArrayBuffer 来确保类型正确
-  const buffer = new Uint8Array(bytes).buffer;
-  const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
-
-  // 转换为十六进制字符串
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Promise.resolve(hashSync(data, algorithm));
 }
 
 // ==================== 同步哈希 API ====================
@@ -92,94 +68,61 @@ export async function hash(
 // 在可能的情况下，优先使用异步 API
 
 /**
- * 同步计算数据的哈希值
+ * 同步计算数据的哈希值（内部使用 node:crypto，Deno/Bun 均兼容）
  * @param data 数据（Uint8Array 或字符串）
  * @param algorithm 哈希算法（默认：SHA-256）
  * @returns 数据的十六进制哈希值
- * @throws 如果运行时不支持同步哈希计算，抛出错误
  *
  * @example
  * ```typescript
  * import { hashSync } from "@dreamer/runtime-adapter";
- * // Deno: 需要预先导入 node:crypto（在模块顶层）
- * // import "node:crypto";
  * const hash = hashSync("Hello, World!");
  * console.log("哈希值:", hash);
  * ```
  */
+/** 将 HashAlgorithm 映射为 node:crypto 的算法名 */
+function toNodeAlgorithm(
+  algorithm: HashAlgorithm,
+): "md5" | "sha1" | "sha256" | "sha512" {
+  switch (algorithm) {
+    case "MD5":
+      return "md5";
+    case "SHA-1":
+      return "sha1";
+    case "SHA-256":
+      return "sha256";
+    case "SHA-512":
+      return "sha512";
+    default:
+      return "sha256";
+  }
+}
+
 export function hashSync(
   data: Uint8Array | string,
   algorithm: HashAlgorithm = "SHA-256",
 ): string {
-  // 如果是字符串，转换为 Uint8Array
   const bytes = typeof data === "string"
     ? new TextEncoder().encode(data)
     : data;
-
-  // 将 HashAlgorithm 映射到 Node.js 的算法名称
-  const nodeAlgorithm = algorithm === "MD5"
-    ? "md5"
-    : algorithm === "SHA-1"
-    ? "sha1"
-    : algorithm === "SHA-256"
-    ? "sha256"
-    : algorithm === "SHA-512"
-    ? "sha512"
-    : "sha256";
-
-  // 获取 Node.js 兼容的 crypto 模块
-  let crypto: CryptoModule | null = null;
-
-  if (IS_DENO) {
-    // Deno 中需要通过 globalThis.require 获取
-    const requireFn =
-      (globalThis as unknown as { require?: RequireFunction }).require;
-    if (requireFn) {
-      const cryptoModule = requireFn("node:crypto");
-      if (
-        cryptoModule &&
-        typeof (cryptoModule as CryptoModule).createHash === "function"
-      ) {
-        crypto = cryptoModule as CryptoModule;
-      }
-    }
-  } else if (IS_BUN) {
-    // Bun 支持 Node.js 兼容的 crypto 模块
-    crypto = nodeCrypto as unknown as CryptoModule;
-  }
-
-  if (!crypto || typeof crypto.createHash !== "function") {
-    throw new Error(
-      "同步哈希计算需要 node:crypto 模块。请使用异步的 hash() 方法，或确保运行时支持 Node.js 兼容模式",
-    );
-  }
-
-  // 使用 crypto 模块计算哈希
-  const hash = crypto.createHash(
-    nodeAlgorithm as "sha256" | "sha512" | "sha1" | "md5",
-  );
-  hash.update(bytes);
-  return hash.digest("hex");
+  const nodeAlgorithm = toNodeAlgorithm(algorithm);
+  const h = nodeCrypto.createHash(nodeAlgorithm);
+  h.update(bytes);
+  return h.digest("hex");
 }
 
 /**
- * 同步计算文件哈希值
+ * 同步计算文件哈希值（内部使用 node:crypto，Deno/Bun 均兼容）
  * @param path 文件路径
  * @param algorithm 哈希算法（默认：SHA-256）
  * @returns 文件的十六进制哈希值
- * @throws 如果文件不存在或无法读取，或运行时不支持同步哈希计算，抛出错误
+ * @throws 如果文件不存在或无法读取则抛出错误
  *
  * @example
  * ```typescript
  * import { hashFileSync } from "@dreamer/runtime-adapter";
- * // Deno: 需要预先导入 node:crypto（在模块顶层）
- * // import "node:crypto";
- * try {
- *   const hash = hashFileSync("./file.txt");
- *   console.log("文件哈希:", hash);
- * } catch {
- *   console.log("文件读取失败");
- * }
+ * const hash = hashFileSync("./file.txt");
+ * console.log("文件哈希:", hash);
  * ```
  */
 export function hashFileSync(

@@ -45,11 +45,17 @@ export interface RuntimeVersion {
  */
 export function execPath(): string {
   const deno = getDeno();
-  if (deno && "execPath" in deno && typeof (deno as { execPath?: () => string }).execPath === "function") {
+  if (
+    deno && "execPath" in deno &&
+    typeof (deno as { execPath?: () => string }).execPath === "function"
+  ) {
     return (deno as { execPath: () => string }).execPath();
   }
   const proc = getProcess();
-  if (proc && "execPath" in proc && typeof (proc as { execPath?: unknown }).execPath === "string") {
+  if (
+    proc && "execPath" in proc &&
+    typeof (proc as { execPath?: unknown }).execPath === "string"
+  ) {
     return (proc as { execPath: string }).execPath;
   }
   return "deno"; // fallback

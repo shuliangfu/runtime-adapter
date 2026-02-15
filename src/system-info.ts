@@ -67,8 +67,13 @@ async function getWindowsMemoryAsync(): Promise<MemoryInfo | null> {
   }
 
   try {
-    const ps = `$o=Get-CimInstance Win32_OperatingSystem;"TotalVisibleMemorySize="+$o.TotalVisibleMemorySize;"FreePhysicalMemory="+$o.FreePhysicalMemory`;
-    const text = await execCommand("powershell", ["-NoProfile", "-Command", ps]);
+    const ps =
+      `$o=Get-CimInstance Win32_OperatingSystem;"TotalVisibleMemorySize="+$o.TotalVisibleMemorySize;"FreePhysicalMemory="+$o.FreePhysicalMemory`;
+    const text = await execCommand("powershell", [
+      "-NoProfile",
+      "-Command",
+      ps,
+    ]);
     const totalKb = parseKeyValue(text, "TotalVisibleMemorySize");
     const freeKb = parseKeyValue(text, "FreePhysicalMemory");
     if (totalKb != null && freeKb != null) {
@@ -121,7 +126,8 @@ function getWindowsMemorySync(): MemoryInfo | null {
   }
 
   try {
-    const ps = `$o=Get-CimInstance Win32_OperatingSystem;"TotalVisibleMemorySize="+$o.TotalVisibleMemorySize;"FreePhysicalMemory="+$o.FreePhysicalMemory`;
+    const ps =
+      `$o=Get-CimInstance Win32_OperatingSystem;"TotalVisibleMemorySize="+$o.TotalVisibleMemorySize;"FreePhysicalMemory="+$o.FreePhysicalMemory`;
     const text = execCommandSync("powershell", ["-NoProfile", "-Command", ps]);
     const totalKb = parseKeyValue(text, "TotalVisibleMemorySize");
     const freeKb = parseKeyValue(text, "FreePhysicalMemory");
@@ -172,8 +178,13 @@ async function getWindowsDiskAsync(): Promise<DiskUsage | null> {
   }
 
   try {
-    const ps = `$d=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|Select-Object -First 1;"Size="+$d.Size;"FreeSpace="+$d.FreeSpace`;
-    const text = await execCommand("powershell", ["-NoProfile", "-Command", ps]);
+    const ps =
+      `$d=Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"|Select-Object -First 1;"Size="+$d.Size;"FreeSpace="+$d.FreeSpace`;
+    const text = await execCommand("powershell", [
+      "-NoProfile",
+      "-Command",
+      ps,
+    ]);
     const size = parseKeyValue(text, "Size");
     const free = parseKeyValue(text, "FreeSpace");
     if (size != null && free != null) {
@@ -210,8 +221,13 @@ async function getWindowsCpuCoresAsync(): Promise<number | null> {
   }
 
   try {
-    const ps = `(Get-CimInstance Win32_Processor|Measure-Object -Property NumberOfCores -Sum).Sum`;
-    const text = await execCommand("powershell", ["-NoProfile", "-Command", ps]);
+    const ps =
+      `(Get-CimInstance Win32_Processor|Measure-Object -Property NumberOfCores -Sum).Sum`;
+    const text = await execCommand("powershell", [
+      "-NoProfile",
+      "-Command",
+      ps,
+    ]);
     const val = parseInt(text.trim().match(/\d+/)?.[0] ?? "0", 10);
     if (val > 0) return val;
   } catch {
@@ -238,7 +254,8 @@ function getWindowsCpuCoresSync(): number | null {
   }
 
   try {
-    const ps = `(Get-CimInstance Win32_Processor|Measure-Object -Property NumberOfCores -Sum).Sum`;
+    const ps =
+      `(Get-CimInstance Win32_Processor|Measure-Object -Property NumberOfCores -Sum).Sum`;
     const text = execCommandSync("powershell", ["-NoProfile", "-Command", ps]);
     const val = parseInt(text.trim().match(/\d+/)?.[0] ?? "0", 10);
     if (val > 0) return val;

@@ -4,13 +4,15 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import { IS_BUN, IS_DENO } from "../src/detect.ts";
-import { serve, upgradeWebSocket, type ServeHandle } from "../src/network.ts";
+import { serve, type ServeHandle, upgradeWebSocket } from "../src/network.ts";
 
 /**
  * 使用系统分配端口启动 serve，返回 handle 和实际端口
  */
 async function serveWithSystemPort(
-  handler: (req: Request) => Response | Promise<Response> | Promise<Response | undefined> | undefined,
+  handler: (
+    req: Request,
+  ) => Response | Promise<Response> | Promise<Response | undefined> | undefined,
 ): Promise<{ handle: ServeHandle; port: number }> {
   const handle = serve({ port: 0 }, handler);
   await new Promise((r) => setTimeout(r, 100));

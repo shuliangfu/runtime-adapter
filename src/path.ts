@@ -1,11 +1,25 @@
 /**
  * 路径操作 API 适配模块
- * 提供统一的路径操作接口，兼容 Deno 和 Bun
+ * 统一使用 node:path，兼容 Deno（Node 兼容层）与 Bun。
+ * Windows 兼容：所有返回路径的 API 统一转为正斜杠，便于跨平台断言与字符串比较。
  */
 
+import {
+  basename as nodeBasename,
+  dirname as nodeDirname,
+  extname as nodeExtname,
+  isAbsolute as nodeIsAbsolute,
+  join as nodeJoin,
+  normalize as nodeNormalize,
+  relative as nodeRelative,
+  resolve as nodeResolve,
+} from "node:path";
 import { pathToFileURL as nodePathToFileURL } from "node:url";
-import { IS_BUN } from "./detect.ts";
-import { getDeno, getProcess } from "./utils.ts";
+
+/** 将路径中的反斜杠统一为正斜杠（Windows 兼容，便于跨平台一致） */
+function toForwardSlash(path: string): string {
+  return path.replace(/\\/g, "/");
+}
 
 /**
  * 拼接路径
@@ -20,31 +34,7 @@ import { getDeno, getProcess } from "./utils.ts";
  * ```
  */
 export function join(...paths: string[]): string {
-  if (paths.length === 0) return ".";
-
-  // 过滤空字符串（空字符串被视为当前目录，在 join 中通常被忽略）
-  const filteredPaths = paths.filter((p) => p !== "");
-
-  if (filteredPaths.length === 0) return ".";
-  if (filteredPaths.length === 1) {
-    // 单个路径也需要规范化：Windows 反斜杠转正斜杠，合并多个斜杠
-    return filteredPaths[0].replace(/\\/g, "/").replace(/\/+/g, "/");
-  }
-
-  // 处理第一个路径（可能包含协议或绝对路径）
-  // Windows 兼容：先将反斜杠转为正斜杠
-  let result = filteredPaths[0].replace(/\\/g, "/").replace(/\/+$/, ""); // 移除末尾斜杠
-
-  // 拼接后续路径
-  for (let i = 1; i < filteredPaths.length; i++) {
-    const path = filteredPaths[i].replace(/\\/g, "/").replace(/^\/+/, ""); // 移除开头斜杠
-    if (path) {
-      result += `/${path}`;
-    }
-  }
-
-  // 规范化路径（合并多个斜杠）
-  return result.replace(/\/+/g, "/");
+  return toForwardSlash(nodeJoin(...paths));
 }
 
 /**
@@ -60,22 +50,7 @@ export function join(...paths: string[]): string {
  * ```
  */
 export function dirname(path: string): string {
-  // 处理根目录的特殊情况
-  if (path === "/" || path === "") {
-    return path === "/" ? "/" : ".";
-  }
-
-  // Windows 兼容：先将反斜杠转为正斜杠
-  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, ""); // 移除末尾斜杠
-  // 如果移除斜杠后变成空字符串，说明是根目录
-  if (normalized === "") {
-    return "/";
-  }
-
-  const lastSlash = normalized.lastIndexOf("/");
-  if (lastSlash === -1) return ".";
-  if (lastSlash === 0) return "/";
-  return normalized.substring(0, lastSlash);
+  return toForwardSlash(nodeDirname(path));
 }
 
 /**
@@ -94,18 +69,7 @@ export function dirname(path: string): string {
  * ```
  */
 export function basename(path: string, ext?: string): string {
-  // Windows 兼容：先将反斜杠转为正斜杠
-  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, ""); // 移除末尾斜杠
-  const lastSlash = normalized.lastIndexOf("/");
-  let name = lastSlash === -1
-    ? normalized
-    : normalized.substring(lastSlash + 1);
-
-  if (ext && name.endsWith(ext)) {
-    name = name.substring(0, name.length - ext.length);
-  }
-
-  return name;
+  return toForwardSlash(nodeBasename(path, ext));
 }
 
 /**
@@ -121,10 +85,7 @@ export function basename(path: string, ext?: string): string {
  * ```
  */
 export function extname(path: string): string {
-  const name = basename(path);
-  const lastDot = name.lastIndexOf(".");
-  if (lastDot === -1 || lastDot === 0) return "";
-  return name.substring(lastDot);
+  return toForwardSlash(nodeExtname(path));
 }
 
 /**
@@ -140,32 +101,7 @@ export function extname(path: string): string {
  * ```
  */
 export function resolve(...paths: string[]): string {
-  // 获取当前工作目录
-  let base = ".";
-  const deno = getDeno();
-  if (deno) {
-    try {
-      base = deno.cwd();
-    } catch {
-      base = ".";
-    }
-  } else if (IS_BUN) {
-    const process = getProcess();
-    base = process?.cwd() || ".";
-  }
-
-  // 如果第一个路径是绝对路径，直接使用
-  // Unix 绝对路径：以 / 开头
-  if (paths.length > 0 && paths[0].startsWith("/")) {
-    return join(...paths);
-  }
-
-  // Windows 绝对路径：如 C:\path 或 C:/path
-  if (paths.length > 0 && /^[A-Za-z]:[\\/]/.test(paths[0])) {
-    return join(...paths);
-  }
-
-  return join(base, ...paths);
+  return toForwardSlash(nodeResolve(...paths));
 }
 
 /**
@@ -182,58 +118,18 @@ export function resolve(...paths: string[]): string {
  * ```
  */
 export function relative(from: string, to: string): string {
-  // 规范化路径（Windows 兼容：反斜杠转正斜杠，移除末尾斜杠，处理多个斜杠）
-  const normalize = (path: string): string[] => {
-    return path.replace(/\\/g, "/").replace(/\/+$/, "").replace(/\/+/g, "/")
-      .split("/").filter(Boolean);
-  };
-
-  const fromParts = normalize(from);
-  const toParts = normalize(to);
-
-  // Windows 跨盘符：C:\a\b 与 D:\x\y 无法用相对路径表示，返回 to 的规范化路径
-  const fromDrive = fromParts[0];
-  const toDrive = toParts[0];
-  if (
-    fromDrive &&
-    toDrive &&
-    /^[A-Za-z]:$/.test(fromDrive) &&
-    /^[A-Za-z]:$/.test(toDrive) &&
-    fromDrive.toUpperCase() !== toDrive.toUpperCase()
-  ) {
-    return join(...toParts);
+  // 非 Windows 上 node 不识别盘符，relative("C:/a", "D:/b") 会得到 "../../../D:/b"；
+  // 为了一致地「跨盘符即返回目标路径」，这里先判断再交给 nodeRelative。
+  const fromNorm = toForwardSlash(from);
+  const toNorm = toForwardSlash(to);
+  const winAbs = /^([A-Za-z]):\//;
+  const fromDrive = fromNorm.match(winAbs)?.[1]?.toLowerCase();
+  const toDrive = toNorm.match(winAbs)?.[1]?.toLowerCase();
+  if (fromDrive && toDrive && fromDrive !== toDrive) {
+    return toNorm;
   }
-
-  // 找到共同的前缀
-  let commonLength = 0;
-  const minLength = Math.min(fromParts.length, toParts.length);
-  while (
-    commonLength < minLength &&
-    fromParts[commonLength] === toParts[commonLength]
-  ) {
-    commonLength++;
-  }
-
-  // 计算需要向上多少级
-  const upLevels = fromParts.length - commonLength;
-
-  // 构建相对路径
-  const relativeParts: string[] = [];
-
-  // 添加向上级别的路径（..）
-  for (let i = 0; i < upLevels; i++) {
-    relativeParts.push("..");
-  }
-
-  // 添加目标路径的剩余部分
-  relativeParts.push(...toParts.slice(commonLength));
-
-  // 如果没有相对路径，返回 "."
-  if (relativeParts.length === 0) {
-    return ".";
-  }
-
-  return join(...relativeParts);
+  const result = toForwardSlash(nodeRelative(from, to));
+  return result === "" ? "." : result;
 }
 
 /**
@@ -250,75 +146,7 @@ export function relative(from: string, to: string): string {
  * ```
  */
 export function normalize(path: string): string {
-  if (path === "" || path === ".") {
-    return ".";
-  }
-
-  // 处理 Windows 路径分隔符（转换为 Unix 风格）
-  let normalized = path.replace(/\\/g, "/");
-
-  // 判断是否为绝对路径
-  const isAbs = normalized.startsWith("/");
-  const isWindowsAbs = /^[A-Za-z]:/.test(normalized);
-
-  // 移除开头的斜杠（稍后恢复）
-  if (isAbs) {
-    normalized = normalized.substring(1);
-  }
-
-  // 处理 Windows 绝对路径（如 C:/path/to/file）
-  let windowsDrive = "";
-  if (isWindowsAbs) {
-    const match = normalized.match(/^([A-Za-z]:)(.*)$/);
-    if (match) {
-      windowsDrive = match[1];
-      normalized = match[2];
-    }
-  }
-
-  // 分割路径段
-  const parts = normalized.split("/").filter((part) => part !== "");
-
-  // 处理 . 和 ..
-  const resolved: string[] = [];
-  for (const part of parts) {
-    if (part === ".") {
-      // 忽略当前目录
-      continue;
-    } else if (part === "..") {
-      // 向上级目录
-      if (resolved.length > 0 && resolved[resolved.length - 1] !== "..") {
-        resolved.pop();
-      } else if (!isAbs && !isWindowsAbs) {
-        // 相对路径中保留 ..
-        resolved.push("..");
-      }
-    } else {
-      resolved.push(part);
-    }
-  }
-
-  // 重新组合路径
-  let result = resolved.join("/");
-
-  // 恢复绝对路径前缀
-  if (isAbs) {
-    result = "/" + result;
-  } else if (isWindowsAbs) {
-    result = windowsDrive + (result ? "/" + result : "");
-  }
-
-  // 处理根目录和空路径
-  if (result === "") {
-    return isAbs || isWindowsAbs
-      ? (isWindowsAbs ? windowsDrive + "/" : "/")
-      : ".";
-  }
-
-  // 规范化多个斜杠
-  result = result.replace(/\/+/g, "/");
-
-  return result;
+  return toForwardSlash(nodeNormalize(path));
 }
 
 /**
@@ -335,17 +163,8 @@ export function normalize(path: string): string {
  * ```
  */
 export function isAbsolute(path: string): boolean {
-  // Unix 绝对路径
-  if (path.startsWith("/")) {
-    return true;
-  }
-
-  // Windows 绝对路径（如 C:\path 或 C:/path）
-  if (/^[A-Za-z]:[\\/]/.test(path)) {
-    return true;
-  }
-
-  return false;
+  const normalized = toForwardSlash(path);
+  return nodeIsAbsolute(normalized) || /^[A-Za-z]:\//.test(normalized);
 }
 
 /**

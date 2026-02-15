@@ -3,13 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import {
-  arch,
-  execPath,
-  pid,
-  platform,
-  version,
-} from "../src/process-info.ts";
+import { arch, execPath, pid, platform, version } from "../src/process-info.ts";
 
 describe("进程信息 API", () => {
   describe("execPath", () => {

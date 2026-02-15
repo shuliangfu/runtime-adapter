@@ -53,7 +53,7 @@ describe("路径操作 API", () => {
     });
 
     it("应该处理相对路径", () => {
-      expect(join(".", "file.txt")).toBe("./file.txt");
+      expect(join(".", "file.txt")).toBe("file.txt");
       expect(join("..", "file.txt")).toBe("../file.txt");
     });
 

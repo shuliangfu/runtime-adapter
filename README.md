@@ -6,8 +6,8 @@
 English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![Tests](https://img.shields.io/badge/tests-267%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
 
 ---
 
@@ -127,21 +127,30 @@ bunx jsr add @dreamer/runtime-adapter
 
 ### Platform Support
 
-| Platform | Deno | Bun | Notes |
-| -------- | ---- | --- | ----- |
-| **Linux** | ✅ | ✅ | Full support |
-| **macOS** | ✅ | ✅ | Full support |
-| **Windows** | ✅ | ✅ | Full support; some APIs have platform differences (see below) |
+| Platform    | Deno | Bun | Notes                                                         |
+| ----------- | ---- | --- | ------------------------------------------------------------- |
+| **Linux**   | ✅   | ✅  | Full support                                                  |
+| **macOS**   | ✅   | ✅  | Full support                                                  |
+| **Windows** | ✅   | ✅  | Full support; some APIs have platform differences (see below) |
 
 **Windows platform notes**:
 
-- **Path API**: Supports `C:\` style absolute paths; backslashes are normalized to forward slashes; `relative()` returns target path when across drives (e.g. `C:\` to `D:\`)
-- **Signal API**: SIGTERM listener is silently skipped on Windows (Deno); Bun works normally
-- **Terminal API**: `setStdinRaw` may return `false` on Windows (Deno throws "The operation is not supported", caught and fallback)
-- **System Info API**: `getLoadAverage()` returns `undefined` on Windows; memory/disk uses `wmic`
-- **Temp directory**: Bun uses `os.tmpdir()` (e.g. `C:\Users\xxx\AppData\Local\Temp`); Deno uses native API
-- **File API**: `chown` throws EPERM on Windows (not supported); `symlink` requires admin or Developer Mode
-- **System Info**: Uses `wmic` first; falls back to PowerShell `Get-CimInstance` when wmic is unavailable (e.g. Windows 11 24H2+)
+- **Path API**: `join` uses node:path semantics, result normalized to forward
+  slashes (e.g. `join(".", "file.txt")` → `"file.txt"`); supports `C:\` style
+  absolute paths; `relative()` returns target path when across drives (e.g.
+  `C:\` to `D:\`)
+- **Signal API**: SIGTERM listener is silently skipped on Windows (Deno); Bun
+  works normally
+- **Terminal API**: `setStdinRaw` may return `false` on Windows (Deno throws
+  "The operation is not supported", caught and fallback)
+- **System Info API**: `getLoadAverage()` returns `undefined` on Windows;
+  memory/disk uses `wmic`
+- **Temp directory**: Bun uses `os.tmpdir()` (e.g.
+  `C:\Users\xxx\AppData\Local\Temp`); Deno uses native API
+- **File API**: `chown` throws EPERM on Windows (not supported); `symlink`
+  requires admin or Developer Mode
+- **System Info**: Uses `wmic` first; falls back to PowerShell `Get-CimInstance`
+  when wmic is unavailable (e.g. Windows 11 24H2+)
 
 For detailed analysis, see [WIN_COMPAT.md](./docs/en-US/WIN_COMPAT.md).
 
@@ -632,8 +641,7 @@ const sha512 = hashFileSync("./file.txt", "SHA-512");
 const md5 = hashSync("Hello, World!", "MD5");
 ```
 
-> 📌 **Note**: Sync hash requires `node:crypto`. Deno needs Node compat; Bun
-> supports natively.
+> 📌 **Note**: Hash API uses `node:crypto`. Supported on both Deno and Bun.
 
 ### System Info
 
@@ -1011,13 +1019,13 @@ cron(
 
 ### Process Info API
 
-| API          | Description        | Returns                                         |
-| ------------ | ------------------ | ----------------------------------------------- |
+| API          | Description             | Returns                                                 |
+| ------------ | ----------------------- | ------------------------------------------------------- |
 | `execPath()` | Runtime executable path | `string` (e.g. `/usr/bin/deno` or `C:\path\to\bun.exe`) |
-| `pid()`      | Current process ID | `number`                                        |
-| `platform()` | OS platform        | `"linux" \| "darwin" \| "windows" \| "unknown"` |
-| `arch()`     | CPU architecture   | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
-| `version()`  | Runtime version    | `RuntimeVersion`                                |
+| `pid()`      | Current process ID      | `number`                                                |
+| `platform()` | OS platform             | `"linux" \| "darwin" \| "windows" \| "unknown"`         |
+| `arch()`     | CPU architecture        | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"`         |
+| `version()`  | Runtime version         | `RuntimeVersion`                                        |
 
 **RuntimeVersion**:
 
@@ -1062,6 +1070,9 @@ interface RuntimeVersion {
 | `isAbsolute(path)`     | Is absolute         | `boolean` |
 | `isRelative(path)`     | Is relative         | `boolean` |
 
+> 📌 **Note**: `join` follows node:path (e.g. `join(".", "file.txt")` returns
+> `"file.txt"`). All path results use forward slashes.
+
 ### File Hash API
 
 #### File Hash API - Async
@@ -1085,8 +1096,7 @@ interface RuntimeVersion {
 - `"SHA-1"`
 - `"MD5"`
 
-> 📌 Sync hash requires `node:crypto`. Deno needs Node compat; Bun supports
-> natively.
+> 📌 Hash API uses `node:crypto`. Supported on both Deno and Bun.
 
 ### System Info API
 
@@ -1164,7 +1174,7 @@ bun test tests/
 
 See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
-- ✅ 266 tests passed
+- ✅ 267 tests passed
 - ✅ 17 modules covered
 - ✅ Deno and Bun compatibility
 - ✅ Sync and async API tests
@@ -1190,9 +1200,11 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.5] - 2026-02-10
+### [1.0.6] - 2026-02-16
 
-**Changed**: CI remove Bun test jobs; restore package.json to gitignore; reorder jobs (test-windows last). See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Changed**: path.join uses node:path semantics; hash API unified to node:crypto
+(Deno/Bun); docs updated (path/hash notes, 267 tests); license updated to Apache
+2.0. See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 
@@ -1204,7 +1216,7 @@ Issues and Pull Requests welcome!
 
 ## 📄 License
 
-MIT License - see [LICENSE.md](./LICENSE.md)
+Apache License 2.0 - see [LICENSE](./LICENSE)
 
 ---
 
