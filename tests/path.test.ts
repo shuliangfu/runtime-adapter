@@ -213,7 +213,12 @@ describe("路径操作 API", () => {
 
     it("应该处理根路径", () => {
       const result = resolve("/", "file.txt");
-      expect(result).toBe("/file.txt");
+      // Unix: "/" 为根，得 "/file.txt"；Windows: "/" 为当前盘符根，得 "D:/file.txt" 等
+      if (platform() === "windows") {
+        expect(result).toMatch(/^[A-Za-z]:\/file\.txt$/);
+      } else {
+        expect(result).toBe("/file.txt");
+      }
     });
   });
 
