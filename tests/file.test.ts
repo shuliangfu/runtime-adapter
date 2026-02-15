@@ -486,7 +486,9 @@ describe("文件系统 API", () => {
         // 使用当前用户 ID（如果可用）
         // 注意：在某些系统上可能需要 root 权限
         // 使用 globalThis 访问 process，兼容 Deno/Bun 类型检查
-        const proc = (globalThis as { process?: { getuid?: () => number; getgid?: () => number } }).process;
+        const proc = (globalThis as {
+          process?: { getuid?: () => number; getgid?: () => number };
+        }).process;
         const currentUid = proc?.getuid?.() || 1000;
         const currentGid = proc?.getgid?.() || 1000;
         await chown(testFile, currentUid, currentGid);
@@ -698,7 +700,10 @@ describe("文件系统 API", () => {
   describe("watchFs", () => {
     it("应该监控目录并收到文件创建事件", async () => {
       await mkdir(TEST_DIR, { recursive: true });
-      const watchDir = await makeTempDir({ prefix: "test-watch-", dir: TEST_DIR });
+      const watchDir = await makeTempDir({
+        prefix: "test-watch-",
+        dir: TEST_DIR,
+      });
       try {
         const watcher = watchFs(watchDir);
         const events: Array<{ kind: string; paths: string[] }> = [];
@@ -745,7 +750,10 @@ describe("文件系统 API", () => {
 
     it("应该支持 close 方法", async () => {
       await mkdir(TEST_DIR, { recursive: true });
-      const watchDir = await makeTempDir({ prefix: "test-watch-close-", dir: TEST_DIR });
+      const watchDir = await makeTempDir({
+        prefix: "test-watch-close-",
+        dir: TEST_DIR,
+      });
       try {
         const watcher = watchFs(watchDir);
         expect(() => watcher.close()).not.toThrow();

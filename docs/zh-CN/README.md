@@ -5,8 +5,8 @@
 [English](../../README.md) | 中文 (Chinese)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)](./TEST_REPORT.md)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../../LICENSE)
+[![Tests](https://img.shields.io/badge/tests-267%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -76,7 +76,7 @@
 
 ## 🎨 设计原则
 
-**所有 @dreamer/* 包都遵循以下原则**：
+__所有 @dreamer/_ 包都遵循以下原则_*：
 
 - **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
@@ -126,21 +126,28 @@ bunx jsr add @dreamer/runtime-adapter
 
 ### 平台支持
 
-| 平台       | Deno | Bun | 说明                                 |
-| ---------- | ---- | --- | ------------------------------------ |
-| **Linux**  | ✅   | ✅  | 完全支持                             |
-| **macOS**  | ✅   | ✅  | 完全支持                             |
-| **Windows**| ✅   | ✅  | 完全支持；部分 API 有平台差异（见下方） |
+| 平台        | Deno | Bun | 说明                                    |
+| ----------- | ---- | --- | --------------------------------------- |
+| **Linux**   | ✅   | ✅  | 完全支持                                |
+| **macOS**   | ✅   | ✅  | 完全支持                                |
+| **Windows** | ✅   | ✅  | 完全支持；部分 API 有平台差异（见下方） |
 
 **Windows 平台说明**：
 
-- **Path API**：支持 `C:\` 风格绝对路径，反斜杠自动规范化为正斜杠；跨盘符时 `relative()` 返回目标路径
+- **Path API**：`join` 遵循 node:path 语义，结果统一为正斜杠（如
+  `join(".", "file.txt")` → `"file.txt"`）；支持 `C:\` 风格绝对路径；跨盘符时
+  `relative()` 返回目标路径
 - **Signal API**：Windows 上 SIGTERM 在 Deno 中不注册（静默跳过），Bun 正常
-- **Terminal API**：`setStdinRaw` 在 Windows 可能返回 `false`（Deno 抛出 "The operation is not supported" 时捕获并回退）
-- **System Info API**：`getLoadAverage()` 在 Windows 返回 `undefined`；内存/磁盘使用 `wmic` 获取
-- **Temp 目录**：Bun 使用 `os.tmpdir()`（如 `C:\Users\xxx\AppData\Local\Temp`），Deno 使用原生 API
-- **File API**：`chown` 在 Windows 上会抛出 EPERM（不支持）；`symlink` 需管理员或开发者模式
-- **System Info**：优先使用 `wmic`，不可用时自动回退到 PowerShell `Get-CimInstance`（如 Windows 11 24H2+）
+- **Terminal API**：`setStdinRaw` 在 Windows 可能返回 `false`（Deno 抛出 "The
+  operation is not supported" 时捕获并回退）
+- **System Info API**：`getLoadAverage()` 在 Windows 返回
+  `undefined`；内存/磁盘使用 `wmic` 获取
+- **Temp 目录**：Bun 使用 `os.tmpdir()`（如
+  `C:\Users\xxx\AppData\Local\Temp`），Deno 使用原生 API
+- **File API**：`chown` 在 Windows 上会抛出 EPERM（不支持）；`symlink`
+  需管理员或开发者模式
+- **System Info**：优先使用 `wmic`，不可用时自动回退到 PowerShell
+  `Get-CimInstance`（如 Windows 11 24H2+）
 
 详细分析见 [WIN_COMPAT.md](./WIN_COMPAT.md)。
 
@@ -646,8 +653,7 @@ const sha512 = hashFileSync("./file.txt", "SHA-512");
 const md5 = hashSync("Hello, World!", "MD5");
 ```
 
-> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用
-> Node.js 兼容模式，Bun 原生支持。
+> 📌 **注意**：哈希 API 使用 `node:crypto`，Deno 与 Bun 均支持。
 
 ### 系统信息
 
@@ -1032,13 +1038,13 @@ cron(
 
 ### 进程信息 API
 
-| API          | 说明                     | 返回值                                          |
-| ------------ | ------------------------ | ----------------------------------------------- |
-| `execPath()` | 运行时可执行文件路径     | `string`（如 `/usr/bin/deno` 或 `C:\path\to\bun.exe`） |
-| `pid()`      | 获取当前进程 ID          | `number`                                        |
-| `platform()` | 获取操作系统平台         | `"linux" \| "darwin" \| "windows" \| "unknown"` |
-| `arch()`     | 获取 CPU 架构            | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"` |
-| `version()`  | 获取运行时版本信息       | `RuntimeVersion`                                |
+| API          | 说明                 | 返回值                                                 |
+| ------------ | -------------------- | ------------------------------------------------------ |
+| `execPath()` | 运行时可执行文件路径 | `string`（如 `/usr/bin/deno` 或 `C:\path\to\bun.exe`） |
+| `pid()`      | 获取当前进程 ID      | `number`                                               |
+| `platform()` | 获取操作系统平台     | `"linux" \| "darwin" \| "windows" \| "unknown"`        |
+| `arch()`     | 获取 CPU 架构        | `"x86_64" \| "aarch64" \| "arm64" \| "unknown"`        |
+| `version()`  | 获取运行时版本信息   | `RuntimeVersion`                                       |
 
 **RuntimeVersion 接口：**
 
@@ -1083,6 +1089,9 @@ interface RuntimeVersion {
 | `isAbsolute(path: string)`             | 判断是否为绝对路径 | `boolean` |
 | `isRelative(path: string)`             | 判断是否为相对路径 | `boolean` |
 
+> 📌 **注意**：`join` 遵循 node:path 语义（如 `join(".", "file.txt")` 返回
+> `"file.txt"`）。所有路径结果统一为正斜杠。
+
 ### 文件哈希 API
 
 #### 文件哈希 API - 异步
@@ -1106,8 +1115,7 @@ interface RuntimeVersion {
 - `"SHA-1"`
 - `"MD5"`
 
-> 📌 **注意**：同步哈希计算需要运行时支持 `node:crypto` 模块。Deno 需要启用
-> Node.js 兼容模式，Bun 原生支持。
+> 📌 **注意**：哈希 API 使用 `node:crypto`，Deno 与 Bun 均支持。
 
 ### 系统信息 API
 
@@ -1237,7 +1245,7 @@ bun test tests/
 
 测试覆盖包括：
 
-- ✅ 266 个测试用例全部通过
+- ✅ 267 个测试用例全部通过
 - ✅ 17 个功能模块完整测试
 - ✅ Deno 和 Bun 跨运行时兼容性验证
 - ✅ 同步和异步 API 完整测试
@@ -1275,9 +1283,11 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.5] - 2026-02-10
+### [1.0.6] - 2026-02-16
 
-**变更**：CI 移除 Bun 测试 job；package.json 恢复至 gitignore；调整 job 顺序（test-windows 放最后）。完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
+**变更**：path.join 采用 node:path 语义；hash API 统一为
+node:crypto（Deno/Bun）；文档更新（path/hash 说明，267 测试）；许可已更换为
+Apache 2.0。完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 
@@ -1289,7 +1299,7 @@ bun test tests/
 
 ## 📄 许可证
 
-MIT License - 详见 [LICENSE.md](../../LICENSE.md)
+Apache License 2.0 - 详见 [LICENSE](../../LICENSE)
 
 ---
 

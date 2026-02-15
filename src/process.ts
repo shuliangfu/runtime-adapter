@@ -198,8 +198,14 @@ export function createCommand(
           cwd: options?.cwd,
           env: options?.env,
           stdin: mapBunStdio(options?.stdin) as "inherit" | "pipe" | undefined,
-          stdout: mapBunStdio(options?.stdout) as "inherit" | "pipe" | undefined,
-          stderr: mapBunStdio(options?.stderr) as "inherit" | "pipe" | undefined,
+          stdout: mapBunStdio(options?.stdout) as
+            | "inherit"
+            | "pipe"
+            | undefined,
+          stderr: mapBunStdio(options?.stderr) as
+            | "inherit"
+            | "pipe"
+            | undefined,
         });
 
         return {
@@ -249,8 +255,14 @@ export function createCommand(
           cwd: options?.cwd,
           env: options?.env,
           stdin: mapBunStdio(options?.stdin) as "inherit" | "pipe" | undefined,
-          stdout: mapBunStdio(options?.stdout) as "inherit" | "pipe" | undefined,
-          stderr: mapBunStdio(options?.stderr) as "inherit" | "pipe" | undefined,
+          stdout: mapBunStdio(options?.stdout) as
+            | "inherit"
+            | "pipe"
+            | undefined,
+          stderr: mapBunStdio(options?.stderr) as
+            | "inherit"
+            | "pipe"
+            | undefined,
         });
 
         const exitCode = await proc.exited;

@@ -13,34 +13,34 @@
 
 ### Overall Statistics
 
-- **Total tests**: 266
-- **Passed**: 266 ✅
+- **Total tests**: 267
+- **Passed**: 267 ✅
 - **Failed**: 0
 - **Pass rate**: 100% ✅
 - **Test execution time**: ~51 seconds
 
 ### Test File Statistics
 
-| Test File               | Test Count | Status        | Description                                           |
-| ----------------------- | ---------- | ------------- | ----------------------------------------------------- |
-| `detect.test.ts`        | 7          | ✅ All passed | Runtime detection                                     |
-| `file.test.ts`          | 35         | ✅ All passed | Async file system API (open, create, watchFs, ensureDir) |
-| `file-sync.test.ts`     | 21         | ✅ All passed | Sync file system API (includes ensureDirSync)          |
-| `file-ext.test.ts`      | 4          | ✅ All passed | File extension utilities                              |
-| `network.test.ts`       | 5          | ✅ All passed | Network API (HTTP server)                             |
-| `websocket.test.ts`     | 6          | ✅ All passed | WebSocket API (upgradeWebSocket)                       |
-| `websocket-test.test.ts`| 36         | ✅ All passed | WebSocket Server (rooms, events, heartbeat)            |
-| `env.test.ts`           | 10         | ✅ All passed | Environment variable API                             |
-| `process.test.ts`       | 12         | ✅ All passed | Process/command API (includes sync command execution) |
-| `process-info.test.ts`  | 5          | ✅ All passed | Process info API (includes execPath)                  |
-| `process-utils.test.ts` | 2          | ✅ All passed | Process utils API                                     |
-| `signal.test.ts`        | 2          | ✅ All passed | Signal handling API                                   |
-| `terminal.test.ts`      | 25         | ✅ All passed | Terminal API                                          |
-| `cron.test.ts`          | 4          | ✅ All passed | Cron/scheduled task API                               |
-| `path.test.ts`          | 52         | ✅ All passed | Path operation API (includes cross-drive relative)     |
-| `hash.test.ts`          | 10         | ✅ All passed | File hash API (includes sync hash)                    |
-| `system-info.test.ts`   | 16         | ✅ All passed | System info API (includes sync version)               |
-| `mod.test.ts`           | 14         | ✅ All passed | Module exports (includes utils: getDeno, getBun, getProcess, getBuffer) |
+| Test File                | Test Count | Status        | Description                                                             |
+| ------------------------ | ---------- | ------------- | ----------------------------------------------------------------------- |
+| `detect.test.ts`         | 7          | ✅ All passed | Runtime detection                                                       |
+| `file.test.ts`           | 35         | ✅ All passed | Async file system API (open, create, watchFs, ensureDir)                |
+| `file-sync.test.ts`      | 21         | ✅ All passed | Sync file system API (includes ensureDirSync)                           |
+| `file-ext.test.ts`       | 4          | ✅ All passed | File extension utilities                                                |
+| `network.test.ts`        | 5          | ✅ All passed | Network API (HTTP server)                                               |
+| `websocket.test.ts`      | 6          | ✅ All passed | WebSocket API (upgradeWebSocket)                                        |
+| `websocket-test.test.ts` | 36         | ✅ All passed | WebSocket Server (rooms, events, heartbeat)                             |
+| `env.test.ts`            | 10         | ✅ All passed | Environment variable API                                                |
+| `process.test.ts`        | 12         | ✅ All passed | Process/command API (includes sync command execution)                   |
+| `process-info.test.ts`   | 5          | ✅ All passed | Process info API (includes execPath)                                    |
+| `process-utils.test.ts`  | 2          | ✅ All passed | Process utils API                                                       |
+| `signal.test.ts`         | 2          | ✅ All passed | Signal handling API                                                     |
+| `terminal.test.ts`       | 25         | ✅ All passed | Terminal API                                                            |
+| `cron.test.ts`           | 4          | ✅ All passed | Cron/scheduled task API                                                 |
+| `path.test.ts`           | 52         | ✅ All passed | Path operation API (includes cross-drive relative)                      |
+| `hash.test.ts`           | 11         | ✅ All passed | File hash API (includes sync hash)                                      |
+| `system-info.test.ts`    | 16         | ✅ All passed | System info API (includes sync version)                                 |
+| `mod.test.ts`            | 14         | ✅ All passed | Module exports (includes utils: getDeno, getBun, getProcess, getBuffer) |
 
 ## Feature Test Details
 
@@ -360,12 +360,12 @@
   - Sync compute file hash
   - Produce same hash for same content
 
-**Test result**: All 10 tests passed
+**Test result**: All 11 tests passed
 
 **Implementation characteristics**:
 
-- ✅ Cross-runtime compatibility: Uses `node:crypto` module (both Deno and Bun
-  support)
+- ✅ Cross-runtime compatibility: Hash API uses `node:crypto` (Deno and Bun both
+  support static import)
 - ✅ Multiple algorithm support: MD5, SHA-1, SHA-256, SHA-512
 - ✅ Sync and async versions: Meet different use case requirements
 
@@ -578,7 +578,7 @@ Added directory ensure functionality, similar to `mkdir -p` command:
 
 ### ✅ Test Pass Rate: 100%
 
-All 266 test cases passed, including:
+All 267 test cases passed, including:
 
 1. **Core features**: Runtime detection, file system, network, WebSocket,
    environment variables, process management
@@ -611,4 +611,6 @@ All 266 test cases passed, including:
 
 ---
 
-**Test report generated**: 2026-02-07 | **Test framework**: @dreamer/test@^1.0.0-beta.12 | **Test environment**: Bun 1.3.5, Deno 2.6.4 | **Total tests**: 266 | **Pass rate**: 100% ✅
+**Test report generated**: 2026-02-07 | **Test framework**:
+@dreamer/test@^1.0.0-beta.12 | **Test environment**: Bun 1.3.5, Deno 2.6.4 |
+**Total tests**: 267 | **Pass rate**: 100% ✅

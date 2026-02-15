@@ -10,11 +10,28 @@ and this project adheres to
 
 ---
 
+## [1.0.6] - 2026-02-16
+
+### Changed
+
+- **path.join**: Use node:path semantics only; result normalized to forward
+  slashes (e.g. `join(".", "file.txt")` returns `"file.txt"`). Removed
+  special-case that prepended `"./"`.
+- **hash API**: Unified to use `node:crypto` for both async and sync; Deno and
+  Bun both support static import. Removed `IS_DENO`/`IS_BUN` and `require`
+  fallback.
+- **Docs**: Path API note (join semantics, forward slashes); Hash API note
+  (node:crypto, Deno/Bun); TEST_REPORT hash count 10→11, total tests 266→267.
+- **License**: Project license updated to Apache 2.0.
+
+---
+
 ## [1.0.5] - 2026-02-10
 
 ### Changed
 
-- **CI**: Remove Bun test jobs (JSR dependency resolution issues in CI); CI runs Deno-only on Linux, macOS, Windows
+- **CI**: Remove Bun test jobs (JSR dependency resolution issues in CI); CI runs
+  Deno-only on Linux, macOS, Windows
 - **CI**: Restore package.json to .gitignore (no longer committed)
 - **CI**: Reorder jobs - put test-windows last (Linux → macOS → Windows)
 
@@ -24,11 +41,14 @@ and this project adheres to
 
 ### Fixed
 
-- **pathToFileUrl test on Windows**: Platform-specific assertion for POSIX absolute path (`/home/user/config.ts`); on Windows, Node's pathToFileURL resolves it as current-drive path (e.g. `file:///D:/home/user/config.ts`)
+- **pathToFileUrl test on Windows**: Platform-specific assertion for POSIX
+  absolute path (`/home/user/config.ts`); on Windows, Node's pathToFileURL
+  resolves it as current-drive path (e.g. `file:///D:/home/user/config.ts`)
 
 ### Changed
 
-- **WebSocket tests**: Use system-assigned port (`port: 0`) instead of fixed port to avoid AddrInUse conflicts
+- **WebSocket tests**: Use system-assigned port (`port: 0`) instead of fixed
+  port to avoid AddrInUse conflicts
 
 ---
 
@@ -36,17 +56,24 @@ and this project adheres to
 
 ### Added
 
-- **CI workflow**: GitHub Actions CI on Linux, macOS, Windows (deno check, lint, test)
+- **CI workflow**: GitHub Actions CI on Linux, macOS, Windows (deno check, lint,
+  test)
 
 ### Fixed
 
 - **Windows chmod**: Wrap chmod in try-catch (Windows may not support)
 - **Windows chdir**: Path assertion normalized for backslash
-- **Windows path resolve**: Platform-aware assertions for Unix/Windows path formats
-- **Windows process**: `cd` requires `cmd /c cd` (shell built-in); use `sort`/`cat` for spawn; `set`/`printenv` for env; `cmd /c cd` for cwd
-- **Deno check**: crypto-comparison/performance use `(globalThis as any).require`; file.test use `globalThis.process` for getuid/getgid
-- **watchFs test**: Accept both `create` and `modify` events (Bun/Node fs.watch may report modify)
-- **WebSocket tests**: Try-catch around `ws.send()`; `cmd /c cd` for Windows; port counter + delay to avoid AddrInUse
+- **Windows path resolve**: Platform-aware assertions for Unix/Windows path
+  formats
+- **Windows process**: `cd` requires `cmd /c cd` (shell built-in); use
+  `sort`/`cat` for spawn; `set`/`printenv` for env; `cmd /c cd` for cwd
+- **Deno check**: crypto-comparison/performance use
+  `(globalThis as any).require`; file.test use `globalThis.process` for
+  getuid/getgid
+- **watchFs test**: Accept both `create` and `modify` events (Bun/Node fs.watch
+  may report modify)
+- **WebSocket tests**: Try-catch around `ws.send()`; `cmd /c cd` for Windows;
+  port counter + delay to avoid AddrInUse
 
 ---
 
@@ -54,13 +81,18 @@ and this project adheres to
 
 ### Fixed
 
-- **Bun createCommand stdin**: Wrapped Bun FileSink to Web Streams WritableStream so `proc.stdin.getWriter()` works (Bun returns FileSink with write/end, not getWriter)
-- **Bun createCommand stdio**: Map `"null"` to `"ignore"` and `"piped"` to `"pipe"` for Bun spawn options (Bun does not accept string `"null"`)
-- **Bun export resolution**: Explicit `execPath` export in mod.ts for Bun workspace/local dependency resolution
+- **Bun createCommand stdin**: Wrapped Bun FileSink to Web Streams
+  WritableStream so `proc.stdin.getWriter()` works (Bun returns FileSink with
+  write/end, not getWriter)
+- **Bun createCommand stdio**: Map `"null"` to `"ignore"` and `"piped"` to
+  `"pipe"` for Bun spawn options (Bun does not accept string `"null"`)
+- **Bun export resolution**: Explicit `execPath` export in mod.ts for Bun
+  workspace/local dependency resolution
 
 ### Added
 
-- **package.json exports**: Added `exports` field for Bun workspace and local file: dependency resolution
+- **package.json exports**: Added `exports` field for Bun workspace and local
+  file: dependency resolution
 
 ---
 
@@ -68,21 +100,30 @@ and this project adheres to
 
 ### Added
 
-- **execPath**: Process info API now exports `execPath()` returning runtime executable path
-- **Windows compatibility docs**: Added `WINDOWS_COMPATIBILITY_ANALYSIS.md` (EN) and `WINDOWS_COMPATIBILITY_ANALYSIS-zh.md` (ZH)
+- **execPath**: Process info API now exports `execPath()` returning runtime
+  executable path
+- **Windows compatibility docs**: Added `WINDOWS_COMPATIBILITY_ANALYSIS.md` (EN)
+  and `WINDOWS_COMPATIBILITY_ANALYSIS-zh.md` (ZH)
 
 ### Fixed
 
-- **path.relative() cross-drive**: On Windows, `relative("C:/a/b", "D:/x/y")` now correctly returns `D:/x/y` (matches Node.js)
-- **process-info execPath**: Fixed Deno/Bun type assertions for `execPath` type errors
-- **Tests**: open/create/watchFs BadResource errors when stream closes resource; watchFs timer leak (clearTimeout)
+- **path.relative() cross-drive**: On Windows, `relative("C:/a/b", "D:/x/y")`
+  now correctly returns `D:/x/y` (matches Node.js)
+- **process-info execPath**: Fixed Deno/Bun type assertions for `execPath` type
+  errors
+- **Tests**: open/create/watchFs BadResource errors when stream closes resource;
+  watchFs timer leak (clearTimeout)
 
 ### Changed
 
-- **System Info wmic fallback**: `getMemoryInfo`, `getDiskUsage`, and CPU core count now fall back to PowerShell `Get-CimInstance` when wmic is unavailable (e.g. Windows 11 24H2+)
-- **README**: Added platform support table (Linux/macOS/Windows) and Windows platform notes
+- **System Info wmic fallback**: `getMemoryInfo`, `getDiskUsage`, and CPU core
+  count now fall back to PowerShell `Get-CimInstance` when wmic is unavailable
+  (e.g. Windows 11 24H2+)
+- **README**: Added platform support table (Linux/macOS/Windows) and Windows
+  platform notes
 - **Platform support**: Added `execPath()` to process info API table in README
-- **Docs**: README/README-zh MD024 duplicate heading fixes; TEST_REPORT updated (266 tests); removed TEST_COVERAGE_ANALYSIS.md
+- **Docs**: README/README-zh MD024 duplicate heading fixes; TEST_REPORT updated
+  (266 tests); removed TEST_COVERAGE_ANALYSIS.md
 
 ---
 
