@@ -1283,11 +1283,10 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.6] - 2026-02-16
+### [1.0.7] - 2026-02-16
 
-**变更**：path.join 采用 node:path 语义；hash API 统一为
-node:crypto（Deno/Bun）；文档更新（path/hash 说明，267 测试）；许可已更换为
-Apache 2.0。完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
+**修复**：path resolve 根路径测试在 Windows 上改为按平台断言。完整历史详见
+[CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 

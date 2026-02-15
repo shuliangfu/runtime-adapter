@@ -10,6 +10,16 @@ and this project adheres to
 
 ---
 
+## [1.0.7] - 2026-02-16
+
+### Fixed
+
+- **path resolve root path test on Windows**: Use platform-aware assertion; on
+  Windows `resolve("/", "file.txt")` returns current drive root (e.g.
+  `D:/file.txt`), not `/file.txt`.
+
+---
+
 ## [1.0.6] - 2026-02-16
 
 ### Changed

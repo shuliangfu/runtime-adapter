@@ -1200,11 +1200,10 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.6] - 2026-02-16
+### [1.0.7] - 2026-02-16
 
-**Changed**: path.join uses node:path semantics; hash API unified to node:crypto
-(Deno/Bun); docs updated (path/hash notes, 267 tests); license updated to Apache
-2.0. See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Fixed**: path resolve root path test on Windows (platform-aware assertion).
+See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 
