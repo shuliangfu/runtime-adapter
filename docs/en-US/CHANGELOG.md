@@ -10,6 +10,16 @@ and this project adheres to
 
 ---
 
+## [1.0.8] - 2026-02-17
+
+### Added
+
+- **SpawnedProcess.unref()**: Allows parent process to exit after awaiting child
+  status (Deno keeps child ref by default; call `unref()` after
+  `await child.status` so the CLI can exit). Bun implementation is a no-op.
+
+---
+
 ## [1.0.7] - 2026-02-16
 
 ### Fixed

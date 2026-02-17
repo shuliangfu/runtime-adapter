@@ -68,6 +68,9 @@ export interface CommandOutput {
 
 /**
  * 已启动的子进程句柄
+ *
+ * 在 Deno 下，子进程默认会 ref 事件循环，导致父进程在 handler 返回后仍不退出。
+ * 等待 status 后若不再需要子进程，应调用 unref()，以便父进程能正常退出。
  */
 export interface SpawnedProcess {
   readonly stdin: WritableStream<Uint8Array> | null;
@@ -78,6 +81,11 @@ export interface SpawnedProcess {
   readonly status: Promise<CommandOutput>;
   /** 终止进程 */
   kill(signo?: number): void;
+  /**
+   * 取消子进程对事件循环的引用，允许父进程在子进程已退出后正常退出。
+   * Deno 下必须调用，否则父进程会挂起；Bun 下为 no-op。
+   */
+  unref(): void;
 }
 
 /**
@@ -164,6 +172,10 @@ export function createCommand(
           kill(signo?: number) {
             child.kill(signo);
           },
+          unref() {
+            const c = child as unknown as { unref(): void };
+            if (typeof c.unref === "function") c.unref();
+          },
         };
       },
 
@@ -246,6 +258,8 @@ export function createCommand(
           kill(signo?: number) {
             proc.kill(signo);
           },
+          // Bun 下子进程不会阻止父进程退出，保持接口一致即可
+          unref() {},
         };
       },
 

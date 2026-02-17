@@ -9,6 +9,16 @@
 
 ---
 
+## [1.0.8] - 2026-02-17
+
+### 新增
+
+- **SpawnedProcess.unref()**：等待子进程 status 后允许父进程退出（Deno 默认会
+  ref 子进程，在 `await child.status` 后调用 `unref()` 以便 CLI
+  能正常退出）。Bun 下为 no-op。
+
+---
+
 ## [1.0.7] - 2026-02-16
 
 ### 修复
