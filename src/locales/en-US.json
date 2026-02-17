@@ -1,0 +1,20 @@
+{
+  "error": {
+    "unsupportedRuntime": "Unsupported runtime environment",
+    "commandFailed": "Command execution failed: {command} {args}\n{errorMsg}",
+    "pathNotDirectory": "Path {path} is not a directory",
+    "directoryNotExist": "Directory does not exist: {path}",
+    "destPathNotDirectory": "Destination path {destDir} is not a directory",
+    "sourceNotFileOrDir": "Source path exists but is not a file or directory: {oldPath}",
+    "sourcePathNotExist": "Source path does not exist: {oldPath}",
+    "renameFailed": "Rename failed: source path does not exist \"{oldPath}\" or target directory does not exist \"{newPathDir}\"",
+    "bunChdirNotSupported": "chdir is not supported in Bun environment",
+    "bunWsNeedServe": "WebSocket upgrade in Bun requires calling serve() first. Ensure serve() is called before upgradeWebSocket().",
+    "wsUpgradeFailed": "WebSocket upgrade failed",
+    "wsAdapterMissingAddEventListener": "WebSocketAdapter creation failed: missing addEventListener method",
+    "onlyBunOrDeno": "Only Bun or Deno can be used",
+    "stdoutUnavailable": "Standard output is not available",
+    "stderrUnavailable": "Standard error output is not available"
+  },
+  "cron": { "taskExecutionFailed": "Cron task execution failed:" }
+}

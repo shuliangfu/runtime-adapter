@@ -1200,9 +1200,10 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.8] - 2026-02-17
+### [1.0.9] - 2026-02-18
 
-**Added**: SpawnedProcess.unref() so parent can exit after spawn (Deno). See
+**Added**: i18n for error messages (en-US/zh-CN); exports `$t`,
+`initRuntimeAdapterI18n`, `Locale`. See
 [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---

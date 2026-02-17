@@ -37,6 +37,11 @@
  * ```
  */
 
+import { initRuntimeAdapterI18n } from "./i18n.ts";
+
+// 入口处初始化 i18n，供错误信息等文案使用
+initRuntimeAdapterI18n();
+
 // 导出运行时检测
 export * from "./detect.ts";
 
@@ -83,3 +88,6 @@ export * from "./path.ts";
 export * from "./system-info.ts";
 
 export * from "./utils.ts";
+
+// 导出 i18n（错误信息翻译与 locale）
+export { $t, initRuntimeAdapterI18n, type Locale } from "./i18n.ts";

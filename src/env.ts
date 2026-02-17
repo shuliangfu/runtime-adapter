@@ -5,6 +5,7 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
+import { $t } from "./i18n.ts";
 
 /** 统一的环境变量提供层，避免各函数重复 Deno/Bun 分支 */
 interface EnvProvider {
@@ -44,7 +45,7 @@ function getEnvProvider(): EnvProvider {
       toObject: () => ({ ...env }) as Record<string, string>,
     };
   }
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
