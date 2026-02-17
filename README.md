@@ -1200,10 +1200,10 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.7] - 2026-02-16
+### [1.0.8] - 2026-02-17
 
-**Fixed**: path resolve root path test on Windows (platform-aware assertion).
-See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Added**: SpawnedProcess.unref() so parent can exit after spawn (Deno). See
+[CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

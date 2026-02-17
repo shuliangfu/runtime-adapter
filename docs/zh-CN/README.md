@@ -1283,9 +1283,9 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.7] - 2026-02-16
+### [1.0.8] - 2026-02-17
 
-**修复**：path resolve 根路径测试在 Windows 上改为按平台断言。完整历史详见
+**新增**：SpawnedProcess.unref()，便于 spawn 后父进程退出（Deno）。完整历史详见
 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
