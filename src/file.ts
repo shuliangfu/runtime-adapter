@@ -4,6 +4,7 @@
  */
 
 import { IS_BUN } from "./detect.ts";
+import { $t } from "./i18n.ts";
 import { dirname, join, resolve } from "./path.ts";
 import { getBuffer, getBun, getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
@@ -85,7 +86,7 @@ export async function readFile(path: string): Promise<Uint8Array> {
     return new Uint8Array(arrayBuffer);
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -109,7 +110,7 @@ export async function readTextFile(
     return await file.text();
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -158,7 +159,7 @@ export async function writeFile(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -207,7 +208,7 @@ export async function writeTextFile(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -264,7 +265,7 @@ export async function open(
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -328,7 +329,7 @@ export async function mkdir(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -384,7 +385,7 @@ export async function remove(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -439,7 +440,7 @@ export async function stat(path: string): Promise<FileInfo> {
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -757,7 +758,7 @@ export function watchFs(
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -796,7 +797,7 @@ export async function readdir(path: string): Promise<DirEntry[]> {
       // 先验证目录存在
       const dirInfo = await nodeFsPromises.stat(path);
       if (!dirInfo.isDirectory()) {
-        throw new Error(`路径 ${path} 不是目录`);
+        throw new Error($t("error.pathNotDirectory", { path }));
       }
 
       const entries = await nodeFsPromises.readdir(path, {
@@ -811,13 +812,13 @@ export async function readdir(path: string): Promise<DirEntry[]> {
     } catch (error: unknown) {
       const nodeError = error as { code?: string };
       if (nodeError?.code === "ENOENT") {
-        throw new Error(`目录不存在: ${path}`);
+        throw new Error($t("error.directoryNotExist", { path }));
       }
       throw error;
     }
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -841,7 +842,7 @@ export async function copyFile(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -876,7 +877,7 @@ export async function rename(
         try {
           const dirInfo = await nodeFsPromises.stat(destDir);
           if (!dirInfo.isDirectory()) {
-            throw new Error(`路径 ${destDir} 不是目录`);
+            throw new Error($t("error.destPathNotDirectory", { destDir }));
           }
         } catch {
           // 如果 stat 失败，重新抛出原始错误
@@ -896,7 +897,7 @@ export async function rename(
           if (isFile || isDirectory) {
             sourceExists = true;
           } else {
-            throw new Error(`源路径存在但不是文件或目录: ${oldPath}`);
+            throw new Error($t("error.sourceNotFileOrDir", { oldPath }));
           }
         } catch (error: unknown) {
           const nodeError = error as { code?: string };
@@ -906,7 +907,7 @@ export async function rename(
               // 等待文件系统同步（增加等待时间）
               await new Promise((resolve) => setTimeout(resolve, 50));
             } else {
-              throw new Error(`源路径不存在: ${oldPath}`);
+              throw new Error($t("error.sourcePathNotExist", { oldPath }));
             }
           } else {
             throw error;
@@ -921,9 +922,10 @@ export async function rename(
       const nodeError = error as { code?: string };
       if (nodeError?.code === "ENOENT") {
         throw new Error(
-          `重命名失败: 源路径不存在 "${oldPath}" 或目标目录不存在 "${
-            dirname(newPath)
-          }"`,
+          $t("error.renameFailed", {
+            oldPath,
+            newPathDir: dirname(newPath),
+          }),
         );
       }
       throw error;
@@ -931,7 +933,7 @@ export async function rename(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -963,7 +965,7 @@ export async function symlink(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -982,7 +984,7 @@ export async function realPath(path: string): Promise<string> {
     return await nodeFsPromises.realpath(path);
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1003,7 +1005,7 @@ export async function chmod(path: string, mode: number): Promise<void> {
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1029,7 +1031,7 @@ export async function chown(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1058,7 +1060,7 @@ export async function makeTempDir(
     return tempDirPath;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1093,7 +1095,7 @@ export async function makeTempFile(
     return tempFile;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1116,7 +1118,7 @@ export function cwd(): string {
     return resolve(".");
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1137,10 +1139,10 @@ export function chdir(path: string): void {
       process.chdir(path);
       return;
     }
-    throw new Error("Bun 环境不支持 chdir");
+    throw new Error($t("error.bunChdirNotSupported"));
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1160,7 +1162,7 @@ export async function truncate(path: string, len: number): Promise<void> {
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1297,7 +1299,7 @@ export function statSync(path: string): FileInfo {
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1334,7 +1336,7 @@ export function readTextFileSync(
     }) as string;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1387,7 +1389,7 @@ export function readFileSync(path: string): Uint8Array {
     return new Uint8Array(nodeFs.readFileSync(path));
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1430,7 +1432,7 @@ export function readdirSync(path: string): DirEntry[] {
       // 先验证目录存在
       const dirInfo = nodeFs.statSync(path);
       if (!dirInfo.isDirectory()) {
-        throw new Error(`路径 ${path} 不是目录`);
+        throw new Error($t("error.pathNotDirectory", { path }));
       }
 
       const entries = nodeFs.readdirSync(path, { withFileTypes: true });
@@ -1450,13 +1452,13 @@ export function readdirSync(path: string): DirEntry[] {
     } catch (error: unknown) {
       const nodeError = error as { code?: string };
       if (nodeError?.code === "ENOENT") {
-        throw new Error(`目录不存在: ${path}`);
+        throw new Error($t("error.directoryNotExist", { path }));
       }
       throw error;
     }
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1531,7 +1533,7 @@ export function realPathSync(path: string): string {
     return nodeFs.realpathSync(path);
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1589,7 +1591,7 @@ export function mkdirSync(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1660,7 +1662,7 @@ export function removeSync(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1713,7 +1715,7 @@ export function writeFileSync(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1755,7 +1757,7 @@ export function writeTextFileSync(
     return;
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**

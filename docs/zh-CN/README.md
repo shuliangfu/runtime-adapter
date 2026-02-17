@@ -1283,9 +1283,10 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.8] - 2026-02-17
+### [1.0.9] - 2026-02-18
 
-**新增**：SpawnedProcess.unref()，便于 spawn 后父进程退出（Deno）。完整历史详见
+**新增**：错误信息 i18n（en-US/zh-CN）；导出
+`$t`、`initRuntimeAdapterI18n`、`Locale`。完整历史详见
 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---

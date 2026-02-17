@@ -1,13 +1,22 @@
 {
   "name": "@dreamer/runtime-adapter",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "license": "Apache-2.0",
-  "exports": { ".": "./src/mod.ts" },
-  "compilerOptions": { "lib": ["deno.window", "deno.ns", "deno.unstable"] },
+  "exports": {
+    ".": "./src/mod.ts"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "deno.unstable"
+    ]
+  },
   "nodeModulesDir": "auto",
   "publish": {
     "include": [
       "src/**/*.ts",
+      "src/**/*.json",
       "LICENSE",
       "NOTICE",
       "README.md",
@@ -22,20 +31,33 @@
       "package.json"
     ]
   },
-  "unstable": ["cron"],
+  "unstable": [
+    "cron"
+  ],
   "lint": {
-    "include": ["src/"],
+    "include": [
+      "src/"
+    ],
     "rules": {
-      "tags": ["recommended"],
-      "exclude": ["no-explicit-any", "no-undef"]
+      "tags": [
+        "recommended"
+      ],
+      "exclude": [
+        "no-explicit-any",
+        "no-undef"
+      ]
     }
   },
   "imports": {
-    "@dreamer/test": "jsr:@dreamer/test@^1.0.5",
+    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.0.1",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.7",
     "node-cron": "npm:node-cron@3.0.3"
   },
   "allowScripts": {
     "allow": [],
-    "deny": ["npm:esbuild@0.27.2", "npm:puppeteer@24.36.0"]
+    "deny": [
+      "npm:esbuild@0.27.2",
+      "npm:puppeteer@24.36.0"
+    ]
   }
 }

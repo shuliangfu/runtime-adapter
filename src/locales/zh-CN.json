@@ -1,0 +1,20 @@
+{
+  "error": {
+    "unsupportedRuntime": "不支持的运行时环境",
+    "commandFailed": "命令执行失败: {command} {args}\n{errorMsg}",
+    "pathNotDirectory": "路径 {path} 不是目录",
+    "directoryNotExist": "目录不存在: {path}",
+    "destPathNotDirectory": "目标路径 {destDir} 不是目录",
+    "sourceNotFileOrDir": "源路径存在但不是文件或目录: {oldPath}",
+    "sourcePathNotExist": "源路径不存在: {oldPath}",
+    "renameFailed": "重命名失败: 源路径不存在 \"{oldPath}\" 或目标目录不存在 \"{newPathDir}\"",
+    "bunChdirNotSupported": "Bun 环境不支持 chdir",
+    "bunWsNeedServe": "Bun 环境下的 WebSocket 升级需要先调用 serve() 创建服务器。请确保在调用 upgradeWebSocket() 之前已经调用了 serve()。",
+    "wsUpgradeFailed": "WebSocket 升级失败",
+    "wsAdapterMissingAddEventListener": "WebSocketAdapter 创建失败：缺少 addEventListener 方法",
+    "onlyBunOrDeno": "仅支持 Bun 或 Deno 运行时",
+    "stdoutUnavailable": "标准输出不可用",
+    "stderrUnavailable": "标准错误输出不可用"
+  },
+  "cron": { "taskExecutionFailed": "Cron 任务执行失败:" }
+}

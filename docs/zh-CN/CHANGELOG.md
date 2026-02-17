@@ -9,6 +9,17 @@
 
 ---
 
+## [1.0.9] - 2026-02-18
+
+### 新增
+
+- **i18n**：错误信息（不支持的运行时、文件/进程/网络/终端/cron）现可通过
+  `@dreamer/i18n` 配合 en-US、zh-CN
+  语言包翻译。新增导出：`$t`、`initRuntimeAdapterI18n`、`Locale`。`detect.ts`
+  使用 `$t("error.onlyBunOrDeno")`；i18n 不依赖 `detect.ts` 以避免循环依赖。
+
+---
+
 ## [1.0.8] - 2026-02-17
 
 ### 新增

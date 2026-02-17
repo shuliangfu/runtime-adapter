@@ -5,6 +5,7 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getBun, getDeno } from "./utils.ts";
+import { $t } from "./i18n.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeChildProcess from "node:child_process";
 
@@ -298,7 +299,7 @@ export function createCommand(
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -340,7 +341,11 @@ export function execCommandSync(
     if (!output.success) {
       const errorMsg = new TextDecoder().decode(output.stderr);
       throw new Error(
-        `命令执行失败: ${command} ${args.join(" ")}\n${errorMsg}`,
+        $t("error.commandFailed", {
+          command,
+          args: args.join(" "),
+          errorMsg,
+        }),
       );
     }
     return new TextDecoder().decode(output.stdout);
@@ -372,10 +377,14 @@ export function execCommandSync(
         ?.toString();
       const errorMsg = stderr || errorMessage;
       throw new Error(
-        `命令执行失败: ${command} ${args.join(" ")}\n${errorMsg}`,
+        $t("error.commandFailed", {
+          command,
+          args: args.join(" "),
+          errorMsg,
+        }),
       );
     }
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }

@@ -10,6 +10,18 @@ and this project adheres to
 
 ---
 
+## [1.0.9] - 2026-02-18
+
+### Added
+
+- **i18n**: Error messages (unsupported runtime,
+  file/process/network/terminal/cron) are now translatable via `@dreamer/i18n`
+  with en-US and zh-CN locales. New exports: `$t`, `initRuntimeAdapterI18n`,
+  `Locale`. `detect.ts` uses `$t("error.onlyBunOrDeno")`; i18n does not depend
+  on `detect.ts` to avoid circular dependency.
+
+---
+
 ## [1.0.8] - 2026-02-17
 
 ### Added

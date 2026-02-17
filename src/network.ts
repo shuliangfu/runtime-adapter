@@ -6,6 +6,7 @@
 import { IS_BUN } from "./detect.ts";
 import type { BunServer, BunSocket, BunWebSocket } from "./types.ts";
 import { getBun, getDeno } from "./utils.ts";
+import { $t } from "./i18n.ts";
 
 /**
  * HTTP 服务器选项
@@ -849,7 +850,7 @@ export function serve(
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -871,9 +872,7 @@ export function upgradeWebSocket(
     // Bun 使用 server.upgrade() 方法升级 WebSocket
     // 需要从 serve() 中获取 server 实例
     if (!bunServerInstance) {
-      throw new Error(
-        "Bun 环境下的 WebSocket 升级需要先调用 serve() 创建服务器。请确保在调用 upgradeWebSocket() 之前已经调用了 serve()。",
-      );
+      throw new Error($t("error.bunWsNeedServe"));
     }
 
     // 构建升级选项
@@ -911,7 +910,7 @@ export function upgradeWebSocket(
     const upgraded = bunServerInstance.upgrade(request, upgradeOptions);
 
     if (!upgraded) {
-      throw new Error("WebSocket 升级失败");
+      throw new Error($t("error.wsUpgradeFailed"));
     }
 
     // 注意：Bun 的 WebSocket 升级方式与 Deno 不同
@@ -947,7 +946,7 @@ export function upgradeWebSocket(
 
     // 检查适配器是否正确创建
     if (typeof adapter.addEventListener !== "function") {
-      throw new Error("WebSocketAdapter 创建失败：缺少 addEventListener 方法");
+      throw new Error($t("error.wsAdapterMissingAddEventListener"));
     }
 
     // 在 Bun 环境下，返回 undefined 作为 response，让 Bun 自动处理 WebSocket 升级响应
@@ -959,7 +958,7 @@ export function upgradeWebSocket(
     };
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1087,7 +1086,7 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
     });
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
 
 /**
@@ -1232,5 +1231,5 @@ export async function startTls(
     });
   }
 
-  throw new Error("不支持的运行时环境");
+  throw new Error($t("error.unsupportedRuntime"));
 }
