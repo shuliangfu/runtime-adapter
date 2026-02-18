@@ -35,6 +35,22 @@ let bunServerInstance: BunServer | null = null;
 // 当 upgradeWebSocket 被调用时，我们存储适配器，然后在 websocket 处理器中设置实际的 WebSocket
 const pendingBunAdapters = new Map<string, WebSocketAdapter>();
 
+/** 是否输出 WebSocket 调试日志（环境变量 RUNTIME_ADAPTER_DEBUG_WS=1 时启用） */
+function isWsDebug(): boolean {
+  try {
+    const p = (globalThis as { process?: { env?: Record<string, string> } })
+      .process;
+    return p?.env?.RUNTIME_ADAPTER_DEBUG_WS === "1";
+  } catch {
+    return false;
+  }
+}
+function wsDebug(msg: string, ...args: unknown[]): void {
+  if (isWsDebug()) {
+    console.log("[runtime-adapter WS]", msg, ...args);
+  }
+}
+
 /**
  * WebSocket 适配器类
  * 在 Bun 环境下提供 addEventListener API，兼容 Deno 的 WebSocket API
@@ -70,6 +86,7 @@ class WebSocketAdapter {
    * 设置实际的 WebSocket（用于 Bun 环境下后续替换）
    */
   setWebSocket(ws: WebSocket): void {
+    wsDebug("setWebSocket: adapterId=", this.id, "openListeners=", this.listeners.get("open")?.size ?? 0);
     this._ws = ws;
     this.setupEventHandlers();
     // 执行所有待处理的操作
@@ -77,8 +94,17 @@ class WebSocketAdapter {
       op();
     }
     this.pendingOperations = [];
-    // 触发 open 事件（如果适配器有监听器）
-    this.emit("open", new Event("open"));
+    // Bun 在 upgrade() 内同步调用 open(ws)，queueMicrotask 仍会在同一任务内执行，此时 handler
+    // 尚未执行到 addEventListener("open")，导致 listeners=0。必须推迟到下一宏任务再 emit，
+    // 确保 handler 已注册 open 监听器后再触发。
+    if (IS_BUN) {
+      setTimeout(() => {
+        wsDebug("setWebSocket: emitting open (setTimeout), listeners=", this.listeners.get("open")?.size ?? 0);
+        this.emit("open", new Event("open"));
+      }, 0);
+    } else {
+      this.emit("open", new Event("open"));
+    }
   }
 
   /**
@@ -429,12 +455,13 @@ export function serve(
         fetch: async (req: Request, server: BunServer) => {
           // 保存 server 实例以便 upgradeWebSocket 使用
           bunServerInstance = server;
-          const result = await options(req);
-          // 确保返回 Response，而不是 undefined
-          if (result === undefined) {
-            return new Response(null, { status: 404 });
+          const isWs =
+            req.headers.get("Upgrade")?.toLowerCase() === "websocket";
+          if (isWs) {
+            options(req);
+            return Promise.resolve(undefined as unknown as Response);
           }
-          return result;
+          return (await options(req)) as Response;
         },
         websocket: {
           // websocket 处理器，用于设置实际的 WebSocket 到适配器
@@ -550,6 +577,11 @@ export function serve(
               }
             }
 
+            // 若通过 key 未找到，且当前仅有一个 pending 适配器，直接使用（常见单连接场景）
+            if (!adapter && pendingBunAdapters.size === 1) {
+              adapter = pendingBunAdapters.values().next().value;
+              matchedKey = pendingBunAdapters.keys().next().value;
+            }
             // 如果没找到，尝试查找第一个还没有设置实际 WebSocket 的适配器
             if (!adapter && pendingBunAdapters.size > 0) {
               const adapters = Array.from(pendingBunAdapters.values());
@@ -637,12 +669,15 @@ export function serve(
       fetch: async (req: Request, server: BunServer) => {
         // 保存 server 实例以便 upgradeWebSocket 使用
         bunServerInstance = server;
-        const result = await handler!(req);
-        // 确保返回 Response，而不是 undefined
-        if (result === undefined) {
-          return new Response(null, { status: 404 });
+        const isWs =
+          req.headers.get("Upgrade")?.toLowerCase() === "websocket";
+        if (isWs) {
+          wsDebug("fetch: WebSocket upgrade request, calling handler");
+          handler!(req);
+          wsDebug("fetch: handler returned, returning Promise.resolve(undefined)");
+          return Promise.resolve(undefined as unknown as Response);
         }
-        return result;
+        return (await handler!(req)) as Response;
       },
       websocket: {
         // websocket 处理器，用于设置实际的 WebSocket 到适配器
@@ -708,12 +743,23 @@ export function serve(
           }
         },
         open(ws: BunWebSocket) {
+          const wsData = ws.data;
+          const wsUrl = ws.url || "";
+          wsDebug(
+            "open(ws): called ws.data.adapterId=",
+            wsData?.adapterId,
+            "ws.url=",
+            wsUrl,
+            "pendingSize=",
+            pendingBunAdapters.size,
+            "pendingKeys=",
+            [...pendingBunAdapters.keys()]
+          );
           // 查找对应的适配器并设置实际的 WebSocket
           let adapter: WebSocketAdapter | undefined;
           let matchedKey: string | undefined;
 
           // 首先尝试通过 ws.data.adapterId 从 pendingBunAdapters 中查找（Bun 的特性）
-          const wsData = ws.data;
           if (wsData?.adapterId) {
             adapter = pendingBunAdapters.get(wsData.adapterId);
             if (adapter) {
@@ -722,7 +768,6 @@ export function serve(
           }
 
           // 如果没找到，尝试通过 ws.url 从 pendingBunAdapters 中查找
-          const wsUrl = ws.url || "";
           if (!adapter && wsUrl) {
             // 尝试精确匹配
             adapter = pendingBunAdapters.get(wsUrl);
@@ -769,21 +814,22 @@ export function serve(
             }
           }
 
-          // 如果没找到，不要使用第一个未设置的适配器，因为适配器可能还没有被创建
-          // 等待 fetch 处理器创建适配器后，在 message 处理器中再设置 _ws
-          // 这样可以避免错误的适配器匹配
-          if (!adapter) {
-            // 不设置 _ws，等待 message 处理器中再设置
-            return;
+          // 若通过 key 未找到，且当前仅有一个 pending 适配器，直接使用（常见单连接场景）
+          if (!adapter && pendingBunAdapters.size === 1) {
+            adapter = pendingBunAdapters.values().next().value;
+            matchedKey = pendingBunAdapters.keys().next().value;
           }
-
-          // 如果还是没找到，尝试从所有适配器中查找
+          // 再尝试用「未就绪」的适配器兜底（仅当仅有一个时使用，避免误匹配）
           if (!adapter) {
-            adapter = Array.from(WebSocketAdapter.allAdapters).find(
+            const unready = Array.from(WebSocketAdapter.allAdapters).filter(
               (a) => !a.isWebSocketReady(),
             );
+            if (unready.length === 1) {
+              adapter = unready[0];
+            }
           }
 
+          wsDebug("open(ws): adapter found=", !!adapter);
           if (adapter) {
             adapter.setWebSocket(ws);
             // 从 pending 中移除
@@ -924,9 +970,11 @@ export function upgradeWebSocket(
 
     adapter = new WebSocketAdapter(placeholderWs as WebSocket);
     pendingBunAdapters.set(url, adapter);
+    wsDebug("upgradeWebSocket: url=", url, "pendingSize=", pendingBunAdapters.size);
 
     // 尝试升级 WebSocket（open(ws) 可能在此调用栈内同步触发，此时已能通过 adapterId 找到 adapter）
     const upgraded = bunServerInstance.upgrade(request, upgradeOptions);
+    wsDebug("upgradeWebSocket: upgrade() result=", upgraded);
 
     if (!upgraded) {
       pendingBunAdapters.delete(url);
