@@ -1283,11 +1283,11 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.10] - 2026-02-18
+### [1.0.11] - 2026-02-18
 
-**修复**：Bun WebSocket 升级 — 在 `upgrade()` 前创建适配器，使 `open(ws)`
-能找到并执行待发送队列（修复客户端收不到如批量心跳 ping 等问题）。完整历史详见
-[CHANGELOG.md](./CHANGELOG.md)。
+**修复**：Bun WebSocket open 事件时机 — 在下一宏任务再触发适配器 `open`，确保
+handler 已注册监听器；新增环境变量 `RUNTIME_ADAPTER_DEBUG_WS=1`
+可选调试。完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 

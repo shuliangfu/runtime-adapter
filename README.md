@@ -1200,12 +1200,12 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.10] - 2026-02-18
+### [1.0.11] - 2026-02-18
 
-**Fixed**: Bun WebSocket upgrade — create adapter before `upgrade()` so
-`open(ws)` can find it and flush pending sends (fixes clients not receiving e.g.
-batch heartbeat ping). See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full
-history.
+**Fixed**: Bun WebSocket open event timing — emit adapter `open` in next
+macrotask (`setTimeout(0)`) so handler can register `addEventListener("open")`
+before the event fires; added optional debug via `RUNTIME_ADAPTER_DEBUG_WS=1`.
+See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

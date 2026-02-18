@@ -9,6 +9,24 @@
 
 ---
 
+## [1.0.11] - 2026-02-18
+
+### 修复
+
+- **Bun WebSocket open 事件时机**：在 `setWebSocket` 中改为用 `setTimeout(0)`
+  而非 `queueMicrotask` 触发适配器 `open` 事件。Bun 在 `upgrade()` 内同步调用
+  `websocket.open(ws)`，此时 handler 尚未执行到
+  `addEventListener("open", ...)`； 微任务仍在 handler 继续之前执行，故
+  listeners 为 0。推迟到下一宏任务再 `emit("open")`，确保 handler
+  已注册监听器，服务端 send（如 "Hello from server"） 能正确下发。
+
+### 新增
+
+- **WebSocket 调试日志**：设置环境变量 `RUNTIME_ADAPTER_DEBUG_WS=1` 可输出
+  fetch、upgradeWebSocket、open(ws)、setWebSocket 的调试日志，便于排查问题。
+
+---
+
 ## [1.0.10] - 2026-02-18
 
 ### 修复
