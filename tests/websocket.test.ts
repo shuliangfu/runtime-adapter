@@ -202,24 +202,16 @@ describe("WebSocket API", () => {
         );
         serverHandle = handle;
 
-        // 创建客户端连接
         const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
-
-        // 等待连接建立
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        // 发送消息
-        ws.send("Hello from client");
-
-        // 设置消息监听器（在连接建立之前）
+        // 先设置消息监听器，再发送，避免错过服务端在 open 后 200ms 发出的消息
         let serverMessageReceived = false;
         ws.onmessage = (event) => {
           if (event.data === "Hello from server") {
             serverMessageReceived = true;
           }
         };
-
-        // 等待服务器消息（增加等待时间，确保服务器消息已发送）
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        ws.send("Hello from client");
         await new Promise((resolve) => setTimeout(resolve, 800));
         expect(serverMessageReceived).toBe(true);
 
