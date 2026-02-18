@@ -903,32 +903,18 @@ export function upgradeWebSocket(
       };
     }
 
-    // 尝试升级 WebSocket
-    // Bun 的 upgrade() 方法返回 boolean，不返回 socket 和 response
-    // 升级成功后，Bun 会自动发送 101 Switching Protocols 响应
-    // 实际的 socket 会在 websocket 处理器中可用
-    const upgraded = bunServerInstance.upgrade(request, upgradeOptions);
-
-    if (!upgraded) {
-      throw new Error($t("error.wsUpgradeFailed"));
-    }
-
-    // 注意：Bun 的 WebSocket 升级方式与 Deno 不同
-    // - Deno: 立即返回 socket 和 response
-    // - Bun: 返回 boolean，socket 在 websocket 处理器中可用
-    // 在 Bun 环境下，我们需要创建一个占位符 WebSocket 适配器
-    // 实际的 socket 会在 websocket 处理器中可用，但我们需要先返回一个适配器
-    // 这个适配器会在 websocket 处理器中被替换为真正的 socket
+    // 先创建适配器并注册，再调用 upgrade()。
+    // Bun 可能在 upgrade() 内同步调用 websocket.open(ws)，若 adapter 在 upgrade 之后才放入
+    // pendingBunAdapters，open(ws) 时找不到 adapter，setWebSocket(ws) 不会被调用，服务端
+    // send() 会一直留在 pendingOperations，客户端收不到消息（如批量心跳 ping）。
     const placeholderWs = new Proxy({} as WebSocket, {
       get(_target, prop) {
-        // 如果访问的是 WebSocket 的标准属性，返回默认值
         if (prop === "readyState") {
           return WebSocket.CONNECTING;
         }
         if (prop === "protocol" || prop === "url") {
           return "";
         }
-        // 如果访问的是方法，返回一个空函数
         if (typeof prop === "string" && prop.startsWith("on")) {
           return undefined;
         }
@@ -936,13 +922,16 @@ export function upgradeWebSocket(
       },
     });
 
-    // 创建一个适配器，包装占位符 WebSocket
-    // 注意：在 Bun 环境下，实际的 socket 会在 websocket 处理器中可用
-    // 但我们需要先返回一个适配器，以便 websocket 库可以使用 addEventListener
     adapter = new WebSocketAdapter(placeholderWs as WebSocket);
-
-    // 存储适配器，以便在 websocket.open 中设置实际的 WebSocket
     pendingBunAdapters.set(url, adapter);
+
+    // 尝试升级 WebSocket（open(ws) 可能在此调用栈内同步触发，此时已能通过 adapterId 找到 adapter）
+    const upgraded = bunServerInstance.upgrade(request, upgradeOptions);
+
+    if (!upgraded) {
+      pendingBunAdapters.delete(url);
+      throw new Error($t("error.wsUpgradeFailed"));
+    }
 
     // 检查适配器是否正确创建
     if (typeof adapter.addEventListener !== "function") {

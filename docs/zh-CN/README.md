@@ -1283,10 +1283,10 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.9] - 2026-02-18
+### [1.0.10] - 2026-02-18
 
-**新增**：错误信息 i18n（en-US/zh-CN）；导出
-`$t`、`initRuntimeAdapterI18n`、`Locale`。完整历史详见
+**修复**：Bun WebSocket 升级 — 在 `upgrade()` 前创建适配器，使 `open(ws)`
+能找到并执行待发送队列（修复客户端收不到如批量心跳 ping 等问题）。完整历史详见
 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
