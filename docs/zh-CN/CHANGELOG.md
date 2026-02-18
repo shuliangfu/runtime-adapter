@@ -9,6 +9,19 @@
 
 ---
 
+## [1.0.10] - 2026-02-18
+
+### 修复
+
+- **Bun WebSocket 升级**：在调用 `bunServerInstance.upgrade(request)` **之前**
+  先创建并注册 WebSocket 适配器到 `pendingBunAdapters`。Bun 可能在 `upgrade()`
+  期间同步调用 `websocket.open(ws)`；若在 `upgrade()` 之后才创建
+  适配器，`open(ws)` 无法找到适配器，导致 `setWebSocket(ws)` 从未被调用， 服务端
+  `send()` 一直留在 `pendingOperations`，客户端收不到消息（如批量心跳
+  ping）。现在 `open(ws)` 能正确解析适配器并执行待发送队列。
+
+---
+
 ## [1.0.9] - 2026-02-18
 
 ### 新增

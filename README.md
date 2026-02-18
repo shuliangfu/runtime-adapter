@@ -1200,11 +1200,12 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.9] - 2026-02-18
+### [1.0.10] - 2026-02-18
 
-**Added**: i18n for error messages (en-US/zh-CN); exports `$t`,
-`initRuntimeAdapterI18n`, `Locale`. See
-[CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Fixed**: Bun WebSocket upgrade — create adapter before `upgrade()` so
+`open(ws)` can find it and flush pending sends (fixes clients not receiving e.g.
+batch heartbeat ping). See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full
+history.
 
 ---
 

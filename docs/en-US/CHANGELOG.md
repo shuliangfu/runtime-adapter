@@ -10,6 +10,21 @@ and this project adheres to
 
 ---
 
+## [1.0.10] - 2026-02-18
+
+### Fixed
+
+- **Bun WebSocket upgrade**: Create and register the WebSocket adapter in
+  `pendingBunAdapters` **before** calling `bunServerInstance.upgrade(request)`.
+  Bun may invoke `websocket.open(ws)` synchronously during `upgrade()`; if the
+  adapter was created only after `upgrade()`, `open(ws)` could not find it, so
+  `setWebSocket(ws)` was never called and server-side `send()` stayed queued in
+  `pendingOperations`, causing clients to never receive messages (e.g. batch
+  heartbeat ping). Now `open(ws)` can resolve the adapter and flush pending
+  sends.
+
+---
+
 ## [1.0.9] - 2026-02-18
 
 ### Added
