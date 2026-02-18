@@ -86,7 +86,12 @@ class WebSocketAdapter {
    * 设置实际的 WebSocket（用于 Bun 环境下后续替换）
    */
   setWebSocket(ws: WebSocket): void {
-    wsDebug("setWebSocket: adapterId=", this.id, "openListeners=", this.listeners.get("open")?.size ?? 0);
+    wsDebug(
+      "setWebSocket: adapterId=",
+      this.id,
+      "openListeners=",
+      this.listeners.get("open")?.size ?? 0,
+    );
     this._ws = ws;
     this.setupEventHandlers();
     // 执行所有待处理的操作
@@ -99,7 +104,10 @@ class WebSocketAdapter {
     // 确保 handler 已注册 open 监听器后再触发。
     if (IS_BUN) {
       setTimeout(() => {
-        wsDebug("setWebSocket: emitting open (setTimeout), listeners=", this.listeners.get("open")?.size ?? 0);
+        wsDebug(
+          "setWebSocket: emitting open (setTimeout), listeners=",
+          this.listeners.get("open")?.size ?? 0,
+        );
         this.emit("open", new Event("open"));
       }, 0);
     } else {
@@ -669,12 +677,13 @@ export function serve(
       fetch: async (req: Request, server: BunServer) => {
         // 保存 server 实例以便 upgradeWebSocket 使用
         bunServerInstance = server;
-        const isWs =
-          req.headers.get("Upgrade")?.toLowerCase() === "websocket";
+        const isWs = req.headers.get("Upgrade")?.toLowerCase() === "websocket";
         if (isWs) {
           wsDebug("fetch: WebSocket upgrade request, calling handler");
           handler!(req);
-          wsDebug("fetch: handler returned, returning Promise.resolve(undefined)");
+          wsDebug(
+            "fetch: handler returned, returning Promise.resolve(undefined)",
+          );
           return Promise.resolve(undefined as unknown as Response);
         }
         return (await handler!(req)) as Response;
@@ -753,7 +762,7 @@ export function serve(
             "pendingSize=",
             pendingBunAdapters.size,
             "pendingKeys=",
-            [...pendingBunAdapters.keys()]
+            [...pendingBunAdapters.keys()],
           );
           // 查找对应的适配器并设置实际的 WebSocket
           let adapter: WebSocketAdapter | undefined;
@@ -970,7 +979,12 @@ export function upgradeWebSocket(
 
     adapter = new WebSocketAdapter(placeholderWs as WebSocket);
     pendingBunAdapters.set(url, adapter);
-    wsDebug("upgradeWebSocket: url=", url, "pendingSize=", pendingBunAdapters.size);
+    wsDebug(
+      "upgradeWebSocket: url=",
+      url,
+      "pendingSize=",
+      pendingBunAdapters.size,
+    );
 
     // 尝试升级 WebSocket（open(ws) 可能在此调用栈内同步触发，此时已能通过 adapterId 找到 adapter）
     const upgraded = bunServerInstance.upgrade(request, upgradeOptions);

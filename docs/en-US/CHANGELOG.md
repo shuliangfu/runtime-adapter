@@ -10,6 +10,25 @@ and this project adheres to
 
 ---
 
+## [1.0.11] - 2026-02-18
+
+### Fixed
+
+- **Bun WebSocket open event timing**: Emit the adapter `open` event in
+  `setTimeout(0)` instead of `queueMicrotask()`. Bun calls `websocket.open(ws)`
+  synchronously inside `upgrade()`, so the handler has not yet run
+  `addEventListener("open", ...)` when `setWebSocket(ws)` runs; a microtask
+  still runs before the handler continues, so listeners were 0. Deferring to the
+  next macrotask ensures the handler has registered the listener before
+  `emit("open")`, so server-side send (e.g. "Hello from server") is delivered.
+
+### Added
+
+- **WebSocket debug logging**: Set `RUNTIME_ADAPTER_DEBUG_WS=1` to log fetch,
+  upgradeWebSocket, open(ws), and setWebSocket for troubleshooting.
+
+---
+
 ## [1.0.10] - 2026-02-18
 
 ### Fixed
