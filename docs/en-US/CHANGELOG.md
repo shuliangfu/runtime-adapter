@@ -10,6 +10,19 @@ and this project adheres to
 
 ---
 
+## [1.0.12] - 2026-02-18
+
+### Fixed
+
+- **Bun WebSocket fetch return value**: For WebSocket upgrade requests, await
+  the handler then return a 101 Response instead of undefined. Bun logs
+  "Expected a Response object, but received 'undefined'" and fails the client
+  connection when fetch returns undefined; returning 101 after the handler
+  completes fixes the upgrade and removes the error. Applied to both serve()
+  overloads (function and object form).
+
+---
+
 ## [1.0.11] - 2026-02-18
 
 ### Fixed

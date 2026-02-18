@@ -1200,12 +1200,13 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.11] - 2026-02-18
+### [1.0.12] - 2026-02-18
 
-**Fixed**: Bun WebSocket open event timing — emit adapter `open` in next
-macrotask (`setTimeout(0)`) so handler can register `addEventListener("open")`
-before the event fires; added optional debug via `RUNTIME_ADAPTER_DEBUG_WS=1`.
-See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Fixed**: Bun WebSocket fetch return value — for WebSocket upgrade requests,
+await the handler then return a 101 Response instead of undefined so Bun does
+not log "Expected a Response object" and client connections succeed. Applied to
+both serve() overloads. See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full
+history.
 
 ---
 

@@ -466,8 +466,9 @@ export function serve(
           const isWs =
             req.headers.get("Upgrade")?.toLowerCase() === "websocket";
           if (isWs) {
-            options(req);
-            return Promise.resolve(undefined as unknown as Response);
+            await options(req);
+            // Bun 若收到 undefined 会报 "Expected a Response object"，故返回 101
+            return new Response(null, { status: 101 }) as Response;
           }
           return (await options(req)) as Response;
         },
@@ -680,11 +681,11 @@ export function serve(
         const isWs = req.headers.get("Upgrade")?.toLowerCase() === "websocket";
         if (isWs) {
           wsDebug("fetch: WebSocket upgrade request, calling handler");
-          handler!(req);
-          wsDebug(
-            "fetch: handler returned, returning Promise.resolve(undefined)",
-          );
-          return Promise.resolve(undefined as unknown as Response);
+          await handler!(req);
+          // Bun 若收到 undefined 会报 "Expected a Response object" 并导致客户端连接失败，
+          // 故在升级完成后返回 101，满足 Bun 对 fetch 返回值的期望。
+          wsDebug("fetch: handler completed, returning 101 Response");
+          return new Response(null, { status: 101 }) as Response;
         }
         return (await handler!(req)) as Response;
       },

@@ -1283,11 +1283,12 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.11] - 2026-02-18
+### [1.0.12] - 2026-02-18
 
-**修复**：Bun WebSocket open 事件时机 — 在下一宏任务再触发适配器 `open`，确保
-handler 已注册监听器；新增环境变量 `RUNTIME_ADAPTER_DEBUG_WS=1`
-可选调试。完整历史详见 [CHANGELOG.md](./CHANGELOG.md)。
+**修复**：Bun WebSocket fetch 返回值 — 对 WebSocket 升级请求先 await handler
+完成再返回 101 Response，避免 Bun 报 "Expected a Response object" 并保证客户端
+连接成功；已同时修复两种 serve() 重载。完整历史详见
+[CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 
