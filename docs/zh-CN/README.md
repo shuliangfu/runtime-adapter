@@ -1283,11 +1283,11 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.12] - 2026-02-18
+### [1.0.13] - 2026-02-18
 
-**修复**：Bun WebSocket fetch 返回值 — 对 WebSocket 升级请求先 await handler
-完成再返回 101 Response，避免 Bun 报 "Expected a Response object" 并保证客户端
-连接成功；已同时修复两种 serve() 重载。完整历史详见
+**变更**：i18n — 所有面向用户与日志的文案统一经 `$t` 从 locale 获取，不再硬编码
+中英文；新增 `debug.*` 与 `error.bunRethrowSubstring1/2`，WebSocket 调试与 Bun
+execFileSync 重抛检测均走 i18n，翻译入口仅保留 `$t`（无 `tr`）。完整历史详见
 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---

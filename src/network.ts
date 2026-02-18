@@ -45,9 +45,10 @@ function isWsDebug(): boolean {
     return false;
   }
 }
+/** 调试输出：仅当 RUNTIME_ADAPTER_DEBUG_WS=1 时打印，文案走 i18n */
 function wsDebug(msg: string, ...args: unknown[]): void {
   if (isWsDebug()) {
-    console.log("[runtime-adapter WS]", msg, ...args);
+    console.log($t("debug.wsPrefix"), msg, ...args);
   }
 }
 
@@ -87,9 +88,9 @@ class WebSocketAdapter {
    */
   setWebSocket(ws: WebSocket): void {
     wsDebug(
-      "setWebSocket: adapterId=",
+      $t("debug.setWebSocketAdapterId"),
       this.id,
-      "openListeners=",
+      $t("debug.openListeners"),
       this.listeners.get("open")?.size ?? 0,
     );
     this._ws = ws;
@@ -105,7 +106,7 @@ class WebSocketAdapter {
     if (IS_BUN) {
       setTimeout(() => {
         wsDebug(
-          "setWebSocket: emitting open (setTimeout), listeners=",
+          $t("debug.setWebSocketEmittingOpen"),
           this.listeners.get("open")?.size ?? 0,
         );
         this.emit("open", new Event("open"));
@@ -680,11 +681,11 @@ export function serve(
         bunServerInstance = server;
         const isWs = req.headers.get("Upgrade")?.toLowerCase() === "websocket";
         if (isWs) {
-          wsDebug("fetch: WebSocket upgrade request, calling handler");
+          wsDebug($t("debug.fetchUpgradeRequest"));
           await handler!(req);
           // Bun 若收到 undefined 会报 "Expected a Response object" 并导致客户端连接失败，
           // 故在升级完成后返回 101，满足 Bun 对 fetch 返回值的期望。
-          wsDebug("fetch: handler completed, returning 101 Response");
+          wsDebug($t("debug.fetchHandlerCompleted"));
           return new Response(null, { status: 101 }) as Response;
         }
         return (await handler!(req)) as Response;
@@ -756,13 +757,13 @@ export function serve(
           const wsData = ws.data;
           const wsUrl = ws.url || "";
           wsDebug(
-            "open(ws): called ws.data.adapterId=",
+            $t("debug.openWsCalled"),
             wsData?.adapterId,
-            "ws.url=",
+            $t("debug.wsUrl"),
             wsUrl,
-            "pendingSize=",
+            $t("debug.pendingSize"),
             pendingBunAdapters.size,
-            "pendingKeys=",
+            $t("debug.pendingKeys"),
             [...pendingBunAdapters.keys()],
           );
           // 查找对应的适配器并设置实际的 WebSocket
@@ -839,7 +840,7 @@ export function serve(
             }
           }
 
-          wsDebug("open(ws): adapter found=", !!adapter);
+          wsDebug($t("debug.adapterFound"), !!adapter);
           if (adapter) {
             adapter.setWebSocket(ws);
             // 从 pending 中移除
@@ -981,15 +982,15 @@ export function upgradeWebSocket(
     adapter = new WebSocketAdapter(placeholderWs as WebSocket);
     pendingBunAdapters.set(url, adapter);
     wsDebug(
-      "upgradeWebSocket: url=",
+      $t("debug.upgradeWebSocketUrl"),
       url,
-      "pendingSize=",
+      $t("debug.pendingSize"),
       pendingBunAdapters.size,
     );
 
     // 尝试升级 WebSocket（open(ws) 可能在此调用栈内同步触发，此时已能通过 adapterId 找到 adapter）
     const upgraded = bunServerInstance.upgrade(request, upgradeOptions);
-    wsDebug("upgradeWebSocket: upgrade() result=", upgraded);
+    wsDebug($t("debug.upgradeResult"), upgraded);
 
     if (!upgraded) {
       pendingBunAdapters.delete(url);

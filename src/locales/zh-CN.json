@@ -14,7 +14,24 @@
     "wsAdapterMissingAddEventListener": "WebSocketAdapter 创建失败：缺少 addEventListener 方法",
     "onlyBunOrDeno": "仅支持 Bun 或 Deno 运行时",
     "stdoutUnavailable": "标准输出不可用",
-    "stderrUnavailable": "标准错误输出不可用"
+    "stderrUnavailable": "标准错误输出不可用",
+    "bunRethrowSubstring1": "require 不可用",
+    "bunRethrowSubstring2": "execFileSync 不可用"
+  },
+  "debug": {
+    "wsPrefix": "[runtime-adapter WS]",
+    "setWebSocketAdapterId": "setWebSocket: adapterId=",
+    "openListeners": "openListeners=",
+    "setWebSocketEmittingOpen": "setWebSocket: emitting open (setTimeout), listeners=",
+    "fetchUpgradeRequest": "fetch: WebSocket 升级请求，调用 handler",
+    "fetchHandlerCompleted": "fetch: handler 完成，返回 101 Response",
+    "openWsCalled": "open(ws): 调用 ws.data.adapterId=",
+    "wsUrl": "ws.url=",
+    "pendingSize": "pendingSize=",
+    "pendingKeys": "pendingKeys=",
+    "adapterFound": "open(ws): adapter found=",
+    "upgradeWebSocketUrl": "upgradeWebSocket: url=",
+    "upgradeResult": "upgradeWebSocket: upgrade() result="
   },
   "cron": { "taskExecutionFailed": "Cron 任务执行失败:" }
 }

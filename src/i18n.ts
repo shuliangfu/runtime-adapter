@@ -2,9 +2,12 @@
  * @module @dreamer/runtime-adapter/i18n
  *
  * i18n for @dreamer/runtime-adapter: error messages (unsupported runtime,
- * file/process/network errors). Reads LANGUAGE/LC_ALL/LANG directly here
- * to avoid circular dependency (env.ts would otherwise depend on i18n).
+ * file/process/network errors) and debug labels. Reads LANGUAGE/LC_ALL/LANG
+ * directly here to avoid circular dependency (env.ts would otherwise depend on i18n).
  * When lang is not passed, locale is auto-detected from env.
+ *
+ * 本包统一使用 $t 进行翻译，不提供 tr 方法；所有面向用户或日志的文案均通过
+ * locales (en-US.json / zh-CN.json) 配置，禁止在代码中硬编码中英文。
  */
 
 import {
@@ -90,8 +93,8 @@ export function initRuntimeAdapterI18n(): void {
 }
 
 /**
- * Translate by key. When lang is not passed, uses current locale (set at entry).
- * Do not call ensure/init inside $t; call initRuntimeAdapterI18n() at entry.
+ * 按 key 翻译，统一入口，无 tr 别名。lang 不传时使用入口处设置的当前 locale。
+ * 勿在 $t 内部调用 ensure/init；在入口调用 initRuntimeAdapterI18n()。
  */
 export function $t(
   key: string,
