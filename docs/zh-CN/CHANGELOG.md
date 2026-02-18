@@ -9,6 +9,17 @@
 
 ---
 
+## [1.0.13] - 2026-02-18
+
+### 变更
+
+- **i18n**：所有面向用户与日志的文案统一经 `$t` 从 locale
+  获取，不再硬编码中英文。 新增 `debug.*` 与 `error.bunRethrowSubstring1/2` 至
+  en-US、zh-CN；WebSocket 调试 文案与 Bun execFileSync 重抛检测均走
+  i18n。翻译入口仅保留 `$t`（无 `tr` 方法）。
+
+---
+
 ## [1.0.12] - 2026-02-18
 
 ### 修复

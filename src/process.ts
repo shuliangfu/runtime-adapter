@@ -362,13 +362,19 @@ export function execCommandSync(
       });
       return typeof result === "string" ? result : String(result);
     } catch (error: unknown) {
-      // 如果是我们抛出的错误，直接抛出
+      // 若是运行时“同步 API 不可用”类错误则直接抛出（Bun 可能抛中英文，用 i18n 键检测）
       const errorMessage = error instanceof Error
         ? error.message
         : String(error);
+      const rethrow1En = $t("error.bunRethrowSubstring1", undefined, "en-US");
+      const rethrow1Zh = $t("error.bunRethrowSubstring1", undefined, "zh-CN");
+      const rethrow2En = $t("error.bunRethrowSubstring2", undefined, "en-US");
+      const rethrow2Zh = $t("error.bunRethrowSubstring2", undefined, "zh-CN");
       if (
-        errorMessage.includes("require 不可用") ||
-        errorMessage.includes("execFileSync 不可用")
+        errorMessage.includes(rethrow1En) ||
+        errorMessage.includes(rethrow1Zh) ||
+        errorMessage.includes(rethrow2En) ||
+        errorMessage.includes(rethrow2Zh)
       ) {
         throw error;
       }

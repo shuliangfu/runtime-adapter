@@ -10,6 +10,17 @@ and this project adheres to
 
 ---
 
+## [1.0.13] - 2026-02-18
+
+### Changed
+
+- **i18n**: All user- and log-facing strings use `$t`; no hardcoded English or
+  Chinese. Added `debug.*` and `error.bunRethrowSubstring1/2` to en-US and zh-CN
+  locales. WebSocket debug messages and Bun execFileSync rethrow detection now
+  go through i18n. Translation entry point is `$t` only (no `tr` method).
+
+---
+
 ## [1.0.12] - 2026-02-18
 
 ### Fixed

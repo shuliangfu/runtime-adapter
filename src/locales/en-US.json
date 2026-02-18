@@ -14,7 +14,24 @@
     "wsAdapterMissingAddEventListener": "WebSocketAdapter creation failed: missing addEventListener method",
     "onlyBunOrDeno": "Only Bun or Deno can be used",
     "stdoutUnavailable": "Standard output is not available",
-    "stderrUnavailable": "Standard error output is not available"
+    "stderrUnavailable": "Standard error output is not available",
+    "bunRethrowSubstring1": "require",
+    "bunRethrowSubstring2": "execFileSync"
+  },
+  "debug": {
+    "wsPrefix": "[runtime-adapter WS]",
+    "setWebSocketAdapterId": "setWebSocket: adapterId=",
+    "openListeners": "openListeners=",
+    "setWebSocketEmittingOpen": "setWebSocket: emitting open (setTimeout), listeners=",
+    "fetchUpgradeRequest": "fetch: WebSocket upgrade request, calling handler",
+    "fetchHandlerCompleted": "fetch: handler completed, returning 101 Response",
+    "openWsCalled": "open(ws): called ws.data.adapterId=",
+    "wsUrl": "ws.url=",
+    "pendingSize": "pendingSize=",
+    "pendingKeys": "pendingKeys=",
+    "adapterFound": "open(ws): adapter found=",
+    "upgradeWebSocketUrl": "upgradeWebSocket: url=",
+    "upgradeResult": "upgradeWebSocket: upgrade() result="
   },
   "cron": { "taskExecutionFailed": "Cron task execution failed:" }
 }

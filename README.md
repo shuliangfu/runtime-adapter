@@ -1200,13 +1200,13 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.12] - 2026-02-18
+### [1.0.13] - 2026-02-18
 
-**Fixed**: Bun WebSocket fetch return value — for WebSocket upgrade requests,
-await the handler then return a 101 Response instead of undefined so Bun does
-not log "Expected a Response object" and client connections succeed. Applied to
-both serve() overloads. See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full
-history.
+**Changed**: i18n — all user- and log-facing strings use `$t`; no hardcoded
+English or Chinese. Added `debug.*` and `error.bunRethrowSubstring1/2` to
+locales; WebSocket debug and Bun execFileSync rethrow detection go through i18n.
+Translation entry is `$t` only (no `tr`). See
+[CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

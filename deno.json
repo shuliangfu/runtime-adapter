@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/runtime-adapter",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "license": "Apache-2.0",
   "exports": {
     ".": "./src/mod.ts"
