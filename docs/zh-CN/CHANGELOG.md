@@ -9,6 +9,17 @@
 
 ---
 
+## [1.0.12] - 2026-02-18
+
+### 修复
+
+- **Bun WebSocket fetch 返回值**：对 WebSocket 升级请求先 await handler
+  完成再返回 101 Response，不再返回 undefined。Bun 在收到 undefined 时会报
+  "Expected a Response object" 并导致客户端连接失败；改为在 handler 完成后返回
+  101，升级正常且错误消失。已同时修复两种 serve() 重载（函数形式与对象形式）。
+
+---
+
 ## [1.0.11] - 2026-02-18
 
 ### 修复
