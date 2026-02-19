@@ -5,7 +5,7 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
-import { $t } from "./i18n.ts";
+import { $tr } from "./i18n.ts";
 
 /**
  * 获取命令行参数
@@ -56,5 +56,5 @@ export function exit(code: number): never {
       process.exit(code);
     }
   }
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }

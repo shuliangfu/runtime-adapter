@@ -7,7 +7,7 @@
 
 // 静态导入 node-cron 库
 import * as cronLib from "node-cron";
-import { $t } from "./i18n.ts";
+import { $tr } from "./i18n.ts";
 
 /**
  * Cron 任务选项
@@ -107,7 +107,7 @@ export function cron(
         if (options?.onError) {
           options.onError(error);
         } else {
-          console.error($t("cron.taskExecutionFailed"), error);
+          console.error($tr("cron.taskExecutionFailed"), error);
         }
       });
     },

@@ -89,5 +89,4 @@ export * from "./system-info.ts";
 
 export * from "./utils.ts";
 
-// 导出 i18n（错误信息翻译与 locale）
-export { $t, initRuntimeAdapterI18n, type Locale } from "./i18n.ts";
+// i18n 仅包内使用，不对外导出；测试需 init/setLocale 时从 ./i18n.ts 导入
