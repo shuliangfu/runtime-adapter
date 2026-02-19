@@ -12,9 +12,10 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
 [中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
 
-### [1.0.14] - 2026-02-19
+### [1.0.15] - 2026-02-19
 
-- **Changed**: i18n translation method `$t` → `$tr`.
+- **Changed**: i18n init runs automatically in module; entry files no longer
+  call init. See [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 
@@ -1207,13 +1208,10 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.13] - 2026-02-18
+### [1.0.15] - 2026-02-19
 
-**Changed**: i18n — all user- and log-facing strings use `$t`; no hardcoded
-English or Chinese. Added `debug.*` and `error.bunRethrowSubstring1/2` to
-locales; WebSocket debug and Bun execFileSync rethrow detection go through i18n.
-Translation entry is `$t` only (no `tr`). See
-[CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full history.
+**Changed**: i18n init runs automatically in module; entry files no longer call
+init. See [CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

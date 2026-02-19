@@ -72,10 +72,8 @@ export function detectLocale(): Locale {
   return DEFAULT_LOCALE;
 }
 
-/**
- * Load translations and set current locale. Call once at entry (e.g. mod).
- */
-export function initRuntimeAdapterI18n(): void {
+/** 内部初始化，导入 i18n 时自动执行，不导出 */
+function initRuntimeAdapterI18n(): void {
   if (runtimeAdapterI18n) return;
   const i18n = createI18n({
     defaultLocale: DEFAULT_LOCALE,
@@ -87,6 +85,8 @@ export function initRuntimeAdapterI18n(): void {
   runtimeAdapterI18n = i18n;
 }
 
+initRuntimeAdapterI18n();
+
 /**
  * 框架专用翻译。lang 不传时使用当前 locale。
  */
@@ -95,6 +95,7 @@ export function $tr(
   params?: TranslationParams,
   lang?: Locale,
 ): string {
+  if (!runtimeAdapterI18n) initRuntimeAdapterI18n();
   if (!runtimeAdapterI18n) return key;
   if (lang !== undefined) {
     const prev = runtimeAdapterI18n.getLocale();

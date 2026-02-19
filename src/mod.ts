@@ -37,11 +37,6 @@
  * ```
  */
 
-import { initRuntimeAdapterI18n } from "./i18n.ts";
-
-// 入口处初始化 i18n，供错误信息等文案使用
-initRuntimeAdapterI18n();
-
 // 导出运行时检测
 export * from "./detect.ts";
 
@@ -89,4 +84,4 @@ export * from "./system-info.ts";
 
 export * from "./utils.ts";
 
-// i18n 仅包内使用，不对外导出；测试需 init/setLocale 时从 ./i18n.ts 导入
+// i18n 仅包内使用，不对外导出；测试需 setLocale 时从 ./i18n.ts 导入
