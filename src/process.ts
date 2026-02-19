@@ -5,7 +5,7 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getBun, getDeno } from "./utils.ts";
-import { $t } from "./i18n.ts";
+import { $tr } from "./i18n.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeChildProcess from "node:child_process";
 
@@ -299,7 +299,7 @@ export function createCommand(
     };
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -341,7 +341,7 @@ export function execCommandSync(
     if (!output.success) {
       const errorMsg = new TextDecoder().decode(output.stderr);
       throw new Error(
-        $t("error.commandFailed", {
+        $tr("error.commandFailed", {
           command,
           args: args.join(" "),
           errorMsg,
@@ -366,10 +366,10 @@ export function execCommandSync(
       const errorMessage = error instanceof Error
         ? error.message
         : String(error);
-      const rethrow1En = $t("error.bunRethrowSubstring1", undefined, "en-US");
-      const rethrow1Zh = $t("error.bunRethrowSubstring1", undefined, "zh-CN");
-      const rethrow2En = $t("error.bunRethrowSubstring2", undefined, "en-US");
-      const rethrow2Zh = $t("error.bunRethrowSubstring2", undefined, "zh-CN");
+      const rethrow1En = $tr("error.bunRethrowSubstring1", undefined, "en-US");
+      const rethrow1Zh = $tr("error.bunRethrowSubstring1", undefined, "zh-CN");
+      const rethrow2En = $tr("error.bunRethrowSubstring2", undefined, "en-US");
+      const rethrow2Zh = $tr("error.bunRethrowSubstring2", undefined, "zh-CN");
       if (
         errorMessage.includes(rethrow1En) ||
         errorMessage.includes(rethrow1Zh) ||
@@ -383,7 +383,7 @@ export function execCommandSync(
         ?.toString();
       const errorMsg = stderr || errorMessage;
       throw new Error(
-        $t("error.commandFailed", {
+        $tr("error.commandFailed", {
           command,
           args: args.join(" "),
           errorMsg,
@@ -392,5 +392,5 @@ export function execCommandSync(
     }
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }

@@ -6,7 +6,7 @@
 import { IS_BUN } from "./detect.ts";
 import type { BunServer, BunSocket, BunWebSocket } from "./types.ts";
 import { getBun, getDeno } from "./utils.ts";
-import { $t } from "./i18n.ts";
+import { $tr } from "./i18n.ts";
 
 /**
  * HTTP 服务器选项
@@ -48,7 +48,7 @@ function isWsDebug(): boolean {
 /** 调试输出：仅当 RUNTIME_ADAPTER_DEBUG_WS=1 时打印，文案走 i18n */
 function wsDebug(msg: string, ...args: unknown[]): void {
   if (isWsDebug()) {
-    console.log($t("debug.wsPrefix"), msg, ...args);
+    console.log($tr("debug.wsPrefix"), msg, ...args);
   }
 }
 
@@ -88,9 +88,9 @@ class WebSocketAdapter {
    */
   setWebSocket(ws: WebSocket): void {
     wsDebug(
-      $t("debug.setWebSocketAdapterId"),
+      $tr("debug.setWebSocketAdapterId"),
       this.id,
-      $t("debug.openListeners"),
+      $tr("debug.openListeners"),
       this.listeners.get("open")?.size ?? 0,
     );
     this._ws = ws;
@@ -106,7 +106,7 @@ class WebSocketAdapter {
     if (IS_BUN) {
       setTimeout(() => {
         wsDebug(
-          $t("debug.setWebSocketEmittingOpen"),
+          $tr("debug.setWebSocketEmittingOpen"),
           this.listeners.get("open")?.size ?? 0,
         );
         this.emit("open", new Event("open"));
@@ -681,11 +681,11 @@ export function serve(
         bunServerInstance = server;
         const isWs = req.headers.get("Upgrade")?.toLowerCase() === "websocket";
         if (isWs) {
-          wsDebug($t("debug.fetchUpgradeRequest"));
+          wsDebug($tr("debug.fetchUpgradeRequest"));
           await handler!(req);
           // Bun 若收到 undefined 会报 "Expected a Response object" 并导致客户端连接失败，
           // 故在升级完成后返回 101，满足 Bun 对 fetch 返回值的期望。
-          wsDebug($t("debug.fetchHandlerCompleted"));
+          wsDebug($tr("debug.fetchHandlerCompleted"));
           return new Response(null, { status: 101 }) as Response;
         }
         return (await handler!(req)) as Response;
@@ -757,13 +757,13 @@ export function serve(
           const wsData = ws.data;
           const wsUrl = ws.url || "";
           wsDebug(
-            $t("debug.openWsCalled"),
+            $tr("debug.openWsCalled"),
             wsData?.adapterId,
-            $t("debug.wsUrl"),
+            $tr("debug.wsUrl"),
             wsUrl,
-            $t("debug.pendingSize"),
+            $tr("debug.pendingSize"),
             pendingBunAdapters.size,
-            $t("debug.pendingKeys"),
+            $tr("debug.pendingKeys"),
             [...pendingBunAdapters.keys()],
           );
           // 查找对应的适配器并设置实际的 WebSocket
@@ -840,7 +840,7 @@ export function serve(
             }
           }
 
-          wsDebug($t("debug.adapterFound"), !!adapter);
+          wsDebug($tr("debug.adapterFound"), !!adapter);
           if (adapter) {
             adapter.setWebSocket(ws);
             // 从 pending 中移除
@@ -907,7 +907,7 @@ export function serve(
     };
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -929,7 +929,7 @@ export function upgradeWebSocket(
     // Bun 使用 server.upgrade() 方法升级 WebSocket
     // 需要从 serve() 中获取 server 实例
     if (!bunServerInstance) {
-      throw new Error($t("error.bunWsNeedServe"));
+      throw new Error($tr("error.bunWsNeedServe"));
     }
 
     // 构建升级选项
@@ -982,24 +982,24 @@ export function upgradeWebSocket(
     adapter = new WebSocketAdapter(placeholderWs as WebSocket);
     pendingBunAdapters.set(url, adapter);
     wsDebug(
-      $t("debug.upgradeWebSocketUrl"),
+      $tr("debug.upgradeWebSocketUrl"),
       url,
-      $t("debug.pendingSize"),
+      $tr("debug.pendingSize"),
       pendingBunAdapters.size,
     );
 
     // 尝试升级 WebSocket（open(ws) 可能在此调用栈内同步触发，此时已能通过 adapterId 找到 adapter）
     const upgraded = bunServerInstance.upgrade(request, upgradeOptions);
-    wsDebug($t("debug.upgradeResult"), upgraded);
+    wsDebug($tr("debug.upgradeResult"), upgraded);
 
     if (!upgraded) {
       pendingBunAdapters.delete(url);
-      throw new Error($t("error.wsUpgradeFailed"));
+      throw new Error($tr("error.wsUpgradeFailed"));
     }
 
     // 检查适配器是否正确创建
     if (typeof adapter.addEventListener !== "function") {
-      throw new Error($t("error.wsAdapterMissingAddEventListener"));
+      throw new Error($tr("error.wsAdapterMissingAddEventListener"));
     }
 
     // 在 Bun 环境下，返回 undefined 作为 response，让 Bun 自动处理 WebSocket 升级响应
@@ -1011,7 +1011,7 @@ export function upgradeWebSocket(
     };
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -1139,7 +1139,7 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
     });
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -1284,5 +1284,5 @@ export async function startTls(
     });
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }

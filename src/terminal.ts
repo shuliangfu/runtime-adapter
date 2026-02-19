@@ -5,7 +5,7 @@
 
 import { IS_BUN } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
-import { $t } from "./i18n.ts";
+import { $tr } from "./i18n.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeFs from "node:fs";
 
@@ -63,7 +63,7 @@ export function getStdout(): WritableStream<Uint8Array> {
           const process = getProcess();
           const stdout = process?.stdout;
           if (!stdout) {
-            reject(new Error($t("error.stdoutUnavailable")));
+            reject(new Error($tr("error.stdoutUnavailable")));
             return;
           }
           stdout.write(chunk, (error: Error | null | undefined) => {
@@ -75,7 +75,7 @@ export function getStdout(): WritableStream<Uint8Array> {
     });
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -96,7 +96,7 @@ export function getStderr(): WritableStream<Uint8Array> {
           const process = getProcess();
           const stderr = process?.stderr;
           if (!stderr) {
-            reject(new Error($t("error.stderrUnavailable")));
+            reject(new Error($tr("error.stderrUnavailable")));
             return;
           }
           stderr.write(chunk, (error: Error | null | undefined) => {
@@ -108,7 +108,7 @@ export function getStderr(): WritableStream<Uint8Array> {
     });
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -134,7 +134,7 @@ export function writeStdoutSync(data: Uint8Array): void {
     return;
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**
@@ -254,7 +254,7 @@ export function writeStderrSync(data: Uint8Array): void {
     return;
   }
 
-  throw new Error($t("error.unsupportedRuntime"));
+  throw new Error($tr("error.unsupportedRuntime"));
 }
 
 /**

@@ -2,25 +2,19 @@
  * @module @dreamer/runtime-adapter/i18n
  *
  * i18n for @dreamer/runtime-adapter: error messages (unsupported runtime,
- * file/process/network errors) and debug labels. Reads LANGUAGE/LC_ALL/LANG
- * directly here to avoid circular dependency (env.ts would otherwise depend on i18n).
- * When lang is not passed, locale is auto-detected from env.
- *
- * 本包统一使用 $t 进行翻译，不提供 tr 方法；所有面向用户或日志的文案均通过
- * locales (en-US.json / zh-CN.json) 配置，禁止在代码中硬编码中英文。
+ * file/process/network errors) and debug labels. No global; use import $tr.
+ * Reads LANGUAGE/LC_ALL/LANG via getEnvForLocale to avoid circular dependency
+ * (env.ts would otherwise depend on i18n).
  */
 
 import {
-  $i18n,
-  getGlobalI18n,
-  getI18n,
+  createI18n,
+  type I18n,
   type TranslationData,
   type TranslationParams,
 } from "@dreamer/i18n";
 import enUS from "./locales/en-US.json" with { type: "json" };
 import zhCN from "./locales/zh-CN.json" with { type: "json" };
-
-// 不导入 detect.ts，避免循环依赖，使 detect 可安全 import 本模块并用 $t 翻译
 
 /** Supported locale. */
 export type Locale = "en-US" | "zh-CN";
@@ -30,11 +24,17 @@ export const DEFAULT_LOCALE: Locale = "en-US";
 
 const RUNTIME_ADAPTER_LOCALES: Locale[] = ["en-US", "zh-CN"];
 
-let runtimeAdapterTranslationsLoaded = false;
+const LOCALE_DATA: Record<string, TranslationData> = {
+  "en-US": enUS as TranslationData,
+  "zh-CN": zhCN as TranslationData,
+};
+
+/** init 时创建的实例，不挂全局 */
+let runtimeAdapterI18n: I18n | null = null;
 
 /**
  * 从当前运行时读取环境变量（仅用于 locale 检测）。
- * 内联判断 Deno/Bun，不依赖 detect.ts，避免 i18n → detect 依赖，使 detect 可 import 本模块并用 $t 翻译。
+ * 内联判断 Deno/Bun，不依赖 env.ts，避免循环依赖。
  */
 function getEnvForLocale(key: string): string | undefined {
   const g = globalThis as unknown as {
@@ -52,7 +52,6 @@ function getEnvForLocale(key: string): string | undefined {
 
 /**
  * Detect locale: LANGUAGE > LC_ALL > LANG.
- * Falls back to DEFAULT_LOCALE when unset or not in supported list.
  */
 export function detectLocale(): Locale {
   const langEnv = getEnvForLocale("LANGUAGE") || getEnvForLocale("LC_ALL") ||
@@ -74,41 +73,37 @@ export function detectLocale(): Locale {
 }
 
 /**
- * Load runtime-adapter translations into the current I18n instance (once).
- */
-export function ensureRuntimeAdapterI18n(): void {
-  if (runtimeAdapterTranslationsLoaded) return;
-  const i18n = getGlobalI18n() ?? getI18n();
-  i18n.loadTranslations("en-US", enUS as TranslationData);
-  i18n.loadTranslations("zh-CN", zhCN as TranslationData);
-  runtimeAdapterTranslationsLoaded = true;
-}
-
-/**
  * Load translations and set current locale. Call once at entry (e.g. mod).
  */
 export function initRuntimeAdapterI18n(): void {
-  ensureRuntimeAdapterI18n();
-  $i18n.setLocale(detectLocale());
+  if (runtimeAdapterI18n) return;
+  const i18n = createI18n({
+    defaultLocale: DEFAULT_LOCALE,
+    fallbackBehavior: "default",
+    locales: [...RUNTIME_ADAPTER_LOCALES],
+    translations: LOCALE_DATA as Record<string, TranslationData>,
+  });
+  i18n.setLocale(detectLocale());
+  runtimeAdapterI18n = i18n;
 }
 
 /**
- * 按 key 翻译，统一入口，无 tr 别名。lang 不传时使用入口处设置的当前 locale。
- * 勿在 $t 内部调用 ensure/init；在入口调用 initRuntimeAdapterI18n()。
+ * 框架专用翻译。lang 不传时使用当前 locale。
  */
-export function $t(
+export function $tr(
   key: string,
   params?: TranslationParams,
   lang?: Locale,
 ): string {
+  if (!runtimeAdapterI18n) return key;
   if (lang !== undefined) {
-    const prev = $i18n.getLocale();
-    $i18n.setLocale(lang);
+    const prev = runtimeAdapterI18n.getLocale();
+    runtimeAdapterI18n.setLocale(lang);
     try {
-      return $i18n.t(key, params);
+      return runtimeAdapterI18n.t(key, params);
     } finally {
-      $i18n.setLocale(prev);
+      runtimeAdapterI18n.setLocale(prev);
     }
   }
-  return $i18n.t(key, params);
+  return runtimeAdapterI18n.t(key, params);
 }
