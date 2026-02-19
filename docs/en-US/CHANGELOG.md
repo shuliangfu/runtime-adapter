@@ -10,6 +10,16 @@ and this project adheres to
 
 ---
 
+## [1.0.15] - 2026-02-19
+
+### Changed
+
+- **i18n**: Initialization now runs automatically when the i18n module is
+  loaded. Entry files (`mod.ts`, `detect.ts`) no longer import or call
+  `initRuntimeAdapterI18n`; remove any such usage from your code.
+
+---
+
 ## [1.0.14] - 2026-02-19
 
 ### Changed

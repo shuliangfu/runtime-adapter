@@ -3,7 +3,7 @@
  * 检测当前运行环境是 Deno 还是 Bun
  */
 
-import { $tr, initRuntimeAdapterI18n } from "./i18n.ts";
+import { $tr } from "./i18n.ts";
 
 /**
  * 运行时类型
@@ -52,6 +52,5 @@ export const IS_BUN = RUNTIME === "bun";
 
 // 运行时环境检查：只支持 Bun 或 Deno（i18n 不依赖本模块，可安全使用 $t 翻译）
 if (!IS_BUN && !IS_DENO) {
-  initRuntimeAdapterI18n();
   throw new Error($tr("error.onlyBunOrDeno"));
 }

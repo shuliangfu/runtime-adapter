@@ -1283,12 +1283,10 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.13] - 2026-02-18
+### [1.0.15] - 2026-02-19
 
-**变更**：i18n — 所有面向用户与日志的文案统一经 `$t` 从 locale 获取，不再硬编码
-中英文；新增 `debug.*` 与 `error.bunRethrowSubstring1/2`，WebSocket 调试与 Bun
-execFileSync 重抛检测均走 i18n，翻译入口仅保留 `$t`（无 `tr`）。完整历史详见
-[CHANGELOG.md](./CHANGELOG.md)。
+**变更**：i18n 在模块加载时自动初始化，入口文件不再调用 init。完整历史详见
+[CHANGELOG](./CHANGELOG.md)。
 
 ---
 
