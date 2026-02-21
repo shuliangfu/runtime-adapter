@@ -10,6 +10,23 @@ and this project adheres to
 
 ---
 
+## [1.0.16] - 2026-02-21
+
+### Fixed
+
+- **Windows Bun CI – system info platform**: `getSystemInfo()` and
+  `getSystemInfoSync()` now normalize Node/Bun platform `"win32"` to
+  `"windows"` so the returned `platform` is one of `linux`, `darwin`, `windows`,
+  or `unknown`, matching Deno and test expectations.
+- **Windows Bun CI – pathToFileUrl**: `pathToFileUrl()` now normalizes
+  backslashes to forward slashes in the returned `file://` URL so behavior is
+  consistent on Windows (including Bun) and tests pass.
+- **Windows Bun CI – cron close test**: The cron test “应该支持关闭定时任务” now
+  allows at most one extra execution after `handle.close()` to account for
+  node-cron possibly firing one more tick after stop on Windows/Bun.
+
+---
+
 ## [1.0.15] - 2026-02-19
 
 ### Changed

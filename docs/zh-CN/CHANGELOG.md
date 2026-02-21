@@ -9,6 +9,23 @@
 
 ---
 
+## [1.0.16] - 2026-02-21
+
+### 修复
+
+- **Windows Bun CI – 系统信息 platform**：`getSystemInfo()` 与
+  `getSystemInfoSync()` 现在将 Node/Bun 的 `"win32"` 规范化为 `"windows"`，
+  返回的 `platform` 为 `linux`、`darwin`、`windows` 或 `unknown` 之一，与 Deno
+  及测试预期一致。
+- **Windows Bun CI – pathToFileUrl**：`pathToFileUrl()` 现在将返回的
+  `file://` URL 中的反斜杠规范化为正斜杠，在 Windows（含 Bun）下行为一致，
+  测试通过。
+- **Windows Bun CI – cron 关闭测试**：定时任务测试「应该支持关闭定时任务」
+  现在允许在 `handle.close()` 之后至多多执行一次，以兼容 Windows/Bun 下
+  node-cron 在 stop 后可能再触发一次的情况。
+
+---
+
 ## [1.0.15] - 2026-02-19
 
 ### 变更
