@@ -353,9 +353,13 @@ describe("路径操作 API", () => {
   describe("pathToFileUrl", () => {
     it("应将 POSIX 绝对路径转为 file:// URL", () => {
       const url = pathToFileUrl("/home/user/config.ts");
+      expect(url).toMatch(/^file:\/\//);
+      expect(url.replace(/\\/g, "/")).toContain("home/user/config.ts");
       if (platform() === "windows") {
-        // Windows 会将 /home/user/config.ts 解析为当前驱动器下的路径（如 file:///D:/home/user/config.ts）
-        expect(url).toMatch(/^file:\/\/\/[A-Za-z]:\/home\/user\/config\.ts$/);
+        // Windows 上可能为 file:///X:/home/user/config.ts 或 file:///home/user/config.ts（Bun 等）
+        expect(url.replace(/\\/g, "/")).toMatch(
+          /^file:\/\/\/([A-Za-z]:\/)?home\/user\/config\.ts$/,
+        );
       } else {
         expect(url).toBe("file:///home/user/config.ts");
       }
