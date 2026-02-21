@@ -12,10 +12,11 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
 [中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
 
-### [1.0.15] - 2026-02-19
+### [1.0.16] - 2026-02-21
 
-- **Changed**: i18n init runs automatically in module; entry files no longer
-  call init. See [CHANGELOG](./docs/en-US/CHANGELOG.md).
+- **Fixed**: Windows Bun CI – system info platform (`win32` → `windows`),
+  pathToFileUrl URL normalization, cron close test tolerance. See
+  [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 
@@ -1208,10 +1209,11 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.15] - 2026-02-19
+### [1.0.16] - 2026-02-21
 
-**Changed**: i18n init runs automatically in module; entry files no longer call
-init. See [CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
+**Fixed**: Windows Bun CI – system info platform normalization, pathToFileUrl
+URL normalization, cron close test tolerance. See
+[CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

@@ -15,9 +15,9 @@ and this project adheres to
 ### Fixed
 
 - **Windows Bun CI – system info platform**: `getSystemInfo()` and
-  `getSystemInfoSync()` now normalize Node/Bun platform `"win32"` to
-  `"windows"` so the returned `platform` is one of `linux`, `darwin`, `windows`,
-  or `unknown`, matching Deno and test expectations.
+  `getSystemInfoSync()` now normalize Node/Bun platform `"win32"` to `"windows"`
+  so the returned `platform` is one of `linux`, `darwin`, `windows`, or
+  `unknown`, matching Deno and test expectations.
 - **Windows Bun CI – pathToFileUrl**: `pathToFileUrl()` now normalizes
   backslashes to forward slashes in the returned `file://` URL so behavior is
   consistent on Windows (including Bun) and tests pass.

@@ -1283,10 +1283,10 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.15] - 2026-02-19
+### [1.0.16] - 2026-02-21
 
-**变更**：i18n 在模块加载时自动初始化，入口文件不再调用 init。完整历史详见
-[CHANGELOG](./CHANGELOG.md)。
+**修复**：Windows Bun CI – 系统信息 platform 规范、pathToFileUrl URL
+规范化、cron 关闭测试放宽。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
 
 ---
 
