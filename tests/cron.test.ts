@@ -1,24 +1,33 @@
 /**
  * @fileoverview 定时任务 API 测试
  *
- * Windows Bun CI 说明：node-cron 在 Windows 上触发时机不稳定（定时器/事件循环差异），
- * 依赖「N 秒内必须触发」或「关闭后次数不变」的用例会偶发失败。因此对这类用例在 Windows 上
- * 使用 it.skipIf(platform() === "windows" && IS_BUN) 跳过，仅在 Linux/macOS 上运行，保证 CI 稳定通过。
+ * Windows 上定时器触发较慢且不稳定，通过「轮询等待首次触发 + 更长超时 + 放宽关闭后次数」保证全平台通过。
  */
 
 import { describe, expect, it } from "@dreamer/test";
 import { cron } from "../src/cron.ts";
 import { platform } from "../src/process-info.ts";
-import { IS_BUN } from "../src/detect.ts";
 
-/** Windows 上跳过（依赖定时触发）；非 Windows 正常跑 */
-const itCron = platform() === "windows" && IS_BUN ? it.skip : it;
+const isWindows = () => platform() === "windows";
+
+/** 轮询直到条件成立或超时，避免固定 sleep 在 Windows 上不足 */
+async function waitUntil(
+  condition: () => boolean,
+  opts: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<boolean> {
+  const { timeoutMs = 15000, intervalMs = 200 } = opts;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (condition()) return true;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return false;
+}
 
 describe("定时任务 API", () => {
   describe("cron", () => {
-    itCron("应该创建定时任务", async () => {
+    it("应该创建定时任务", async () => {
       let executed = false;
-      // 使用秒级 cron 表达式（每 2 秒执行一次）
       const handle = await cron("*/2 * * * * *", () => {
         executed = true;
       });
@@ -26,14 +35,15 @@ describe("定时任务 API", () => {
       expect(handle).toBeTruthy();
       expect(typeof handle.close).toBe("function");
 
-      // 等待足够长的时间确保任务执行（至少 3 秒以确保执行一次）
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
+      const triggered = await waitUntil(() => executed, {
+        timeoutMs: isWindows() ? 12000 : 5000,
+      });
       handle.close();
+      expect(triggered).toBe(true);
       expect(executed).toBe(true);
-    });
+    }, { timeout: isWindows() ? 20000 : 10000 });
 
-    itCron("应该支持关闭定时任务", async () => {
+    it("应该支持关闭定时任务", async () => {
       let count = 0;
       const handle = await cron("*/1 * * * * *", () => {
         count++;
@@ -41,17 +51,23 @@ describe("定时任务 API", () => {
 
       expect(handle).toBeTruthy();
       expect(typeof handle.close).toBe("function");
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const triggered = await waitUntil(() => count >= 1, {
+        timeoutMs: isWindows() ? 15000 : 5000,
+      });
+      expect(triggered).toBe(true);
       expect(count).toBeGreaterThanOrEqual(1);
+
       handle.close();
-
       const countAfterClose = count;
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      expect(count).toBeGreaterThanOrEqual(countAfterClose);
-      expect(count - countAfterClose).toBeLessThanOrEqual(3);
-    }, { timeout: 10_000 });
+      await new Promise((r) => setTimeout(r, isWindows() ? 4000 : 2000));
 
-    itCron("应该支持 AbortSignal", async () => {
+      expect(count).toBeGreaterThanOrEqual(countAfterClose);
+      const maxExtra = isWindows() ? 10 : 3;
+      expect(count - countAfterClose).toBeLessThanOrEqual(maxExtra);
+    }, { timeout: isWindows() ? 25000 : 12000 });
+
+    it("应该支持 AbortSignal", async () => {
       let executed = false;
       const handle = await cron("*/1 * * * * *", () => {
         executed = true;
@@ -59,12 +75,17 @@ describe("定时任务 API", () => {
 
       expect(handle.signal).toBeTruthy();
       expect(handle.signal.aborted).toBe(false);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const triggered = await waitUntil(() => executed, {
+        timeoutMs: isWindows() ? 15000 : 4000,
+      });
+      expect(triggered).toBe(true);
       expect(executed).toBe(true);
+
       handle.close();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
       expect(handle.signal.aborted).toBe(true);
-    });
+    }, { timeout: isWindows() ? 25000 : 10000 });
 
     it("应该支持不同的 cron 表达式", async () => {
       let executed = false;
