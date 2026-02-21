@@ -6,8 +6,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shuliangfu/dreamer-jsr.git",
-    "directory": "runtime-adapter"
+    "url": "https://github.com/shuliangfu/dreamer-jsr.git"
   },
   "exports": {
     ".": "./src/mod.ts"
