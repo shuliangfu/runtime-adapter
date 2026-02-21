@@ -148,6 +148,7 @@ jobs:
         run: bun test tests/
 
   # --- Bun: Windows ---
+  # Windows 上不缓存 node_modules，避免 junction/symlink 冲突（os error 183: file already exists）
   test-windows-bun:
     runs-on: windows-latest
     steps:
@@ -156,13 +157,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-bun-runtime-adapter-${{ hashFiles('package.json') }}
-          restore-keys: ${{ runner.os }}-bun-runtime-adapter-
 
       - name: Install dependencies (Bun)
         run: bun install
