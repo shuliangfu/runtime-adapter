@@ -2,28 +2,19 @@
   "name": "@dreamer/runtime-adapter",
   "version": "1.0.15",
   "license": "Apache-2.0",
+  "description": "Runtime adaptation layer providing a unified API abstraction compatible with Deno and Bun runtimes (file, env, path, process, network, cron).",
   "exports": {
     ".": "./src/mod.ts"
   },
-  "compilerOptions": {
-    "lib": [
-      "deno.window",
-      "deno.ns",
-      "deno.unstable"
-    ]
-  },
-  "nodeModulesDir": "auto",
   "publish": {
     "include": [
       "src/**/*.ts",
       "src/**/*.json",
       "LICENSE",
       "NOTICE",
-      "README.md",
-      "TEST_REPORT.md"
+      "README.md"
     ],
     "exclude": [
-      "bun.d.ts",
       "**/*.test.ts",
       "**/*.spec.ts",
       "**/test/**",
@@ -31,9 +22,19 @@
       "package.json"
     ]
   },
-  "unstable": [
-    "cron"
-  ],
+  "imports": {
+    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.0.1",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.12",
+    "node-cron": "npm:node-cron@3.0.3"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "deno.unstable"
+    ]
+  },
   "lint": {
     "include": [
       "src/"
@@ -47,11 +48,6 @@
         "no-undef"
       ]
     }
-  },
-  "imports": {
-    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.0.1",
-    "@dreamer/test": "jsr:@dreamer/test@^1.0.12",
-    "node-cron": "npm:node-cron@3.0.3"
   },
   "allowScripts": {
     "allow": [],
