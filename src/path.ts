@@ -202,5 +202,7 @@ export function isRelative(path: string): boolean {
  * ```
  */
 export function pathToFileUrl(path: string): string {
-  return nodePathToFileURL(path).href;
+  // 将 file:// URL 中的反斜杠统一为正斜杠，保证 Windows（含 Bun）下与 POSIX 行为一致、测试断言可跨平台
+  const href = nodePathToFileURL(path).href;
+  return href.replace(/\\/g, "/");
 }

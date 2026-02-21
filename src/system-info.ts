@@ -732,9 +732,10 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   if (IS_BUN) {
     try {
       const process = getProcess();
-
+      // Node/Bun 在 Windows 上返回 "win32"，统一为 "windows" 以与 Deno 及测试断言一致
+      const rawPlatform = process?.platform || "unknown";
       hostname = nodeOs.hostname();
-      platform = process?.platform || "unknown";
+      platform = rawPlatform === "win32" ? "windows" : rawPlatform;
       arch = process?.arch || "unknown";
       uptime = nodeOs.uptime();
       cpus = nodeOs.cpus().length;
@@ -1012,9 +1013,10 @@ export function getSystemInfoSync(): SystemInfo {
   if (IS_BUN) {
     try {
       const process = getProcess();
-      // Bun 支持 Node.js 兼容的 os 模块
+      // Bun 支持 Node.js 兼容的 os 模块；Node/Bun 在 Windows 上返回 "win32"，统一为 "windows"
+      const rawPlatform = process?.platform || "unknown";
       hostname = nodeOs.hostname();
-      platform = process?.platform || "unknown";
+      platform = rawPlatform === "win32" ? "windows" : rawPlatform;
       arch = process?.arch || "unknown";
       uptime = nodeOs.uptime();
       cpus = nodeOs.cpus().length;
