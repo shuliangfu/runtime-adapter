@@ -50,7 +50,7 @@
   },
   "imports": {
     "@dreamer/i18n": "jsr:@dreamer/i18n@^1.0.1",
-    "@dreamer/test": "jsr:@dreamer/test@^1.0.9",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.12",
     "node-cron": "npm:node-cron@3.0.3"
   },
   "allowScripts": {
