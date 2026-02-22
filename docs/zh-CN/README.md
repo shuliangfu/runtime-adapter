@@ -78,7 +78,7 @@
 
 ## 🎨 设计原则
 
-**所有 @dreamer/* 包都遵循以下原则**：
+__所有 @dreamer/_ 包都遵循以下原则_*：
 
 - **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
@@ -1072,14 +1072,15 @@ interface RuntimeVersion {
 
 ### 工具 API（运行时访问）
 
-| API             | 说明                   | 返回值                    |
-| --------------- | ---------------------- | ------------------------- |
-| `getDeno()`     | 获取 Deno API（类型安全） | `Deno \| null`            |
-| `getBun()`      | 获取 Bun API（类型安全）  | `Bun \| null`             |
-| `getProcess()`  | 获取 Node process 对象   | `process \| null`         |
-| `getBuffer()`   | 获取 Node Buffer 构造函数 | `BufferConstructor \| null` |
+| API            | 说明                      | 返回值                      |
+| -------------- | ------------------------- | --------------------------- |
+| `getDeno()`    | 获取 Deno API（类型安全） | `Deno \| null`              |
+| `getBun()`     | 获取 Bun API（类型安全）  | `Bun \| null`               |
+| `getProcess()` | 获取 Node process 对象    | `process \| null`           |
+| `getBuffer()`  | 获取 Node Buffer 构造函数 | `BufferConstructor \| null` |
 
-> 📌 需要直接访问运行时对象时使用；跨运行时代码请优先使用适配器 API（file、env、process 等）。
+> 📌 需要直接访问运行时对象时使用；跨运行时代码请优先使用适配器
+> API（file、env、process 等）。
 
 ### 信号处理 API
 
@@ -1090,19 +1091,19 @@ interface RuntimeVersion {
 
 ### 路径操作 API
 
-| API                                       | 说明                 | 返回值    |
-| ----------------------------------------- | -------------------- | --------- |
-| `join(...paths: string[])`                | 拼接多个路径片段     | `string`  |
-| `dirname(path: string)`                   | 获取目录名           | `string`  |
-| `basename(path: string, ext?: string)`   | 获取文件名           | `string`  |
-| `extname(path: string)`                  | 获取扩展名           | `string`  |
-| `resolve(...paths: string[])`            | 解析路径为绝对路径   | `string`  |
-| `relative(from: string, to: string)`      | 计算相对路径         | `string`  |
-| `normalize(path: string)`                | 规范化路径           | `string`  |
-| `isAbsolute(path: string)`               | 判断是否为绝对路径   | `boolean` |
-| `isRelative(path: string)`               | 判断是否为相对路径   | `boolean` |
-| `fromFileUrl(url: string \| URL)`         | file URL 转为路径    | `string`  |
-| `pathToFileUrl(path: string)`             | 路径转为 file URL    | `string`  |
+| API                                    | 说明               | 返回值    |
+| -------------------------------------- | ------------------ | --------- |
+| `join(...paths: string[])`             | 拼接多个路径片段   | `string`  |
+| `dirname(path: string)`                | 获取目录名         | `string`  |
+| `basename(path: string, ext?: string)` | 获取文件名         | `string`  |
+| `extname(path: string)`                | 获取扩展名         | `string`  |
+| `resolve(...paths: string[])`          | 解析路径为绝对路径 | `string`  |
+| `relative(from: string, to: string)`   | 计算相对路径       | `string`  |
+| `normalize(path: string)`              | 规范化路径         | `string`  |
+| `isAbsolute(path: string)`             | 判断是否为绝对路径 | `boolean` |
+| `isRelative(path: string)`             | 判断是否为相对路径 | `boolean` |
+| `fromFileUrl(url: string \| URL)`      | file URL 转为路径  | `string`  |
+| `pathToFileUrl(path: string)`          | 路径转为 file URL  | `string`  |
 
 > 📌 **注意**：`join` 遵循 node:path 语义（如 `join(".", "file.txt")` 返回
 > `"file.txt"`）。所有路径结果统一为正斜杠。Windows 下 Bun 子进程脚本路径请用
@@ -1301,8 +1302,8 @@ bun test tests/
 
 ### [1.0.17] - 2026-02-22
 
-**新增**：路径 API `fromFileUrl()`，用于 Windows 下 Bun
-子进程脚本路径。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
+**新增**：路径 API `fromFileUrl()`。**修复**：fromFileUrl 测试在 Windows
+下。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
 
 ---
 

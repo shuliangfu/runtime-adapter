@@ -14,9 +14,8 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 ### [1.0.17] - 2026-02-22
 
-- **Added**: Path API `fromFileUrl()` – convert file URL to filesystem path for
-  Bun subprocess script paths on Windows. See
-  [CHANGELOG](./docs/en-US/CHANGELOG.md).
+- **Added**: Path API `fromFileUrl()`. **Fixed**: fromFileUrl tests on Windows.
+  See [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 
@@ -59,7 +58,8 @@ same API across different runtime environments.
   - Command-line arguments
   - Program exit
 - **Utils API**:
-  - Type-safe runtime access: `getDeno()`, `getBun()`, `getProcess()`, `getBuffer()`
+  - Type-safe runtime access: `getDeno()`, `getBun()`, `getProcess()`,
+    `getBuffer()`
 - **Signal handling API**:
   - OS signal listeners (SIGTERM, SIGINT, SIGUSR1, SIGUSR2)
 - **Terminal API**:
@@ -1062,12 +1062,12 @@ interface RuntimeVersion {
 
 ### Utils API (runtime access)
 
-| API              | Description              | Returns                    |
-| ---------------- | ------------------------ | -------------------------- |
-| `getDeno()`      | Get Deno API (type-safe) | `Deno \| null`             |
-| `getBun()`       | Get Bun API (type-safe)  | `Bun \| null`              |
-| `getProcess()`   | Get Node process object  | `process \| null`          |
-| `getBuffer()`    | Get Node Buffer constructor | `BufferConstructor \| null` |
+| API            | Description                 | Returns                     |
+| -------------- | --------------------------- | --------------------------- |
+| `getDeno()`    | Get Deno API (type-safe)    | `Deno \| null`              |
+| `getBun()`     | Get Bun API (type-safe)     | `Bun \| null`               |
+| `getProcess()` | Get Node process object     | `process \| null`           |
+| `getBuffer()`  | Get Node Buffer constructor | `BufferConstructor \| null` |
 
 > 📌 Use these when you need the raw runtime object; prefer the adapter APIs
 > (file, env, process, etc.) for cross-runtime code.
@@ -1081,23 +1081,24 @@ interface RuntimeVersion {
 
 ### Path API
 
-| API                         | Description              | Returns   |
-| --------------------------- | ------------------------ | --------- |
-| `join(...paths)`           | Join path segments        | `string`  |
-| `dirname(path)`            | Get dirname              | `string`  |
-| `basename(path, ext?)`     | Get basename             | `string`  |
-| `extname(path)`            | Get extension            | `string`  |
-| `resolve(...paths)`        | Resolve to absolute       | `string`  |
-| `relative(from, to)`       | Relative path             | `string`  |
-| `normalize(path)`          | Normalize path            | `string`  |
-| `isAbsolute(path)`         | Is absolute               | `boolean` |
-| `isRelative(path)`         | Is relative               | `boolean` |
-| `fromFileUrl(url)`         | File URL → path           | `string`  |
-| `pathToFileUrl(path)`      | Path → file URL           | `string`  |
+| API                    | Description         | Returns   |
+| ---------------------- | ------------------- | --------- |
+| `join(...paths)`       | Join path segments  | `string`  |
+| `dirname(path)`        | Get dirname         | `string`  |
+| `basename(path, ext?)` | Get basename        | `string`  |
+| `extname(path)`        | Get extension       | `string`  |
+| `resolve(...paths)`    | Resolve to absolute | `string`  |
+| `relative(from, to)`   | Relative path       | `string`  |
+| `normalize(path)`      | Normalize path      | `string`  |
+| `isAbsolute(path)`     | Is absolute         | `boolean` |
+| `isRelative(path)`     | Is relative         | `boolean` |
+| `fromFileUrl(url)`     | File URL → path     | `string`  |
+| `pathToFileUrl(path)`  | Path → file URL     | `string`  |
 
 > 📌 **Note**: `join` follows node:path (e.g. `join(".", "file.txt")` returns
 > `"file.txt"`). All path results use forward slashes. Use `fromFileUrl()` for
-> subprocess script paths on Windows with Bun (avoids `URL.pathname` → `/D:/...`).
+> subprocess script paths on Windows with Bun (avoids `URL.pathname` →
+> `/D:/...`).
 
 ### File Hash API
 
@@ -1228,7 +1229,7 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ### [1.0.17] - 2026-02-22
 
-**Added**: Path API `fromFileUrl()` for Bun subprocess script paths on Windows.
+**Added**: Path API `fromFileUrl()`. **Fixed**: fromFileUrl tests on Windows.
 See [CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
 
 ---

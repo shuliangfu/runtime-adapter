@@ -412,10 +412,9 @@ describe("路径操作 API", () => {
   describe("fromFileUrl", () => {
     it("应将 file:// URL 字符串转为文件系统路径", () => {
       // Windows 下 node 的 fileURLToPath 要求 file URL 为绝对路径，不能使用 file:///home/... 等 Unix 形式
-      const url =
-        platform() === "windows"
-          ? pathToFileUrl("C:/Users/test/script.ts")
-          : "file:///home/user/script.ts";
+      const url = platform() === "windows"
+        ? pathToFileUrl("C:/Users/test/script.ts")
+        : "file:///home/user/script.ts";
       const path = fromFileUrl(url);
       expect(path).toContain("script.ts");
       expect(path).not.toContain("file://");
@@ -429,10 +428,9 @@ describe("路径操作 API", () => {
 
     it("应将 URL 对象转为文件系统路径", () => {
       // Windows 下需使用本平台有效的 file URL
-      const urlObj =
-        platform() === "windows"
-          ? new URL(pathToFileUrl("C:/tmp/config.ts"))
-          : new URL("file:///tmp/config.ts");
+      const urlObj = platform() === "windows"
+        ? new URL(pathToFileUrl("C:/tmp/config.ts"))
+        : new URL("file:///tmp/config.ts");
       const path = fromFileUrl(urlObj);
       expect(path).toContain("config.ts");
       expect(path).not.toContain("file://");
