@@ -47,6 +47,8 @@
 - **进程工具 API 适配**：
   - 命令行参数获取
   - 程序退出
+- **工具 API 适配**：
+  - 类型安全的运行时访问：`getDeno()`、`getBun()`、`getProcess()`、`getBuffer()`
 - **信号处理 API 适配**：
   - 操作系统信号监听和处理
   - 支持 SIGTERM、SIGINT、SIGUSR1、SIGUSR2
@@ -59,9 +61,9 @@
   - 支持秒级任务
   - AbortSignal 支持
 - **路径操作 API 适配**：
-  - 路径拼接、解析、规范化
-  - 相对路径计算
-  - 绝对路径判断
+  - 路径拼接、解析、规范化，dirname、basename、extname
+  - 相对路径计算，绝对/相对路径判断
+  - file URL 与路径互转（`fromFileUrl`、`pathToFileUrl`）
 - **文件哈希 API 适配**：
   - 文件和数据哈希计算
   - 支持同步和异步
@@ -76,7 +78,7 @@
 
 ## 🎨 设计原则
 
-__所有 @dreamer/_ 包都遵循以下原则_*：
+**所有 @dreamer/* 包都遵循以下原则**：
 
 - **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
@@ -1068,6 +1070,17 @@ interface RuntimeVersion {
 | `args()`             | 获取命令行参数数组 | `string[]` |
 | `exit(code: number)` | 退出程序           | `never`    |
 
+### 工具 API（运行时访问）
+
+| API             | 说明                   | 返回值                    |
+| --------------- | ---------------------- | ------------------------- |
+| `getDeno()`     | 获取 Deno API（类型安全） | `Deno \| null`            |
+| `getBun()`      | 获取 Bun API（类型安全）  | `Bun \| null`             |
+| `getProcess()`  | 获取 Node process 对象   | `process \| null`         |
+| `getBuffer()`   | 获取 Node Buffer 构造函数 | `BufferConstructor \| null` |
+
+> 📌 需要直接访问运行时对象时使用；跨运行时代码请优先使用适配器 API（file、env、process 等）。
+
 ### 信号处理 API
 
 | API                                                         | 说明           | 参数                                                                                               |
@@ -1077,20 +1090,23 @@ interface RuntimeVersion {
 
 ### 路径操作 API
 
-| API                                    | 说明               | 返回值    |
-| -------------------------------------- | ------------------ | --------- |
-| `join(...paths: string[])`             | 拼接多个路径片段   | `string`  |
-| `dirname(path: string)`                | 获取目录名         | `string`  |
-| `basename(path: string, ext?: string)` | 获取文件名         | `string`  |
-| `extname(path: string)`                | 获取扩展名         | `string`  |
-| `resolve(...paths: string[])`          | 解析路径为绝对路径 | `string`  |
-| `relative(from: string, to: string)`   | 计算相对路径       | `string`  |
-| `normalize(path: string)`              | 规范化路径         | `string`  |
-| `isAbsolute(path: string)`             | 判断是否为绝对路径 | `boolean` |
-| `isRelative(path: string)`             | 判断是否为相对路径 | `boolean` |
+| API                                       | 说明                 | 返回值    |
+| ----------------------------------------- | -------------------- | --------- |
+| `join(...paths: string[])`                | 拼接多个路径片段     | `string`  |
+| `dirname(path: string)`                   | 获取目录名           | `string`  |
+| `basename(path: string, ext?: string)`   | 获取文件名           | `string`  |
+| `extname(path: string)`                  | 获取扩展名           | `string`  |
+| `resolve(...paths: string[])`            | 解析路径为绝对路径   | `string`  |
+| `relative(from: string, to: string)`      | 计算相对路径         | `string`  |
+| `normalize(path: string)`                | 规范化路径           | `string`  |
+| `isAbsolute(path: string)`               | 判断是否为绝对路径   | `boolean` |
+| `isRelative(path: string)`               | 判断是否为相对路径   | `boolean` |
+| `fromFileUrl(url: string \| URL)`         | file URL 转为路径    | `string`  |
+| `pathToFileUrl(path: string)`             | 路径转为 file URL    | `string`  |
 
 > 📌 **注意**：`join` 遵循 node:path 语义（如 `join(".", "file.txt")` 返回
-> `"file.txt"`）。所有路径结果统一为正斜杠。
+> `"file.txt"`）。所有路径结果统一为正斜杠。Windows 下 Bun 子进程脚本路径请用
+> `fromFileUrl()`，避免 `URL.pathname` 得到 `/D:/...` 导致 spawn 失败。
 
 ### 文件哈希 API
 

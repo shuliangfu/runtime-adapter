@@ -58,6 +58,8 @@ same API across different runtime environments.
 - **Process utils API**:
   - Command-line arguments
   - Program exit
+- **Utils API**:
+  - Type-safe runtime access: `getDeno()`, `getBun()`, `getProcess()`, `getBuffer()`
 - **Signal handling API**:
   - OS signal listeners (SIGTERM, SIGINT, SIGUSR1, SIGUSR2)
 - **Terminal API**:
@@ -69,9 +71,9 @@ same API across different runtime environments.
   - Second-level support
   - AbortSignal support
 - **Path API**:
-  - Path join, resolve, normalize
-  - Relative path calculation
-  - Absolute path check
+  - Path join, resolve, normalize, dirname, basename, extname
+  - Relative path calculation, absolute/relative check
+  - File URL ↔ path conversion (`fromFileUrl`, `pathToFileUrl`)
 - **File hash API**:
   - File and data hashing
   - Sync and async
@@ -1058,6 +1060,18 @@ interface RuntimeVersion {
 | `args()`     | Command-line arguments | `string[]` |
 | `exit(code)` | Exit program           | `never`    |
 
+### Utils API (runtime access)
+
+| API              | Description              | Returns                    |
+| ---------------- | ------------------------ | -------------------------- |
+| `getDeno()`      | Get Deno API (type-safe) | `Deno \| null`             |
+| `getBun()`       | Get Bun API (type-safe)  | `Bun \| null`              |
+| `getProcess()`   | Get Node process object  | `process \| null`          |
+| `getBuffer()`    | Get Node Buffer constructor | `BufferConstructor \| null` |
+
+> 📌 Use these when you need the raw runtime object; prefer the adapter APIs
+> (file, env, process, etc.) for cross-runtime code.
+
 ### Signal Handling API
 
 | API                                     | Description     | Params                          |
@@ -1067,20 +1081,23 @@ interface RuntimeVersion {
 
 ### Path API
 
-| API                    | Description         | Returns   |
-| ---------------------- | ------------------- | --------- |
-| `join(...paths)`       | Join path segments  | `string`  |
-| `dirname(path)`        | Get dirname         | `string`  |
-| `basename(path, ext?)` | Get basename        | `string`  |
-| `extname(path)`        | Get extension       | `string`  |
-| `resolve(...paths)`    | Resolve to absolute | `string`  |
-| `relative(from, to)`   | Relative path       | `string`  |
-| `normalize(path)`      | Normalize path      | `string`  |
-| `isAbsolute(path)`     | Is absolute         | `boolean` |
-| `isRelative(path)`     | Is relative         | `boolean` |
+| API                         | Description              | Returns   |
+| --------------------------- | ------------------------ | --------- |
+| `join(...paths)`           | Join path segments        | `string`  |
+| `dirname(path)`            | Get dirname              | `string`  |
+| `basename(path, ext?)`     | Get basename             | `string`  |
+| `extname(path)`            | Get extension            | `string`  |
+| `resolve(...paths)`        | Resolve to absolute       | `string`  |
+| `relative(from, to)`       | Relative path             | `string`  |
+| `normalize(path)`          | Normalize path            | `string`  |
+| `isAbsolute(path)`         | Is absolute               | `boolean` |
+| `isRelative(path)`         | Is relative               | `boolean` |
+| `fromFileUrl(url)`         | File URL → path           | `string`  |
+| `pathToFileUrl(path)`      | Path → file URL           | `string`  |
 
 > 📌 **Note**: `join` follows node:path (e.g. `join(".", "file.txt")` returns
-> `"file.txt"`). All path results use forward slashes.
+> `"file.txt"`). All path results use forward slashes. Use `fromFileUrl()` for
+> subprocess script paths on Windows with Bun (avoids `URL.pathname` → `/D:/...`).
 
 ### File Hash API
 
