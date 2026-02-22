@@ -9,6 +9,7 @@ import {
   basename,
   dirname,
   extname,
+  fromFileUrl,
   isAbsolute,
   isRelative,
   join,
@@ -405,6 +406,44 @@ describe("路径操作 API", () => {
       expect(url.startsWith("file://")).toBe(true);
       const mod = await import(url);
       expect(mod.pathToFileUrl).toBeDefined();
+    });
+  });
+
+  describe("fromFileUrl", () => {
+    it("应将 file:// URL 字符串转为文件系统路径", () => {
+      const url = "file:///home/user/script.ts";
+      const path = fromFileUrl(url);
+      expect(path).toContain("home");
+      expect(path).toContain("user");
+      expect(path).toContain("script.ts");
+      expect(path).not.toContain("file://");
+      // 统一正斜杠
+      expect(path).not.toContain("\\");
+    });
+
+    it("应将 URL 对象转为文件系统路径", () => {
+      const urlObj = new URL("file:///tmp/config.ts");
+      const path = fromFileUrl(urlObj);
+      expect(path).toContain("config.ts");
+      expect(path).not.toContain("file://");
+    });
+
+    it("应与 pathToFileUrl 互为逆操作（round-trip）", () => {
+      const original = platform() === "windows"
+        ? "C:/Users/test/file.ts"
+        : "/home/user/file.ts";
+      const url = pathToFileUrl(original);
+      const back = fromFileUrl(url);
+      expect(back.replace(/\\/g, "/")).toBe(original);
+    });
+
+    it("应处理 import.meta.url 风格 URL 并返回含文件名的路径", () => {
+      const url = new URL("./path.test.ts", import.meta.url);
+      const path = fromFileUrl(url);
+      expect(path).toContain("path.test.ts");
+      expect(path).not.toMatch(/^\/[A-Za-z]:/); // 不应为 /D:/...（pathname 在 Windows 上的形式）
+      // 统一正斜杠，无反斜杠
+      expect(path).not.toContain("\\");
     });
   });
 });

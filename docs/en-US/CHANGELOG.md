@@ -10,6 +10,19 @@ and this project adheres to
 
 ---
 
+## [1.0.17] - 2026-02-22
+
+### Added
+
+- **Path API – `fromFileUrl()`**: Converts a `file://` URL (string or `URL`
+  object) to a filesystem path with forward slashes. Use this when spawning
+  subprocesses with script paths on Windows with Bun, where `URL.pathname`
+  yields `/D:/...` and can cause spawn to fail;
+  `fromFileUrl(new URL("./script.ts", import.meta.url))` returns a path that Bun
+  accepts.
+
+---
+
 ## [1.0.16] - 2026-02-21
 
 ### Fixed
