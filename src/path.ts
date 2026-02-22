@@ -14,7 +14,10 @@ import {
   relative as nodeRelative,
   resolve as nodeResolve,
 } from "node:path";
-import { pathToFileURL as nodePathToFileURL } from "node:url";
+import {
+  fileURLToPath as nodeFileURLToPath,
+  pathToFileURL as nodePathToFileURL,
+} from "node:url";
 
 /** 将路径中的反斜杠统一为正斜杠（Windows 兼容，便于跨平台一致） */
 function toForwardSlash(path: string): string {
@@ -182,6 +185,27 @@ export function isAbsolute(path: string): boolean {
  */
 export function isRelative(path: string): boolean {
   return !isAbsolute(path);
+}
+
+/**
+ * 将 file:// URL 转为文件系统路径
+ *
+ * 用于子进程脚本路径等场景：Bun 在 Windows 下需要本地路径（如 D:/a/...），
+ * 不能使用 URL.pathname（会得到 /D:/a/...），否则 spawn 可能失败。
+ *
+ * @param url file:// URL 字符串或 URL 对象（如 new URL("./x.ts", import.meta.url)）
+ * @returns 文件系统路径（统一正斜杠，与 path 模块其他 API 一致）
+ *
+ * @example
+ * ```typescript
+ * import { fromFileUrl } from "@dreamer/runtime-adapter";
+ * const path = fromFileUrl(new URL("./script.ts", import.meta.url));
+ * // Windows: "D:/a/repo/script.ts"  Bun/Deno 子进程均可正确解析
+ * ```
+ */
+export function fromFileUrl(url: string | URL): string {
+  const href = typeof url === "string" ? url : url.href;
+  return toForwardSlash(nodeFileURLToPath(href));
 }
 
 /**

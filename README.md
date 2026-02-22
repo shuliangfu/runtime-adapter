@@ -12,10 +12,10 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
 [中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
 
-### [1.0.16] - 2026-02-21
+### [1.0.17] - 2026-02-22
 
-- **Fixed**: Windows Bun CI – system info platform (`win32` → `windows`),
-  pathToFileUrl URL normalization, cron close test tolerance. See
+- **Added**: Path API `fromFileUrl()` – convert file URL to filesystem path for
+  Bun subprocess script paths on Windows. See
   [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
@@ -1209,11 +1209,10 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.16] - 2026-02-21
+### [1.0.17] - 2026-02-22
 
-**Fixed**: Windows Bun CI – system info platform normalization, pathToFileUrl
-URL normalization, cron close test tolerance. See
-[CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
+**Added**: Path API `fromFileUrl()` for Bun subprocess script paths on Windows.
+See [CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 

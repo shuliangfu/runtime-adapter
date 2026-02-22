@@ -9,6 +9,17 @@
 
 ---
 
+## [1.0.17] - 2026-02-22
+
+### 新增
+
+- **路径 API – `fromFileUrl()`**：将 `file://` URL（字符串或 `URL` 对象）转为
+  文件系统路径（统一正斜杠）。在 Windows 下用 Bun 启动子进程并传入脚本路径时，
+  `URL.pathname` 会得到 `/D:/...` 导致 spawn 失败，可改用
+  `fromFileUrl(new URL("./script.ts", import.meta.url))` 得到 Bun 可识别的路径。
+
+---
+
 ## [1.0.16] - 2026-02-21
 
 ### 修复
