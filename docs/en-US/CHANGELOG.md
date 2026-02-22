@@ -21,6 +21,12 @@ and this project adheres to
   `fromFileUrl(new URL("./script.ts", import.meta.url))` returns a path that Bun
   accepts.
 
+### Fixed
+
+- **fromFileUrl tests on Windows**: Tests now use platform-valid file URLs on
+  Windows (Node `fileURLToPath` requires absolute paths; Unix-style
+  `file:///home/...` throws). Deno and Bun Windows CI pass.
+
 ---
 
 ## [1.0.16] - 2026-02-21

@@ -18,6 +18,12 @@
   `URL.pathname` 会得到 `/D:/...` 导致 spawn 失败，可改用
   `fromFileUrl(new URL("./script.ts", import.meta.url))` 得到 Bun 可识别的路径。
 
+### 修复
+
+- **fromFileUrl 测试在 Windows 下**：测试改为在 Windows 上使用本平台有效的 file
+  URL（Node `fileURLToPath` 要求绝对路径，Unix 风格 `file:///home/...`
+  会抛错）。 Deno 与 Bun Windows CI 通过。
+
 ---
 
 ## [1.0.16] - 2026-02-21
