@@ -10,6 +10,22 @@ and this project adheres to
 
 ---
 
+## [1.0.18] - 2026-02-25
+
+### Fixed
+
+- **args() on Bun (Windows)**: When running under Bun, `args()` now prefers
+  `Bun.argv` over `process.argv` so script arguments (e.g. `--build` from
+  `bun run script.ts -- --build`) are correctly received on Windows where
+  `process.argv` may omit them.
+
+### Added
+
+- **process-utils tests**: Additional tests for `args()` (multiple calls, Bun
+  environment); full Windows Bun `--build` behavior is covered by dweb CI.
+
+---
+
 ## [1.0.17] - 2026-02-22
 
 ### Added

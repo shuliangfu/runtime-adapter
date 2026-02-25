@@ -9,6 +9,22 @@
 
 ---
 
+## [1.0.18] - 2026-02-25
+
+### 修复
+
+- **args() 在 Bun（Windows）下**：在 Bun 下运行时，`args()` 现在优先使用
+  `Bun.argv` 而非 `process.argv`，以便在 Windows 上正确拿到脚本参数（例如
+  `bun run script.ts -- --build` 中的 `--build`），避免 `process.argv`
+  未传递的问题。
+
+### 新增
+
+- **process-utils 测试**：为 `args()` 增加测试（多次调用、Bun 环境）；Windows
+  Bun 下 `--build` 的完整行为由 dweb CI 覆盖。
+
+---
+
 ## [1.0.17] - 2026-02-22
 
 ### 新增

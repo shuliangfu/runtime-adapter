@@ -1300,10 +1300,11 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.17] - 2026-02-22
+### [1.0.18] - 2026-02-25
 
-**新增**：路径 API `fromFileUrl()`。**修复**：fromFileUrl 测试在 Windows
-下。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
+**修复**：Bun（Windows）下 `args()` 优先使用 `Bun.argv`，确保脚本参数（如
+`--build`）正确传入。**新增**：process-utils 中 `args()`
+的单元测试。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
 
 ---
 
