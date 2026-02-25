@@ -4,12 +4,15 @@
  */
 
 import { IS_BUN } from "./detect.ts";
-import { getDeno, getProcess } from "./utils.ts";
+import { getBun, getDeno, getProcess } from "./utils.ts";
 import { $tr } from "./i18n.ts";
 
 /**
  * 获取命令行参数
  * @returns 命令行参数数组（不包含脚本路径和运行时路径）
+ *
+ * Bun 下优先使用 Bun.argv（Bun 官方 API），在 Windows 上比 process.argv 更可靠，
+ * 能正确拿到 `bun run script.ts -- --build` 传入的 --build。
  *
  * @example
  * ```typescript
@@ -25,6 +28,14 @@ export function args(): string[] {
     return deno.args;
   }
   if (IS_BUN) {
+    const bun = getBun();
+    const bunArgv =
+      bun && "argv" in bun && Array.isArray((bun as { argv?: string[] }).argv)
+        ? (bun as { argv: string[] }).argv
+        : null;
+    if (bunArgv && bunArgv.length > 2) {
+      return bunArgv.slice(2);
+    }
     const process = getProcess();
     return process?.argv?.slice(2) || [];
   }

@@ -12,10 +12,11 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
 [中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
 
-### [1.0.17] - 2026-02-22
+### [1.0.18] - 2026-02-25
 
-- **Added**: Path API `fromFileUrl()`. **Fixed**: fromFileUrl tests on Windows.
-  See [CHANGELOG](./docs/en-US/CHANGELOG.md).
+- **Fixed**: `args()` on Bun (Windows) now prefers `Bun.argv` so script args
+  like `--build` are received. **Added**: process-utils tests for `args()`. See
+  [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 
