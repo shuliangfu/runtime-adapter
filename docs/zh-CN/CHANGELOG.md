@@ -9,6 +9,25 @@
 
 ---
 
+## [1.0.19] - 2026-06-26
+
+### 修复
+
+- **Deno 下 `serve()` WebSocket 升级**：请求处理器不再用 `async/await`
+  包装，handler 可同步返回 `upgradeWebSocket` 的原始 101 响应，修复经 `serve()`
+  升级 WebSocket 时的 `Upgrade response was not returned from
+  callback` 错误。
+- **WebSocket 集成测试**：测试用 mock 服务器（`tests/websocket.ts`）在
+  `upgradeWebSocket()` 前读取握手信息、立即返回 101，并通过 microtask 延迟创建
+  Socket 与中间件，满足 Deno 升级约束。
+
+### 变更
+
+- **CI**：工作流增加 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` 环境变量，用于 GitHub
+  Actions Node 24 验证。
+
+---
+
 ## [1.0.18] - 2026-02-25
 
 ### 修复

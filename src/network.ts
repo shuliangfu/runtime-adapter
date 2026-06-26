@@ -421,14 +421,20 @@ export function serve(
       },
     };
 
-    const handle = deno.serve(newOptions, async (req: Request) => {
-      const result = await handler!(req);
-      // 确保返回 Response，而不是 undefined
-      if (result === undefined) {
-        return new Response(null, { status: 404 });
-      }
-      return result;
-    });
+    const handle = deno.serve(
+      newOptions,
+      (req: Request): Response | Promise<Response> => {
+        const result = handler!(req);
+        // 确保返回 Response，而不是 undefined（勿用 async/await，否则 WebSocket 升级无法同步返回 101）
+        if (result === undefined) {
+          return new Response(null, { status: 404 });
+        }
+        if (result instanceof Promise) {
+          return result.then((r) => r ?? new Response(null, { status: 404 }));
+        }
+        return result;
+      },
+    );
 
     // 如果 handle 已经有 port，直接使用
     if (handle.port !== undefined) {
