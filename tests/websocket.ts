@@ -119,9 +119,9 @@ export class Socket {
   /** 服务器实例 */
   private server: Server;
   /** 心跳定时器 */
-  private pingTimer?: number;
+  private pingTimer?: ReturnType<typeof setInterval>;
   /** 心跳超时定时器 */
-  private pingTimeoutTimer?: number;
+  private pingTimeoutTimer?: ReturnType<typeof setTimeout>;
 
   /**
    * 创建 Socket 实例
@@ -283,7 +283,7 @@ export class Socket {
           }
         }, pingTimeout);
       }
-    }, pingInterval) as unknown as number;
+    }, pingInterval);
   }
 
   /**
@@ -558,6 +558,122 @@ export class Server {
   }
 
   /**
+   * 取出须原样返回的升级响应（Deno 须返回 upgradeWebSocket 原始 response）
+   */
+  private toUpgradeResponse(response: Response | undefined): Response {
+    if (response !== undefined) {
+      return response;
+    }
+    // Bun 下 response 可能为 undefined，由运行时处理
+    return new Response(null, { status: 101 });
+  }
+
+  /**
+   * 同步处理 WebSocket 升级（Deno 须在同一 tick 返回 101 Response，不可 await 后再 return）
+   * Socket 创建与中间件在 {@link finishConnectionSetup} 中异步完成（须在 101 返回之后）。
+   *
+   * @param request 原始 HTTP 请求
+   * @returns 升级响应（101）或错误响应
+   */
+  private handleUpgrade(request: Request): Response {
+    const url = new URL(request.url);
+    if (url.pathname !== this.options.path) {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    // 握手信息须在 upgradeWebSocket 之前读取（升级后 request 即关闭）
+    const handshake: Handshake = {
+      query: Object.fromEntries(url.searchParams as any),
+      headers: request.headers,
+      address: request.headers.get("x-forwarded-for") || undefined,
+      url: request.url,
+    };
+
+    // Deno：upgradeWebSocket 必须是同步路径上的第一个操作，随后立即 return 101
+    let upgradeResult: ReturnType<typeof upgradeWebSocket>;
+    try {
+      upgradeResult = upgradeWebSocket(request);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return new Response(`WebSocket upgrade failed: ${errMsg}`, {
+        status: 500,
+      });
+    }
+
+    const { socket, response } = upgradeResult;
+
+    // 在返回 101 之后再创建 Socket（Deno 下 upgrade 回调内过早 addEventListener 会抛 Request closed）
+    queueMicrotask(() => {
+      void this.setupSocketAfterUpgrade(socket, handshake);
+    });
+
+    return this.toUpgradeResponse(response);
+  }
+
+  /**
+   * 101 响应返回后创建 Socket 并执行中间件与 connection 事件
+   */
+  private async setupSocketAfterUpgrade(
+    socket: any,
+    handshake: Handshake,
+  ): Promise<void> {
+    try {
+      if (!socket || typeof socket !== "object") {
+        throw new Error(`无效的 WebSocket 对象: ${typeof socket}`);
+      }
+
+      const hasAddEventListener =
+        typeof (socket as any).addEventListener === "function";
+      const hasOnMessage = typeof (socket as any).onmessage !== "undefined";
+
+      if (!hasAddEventListener && !hasOnMessage) {
+        const adapterKeys = Object.getOwnPropertyNames(socket);
+        const prototypeKeys = Object.getOwnPropertyNames(
+          Object.getPrototypeOf(socket || {}),
+        );
+        throw new Error(
+          `WebSocket 对象缺少必要的方法。属性: ${
+            adapterKeys.join(", ")
+          }, 原型属性: ${prototypeKeys.join(", ")}`,
+        );
+      }
+
+      const socketInstance = new Socket(
+        socket as any,
+        this,
+        handshake,
+      );
+
+      this.adapterToSocket.set(socket, socketInstance);
+      await this.finishConnectionSetup(socketInstance);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      try {
+        (socket as WebSocket).close(1011, errMsg);
+      } catch {
+        // 忽略关闭失败
+      }
+    }
+  }
+
+  /**
+   * 升级成功后异步执行中间件与 connection 事件（不可阻塞 101 响应返回）
+   */
+  private async finishConnectionSetup(socketInstance: Socket): Promise<void> {
+    try {
+      await this.executeMiddlewares(socketInstance);
+      this.sockets.set(socketInstance.id, socketInstance);
+      this.emit("connection", socketInstance);
+    } catch {
+      try {
+        socketInstance.disconnect("connection setup failed");
+      } catch {
+        // 忽略关闭失败
+      }
+    }
+  }
+
+  /**
    * 启动服务器
    * @param host 主机地址（可选）
    * @param port 端口号（可选，传 0 则使用系统分配端口）
@@ -572,85 +688,7 @@ export class Server {
         port: serverPort,
         host: serverHost === "0.0.0.0" ? undefined : serverHost,
       },
-      async (request: Request) => {
-        // 检查路径
-        const url = new URL(request.url);
-        if (url.pathname === this.options.path) {
-          try {
-            // 每个 WebSocket 连接都应该创建新的 Socket 实例
-            // 不要使用 urlToSocket 来避免重复创建，因为多个连接可能使用相同的 URL
-
-            // 升级 WebSocket 连接
-            // 在 Bun 环境下，socket 是 WebSocketAdapter，它实现了 addEventListener 等方法
-            // 在 Deno 环境下，socket 是原生 WebSocket
-            const upgradeResult = upgradeWebSocket(request);
-            const { socket, response } = upgradeResult;
-
-            // 调试：检查 socket 的类型和属性
-            if (!socket || typeof socket !== "object") {
-              throw new Error(`无效的 WebSocket 对象: ${typeof socket}`);
-            }
-
-            // 在 Bun 环境下，socket 应该是 WebSocketAdapter 实例
-            // 检查是否有必要的方法（addEventListener 或 onmessage）
-            const hasAddEventListener =
-              typeof (socket as any).addEventListener === "function";
-            const hasOnMessage =
-              typeof (socket as any).onmessage !== "undefined";
-
-            if (!hasAddEventListener && !hasOnMessage) {
-              // 尝试检查是否是 WebSocketAdapter 实例（通过检查内部属性）
-              const adapterKeys = Object.getOwnPropertyNames(socket);
-              const prototypeKeys = Object.getOwnPropertyNames(
-                Object.getPrototypeOf(socket || {}),
-              );
-              throw new Error(
-                `WebSocket 对象缺少必要的方法。属性: ${
-                  adapterKeys.join(", ")
-                }, 原型属性: ${prototypeKeys.join(", ")}`,
-              );
-            }
-
-            // 创建握手信息
-            const handshake: Handshake = {
-              query: Object.fromEntries(url.searchParams as any),
-              headers: request.headers,
-              address: request.headers.get("x-forwarded-for") || undefined,
-              url: request.url,
-            };
-
-            // 创建 Socket 实例
-            // WebSocketAdapter 实现了与 WebSocket 兼容的接口，可以直接使用
-            // 在 Bun 环境下，socket 是 WebSocketAdapter，它实现了 addEventListener 方法
-            // 在 Deno 环境下，socket 是原生 WebSocket
-            const socketInstance = new Socket(
-              socket as any, // 使用 any 避免类型检查问题，WebSocketAdapter 已实现兼容接口
-              this,
-              handshake,
-            );
-
-            // 将适配器映射到 Socket 实例（用于 Bun 环境下的消息处理）
-            this.adapterToSocket.set(socket, socketInstance);
-
-            // 执行中间件
-            await this.executeMiddlewares(socketInstance);
-
-            // 添加到连接池
-            this.sockets.set(socketInstance.id, socketInstance);
-
-            // 触发连接事件
-            this.emit("connection", socketInstance);
-
-            // Bun 环境下 response 可能为 undefined（由 Bun 自动处理）
-            return response ||
-              new Response("WebSocket upgrade", { status: 101 });
-          } catch (error) {
-            return new Response("WebSocket upgrade failed", { status: 500 });
-          }
-        }
-
-        return new Response("Not Found", { status: 404 });
-      },
+      (request: Request) => this.handleUpgrade(request),
     );
   }
 

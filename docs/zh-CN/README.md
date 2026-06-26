@@ -1300,11 +1300,11 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.18] - 2026-02-25
+### [1.0.19] - 2026-06-26
 
-**修复**：Bun（Windows）下 `args()` 优先使用 `Bun.argv`，确保脚本参数（如
-`--build`）正确传入。**新增**：process-utils 中 `args()`
-的单元测试。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
+**修复**：Deno 下 `serve()` 支持同步返回 WebSocket 101 升级响应；WebSocket
+集成测试 mock 服务器符合 Deno 升级约束。完整历史详见
+[CHANGELOG](./CHANGELOG.md)。
 
 ---
 

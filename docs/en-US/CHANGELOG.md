@@ -10,6 +10,28 @@ and this project adheres to
 
 ---
 
+## [1.0.19] - 2026-06-26
+
+### Fixed
+
+- **`serve()` WebSocket upgrade on Deno**: The Deno request handler is no longer
+  wrapped in `async/await`, so handlers can synchronously return the original
+  `upgradeWebSocket` 101 response. Fixes
+  `Upgrade response was not returned from
+  callback` when upgrading WebSockets
+  through `serve()`.
+- **WebSocket integration tests**: The test mock server (`tests/websocket.ts`)
+  now reads handshake data before `upgradeWebSocket()`, returns 101 immediately,
+  and defers Socket creation and middleware to a microtask so Deno upgrade
+  constraints are satisfied.
+
+### Changed
+
+- **CI**: Set workflow env `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` for GitHub
+  Actions Node 24 validation.
+
+---
+
 ## [1.0.18] - 2026-02-25
 
 ### Fixed

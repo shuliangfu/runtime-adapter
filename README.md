@@ -12,10 +12,11 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
 [中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
 
-### [1.0.18] - 2026-02-25
+### [1.0.19] - 2026-06-26
 
-- **Fixed**: `args()` on Bun (Windows) now prefers `Bun.argv` so script args
-  like `--build` are received. **Added**: process-utils tests for `args()`. See
+- **Fixed**: Deno `serve()` no longer wraps handlers in `async/await`, enabling
+  synchronous WebSocket 101 upgrade responses. **Fixed**: WebSocket integration
+  test mock server follows Deno upgrade constraints. See
   [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
@@ -1228,10 +1229,11 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md).
 
 ## 📋 Changelog
 
-### [1.0.17] - 2026-02-22
+### [1.0.19] - 2026-06-26
 
-**Added**: Path API `fromFileUrl()`. **Fixed**: fromFileUrl tests on Windows.
-See [CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
+**Fixed**: Deno `serve()` supports synchronous WebSocket 101 responses;
+WebSocket test mock server aligned with Deno upgrade rules. See
+[CHANGELOG](./docs/en-US/CHANGELOG.md) for full history.
 
 ---
 
