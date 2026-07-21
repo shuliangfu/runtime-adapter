@@ -3,10 +3,13 @@
  * 检测当前运行环境是 Deno 还是 Bun
  */
 
+import { onlyBunOrDenoError } from "./errors.ts";
 import { $tr } from "./i18n.ts";
 
 /**
  * 运行时类型
+ *
+ * 说明：暂不实现 Node 完整兼容；`unknown` 表示非 Deno/Bun。
  */
 export type Runtime = "deno" | "bun" | "unknown";
 
@@ -50,7 +53,22 @@ export const IS_DENO = RUNTIME === "deno";
  */
 export const IS_BUN = RUNTIME === "bun";
 
-// 运行时环境检查：只支持 Bun 或 Deno（i18n 不依赖本模块，可安全使用 $t 翻译）
-if (!IS_BUN && !IS_DENO) {
-  throw new Error($tr("error.onlyBunOrDeno"));
+/**
+ * 是否为已支持的服务端运行时（Deno 或 Bun）
+ */
+export const IS_SUPPORTED = IS_DENO || IS_BUN;
+
+/**
+ * 断言当前为 Deno 或 Bun，否则抛出 {@link RuntimeAdapterError}
+ * （供业务在入口做一次显式检查，与模块顶层检查互补）
+ */
+export function assertSupportedRuntime(): void {
+  if (!IS_SUPPORTED) {
+    throw onlyBunOrDenoError($tr("error.onlyBunOrDeno"));
+  }
+}
+
+// 模块加载时即检查：只支持 Bun 或 Deno（保持既有行为，错误类型升级为 RuntimeAdapterError）
+if (!IS_SUPPORTED) {
+  throw onlyBunOrDenoError($tr("error.onlyBunOrDeno"));
 }

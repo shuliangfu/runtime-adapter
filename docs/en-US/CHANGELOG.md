@@ -10,6 +10,39 @@ and this project adheres to
 
 ---
 
+## [1.1.0] - 2026-07-21
+
+### Added
+
+- **`RuntimeAdapterError`**: Stable error codes (`UNSUPPORTED_RUNTIME`,
+  `ONLY_BUN_OR_DENO`, `PLATFORM_LIMITATION`, …) with `isRuntimeAdapterError()`.
+- **`IS_SUPPORTED` / `assertSupportedRuntime()`**: Explicit supported-runtime
+  checks (Deno or Bun only; Node not targeted).
+- **Subpath exports**: `@dreamer/runtime-adapter/fs`, `/path`, `/process`,
+  `/net` for lighter imports without pulling the full surface.
+
+### Fixed
+
+- **Bun multi-`serve` WebSocket upgrade**: Request handlers run inside
+  `AsyncLocalStorage` so `upgradeWebSocket` resolves the correct Bun server
+  instance instead of a global singleton (reduces cross-talk when multiple
+  servers run in one process).
+- **file `chdir` on Bun without `process.chdir`**: Throws `RuntimeAdapterError`
+  with `PLATFORM_LIMITATION` instead of a bare `Error`.
+
+### Changed
+
+- file / env / process-utils: unsupported-runtime throws use
+  `RuntimeAdapterError` (`UNSUPPORTED_RUNTIME`).
+- Dev dependency `@dreamer/test` raised to `^1.1.10`.
+
+### Fixed (additional)
+
+- **macOS disk usage**: `getDiskUsage` uses `df -k` on darwin (convert KiB to
+  bytes) instead of Linux-only `df -B1`.
+
+---
+
 ## [1.0.19] - 2026-06-26
 
 ### Fixed

@@ -2,22 +2,21 @@
 
 ## Test Overview
 
-- **Test library version**: @dreamer/test@^1.0.0-beta.12
+- **Test library version**: @dreamer/test@^1.1.10
 - **Test framework**: @dreamer/test (compatible with Deno and Bun)
-- **Test date**: 2026-02-07
+- **Test date**: 2026-07-21
+- **Package version**: 1.1.0
 - **Test environment**:
-  - Bun 1.3.5
-  - Deno 2.6.4
+  - Bun 1.3.14
+  - Deno 2.x
 
 ## Test Results
 
 ### Overall Statistics
 
-- **Total tests**: 267
-- **Passed**: 267 ✅
-- **Failed**: 0
+- **Bun**: **284 passed**, 0 failed (~53s)
+- **Deno**: **307 passed**, 0 failed (~49s)
 - **Pass rate**: 100% ✅
-- **Test execution time**: ~51 seconds
 
 ### Test File Statistics
 

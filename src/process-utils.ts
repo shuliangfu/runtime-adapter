@@ -4,6 +4,7 @@
  */
 
 import { IS_BUN } from "./detect.ts";
+import { unsupportedRuntimeError } from "./errors.ts";
 import { getBun, getDeno, getProcess } from "./utils.ts";
 import { $tr } from "./i18n.ts";
 
@@ -67,5 +68,5 @@ export function exit(code: number): never {
       process.exit(code);
     }
   }
-  throw new Error($tr("error.unsupportedRuntime"));
+  throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
 }

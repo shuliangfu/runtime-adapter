@@ -4,10 +4,57 @@
  */
 
 import { IS_BUN } from "./detect.ts";
-import { getBun, getDeno } from "./utils.ts";
 import { $tr } from "./i18n.ts";
+import { platform } from "./process-info.ts";
+import { getBun, getDeno } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeChildProcess from "node:child_process";
+
+/**
+ * 杀掉指定 PID 的全部子进程树（递归）。
+ *
+ * Bun 下 `proc.kill(9)` 只杀父进程，esbuild 等子进程会变孤儿继续占用端口。
+ * 此函数通过 `pkill -P` (Unix) 或 `taskkill /T` (Windows) 杀掉整棵进程树。
+ *
+ * @param pid 父进程 PID
+ * @param signo 信号号（Unix 下传递给 pkill，默认 9 = SIGKILL）
+ */
+export function killProcessTree(pid: number, signo: number = 9): void {
+  const plat = platform();
+  if (plat === "windows") {
+    // Windows: taskkill /T 杀整棵树
+    try {
+      nodeChildProcess.execFileSync("taskkill", [
+        "/pid",
+        String(pid),
+        "/T",
+        "/F",
+      ], { stdio: "ignore" });
+    } catch {
+      // ignore - 进程可能已退出
+    }
+  } else {
+    // Unix: 先递归杀子进程，再杀父进程
+    try {
+      const childPids = nodeChildProcess
+        .execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf-8" })
+        .trim();
+      if (childPids) {
+        for (const childPidStr of childPids.split("\n")) {
+          const childPid = parseInt(childPidStr.trim(), 10);
+          if (childPid) killProcessTree(childPid, signo);
+        }
+      }
+    } catch {
+      // pgrep 失败 = 没有子进程，正常
+    }
+    try {
+      process.kill(pid, signo);
+    } catch {
+      // ignore - 进程可能已退出
+    }
+  }
+}
 
 /**
  * 将 Bun FileSink（write/end 接口）包装为 Web Streams WritableStream，以兼容 getWriter()
@@ -80,11 +127,18 @@ export interface SpawnedProcess {
   readonly pid: number;
   /** 等待进程结束并返回状态（不读取 stdout/stderr） */
   readonly status: Promise<CommandOutput>;
-  /** 终止进程 */
+  /** 终止进程（仅杀父进程，不杀子进程树） */
   kill(signo?: number): void;
   /**
+   * 终止进程及其全部子进程树。
+   *
+   * Bun 下 `proc.kill(9)` 只杀父进程，esbuild 等子进程会变孤儿继续占用端口。
+   * 此方法通过 `pkill -P` (Unix) 或 `taskkill /T` (Windows) 杀掉整棵进程树。
+   */
+  killTree(signo?: number): void;
+  /**
    * 取消子进程对事件循环的引用，允许父进程在子进程已退出后正常退出。
-   * Deno 下必须调用，否则父进程会挂起；Bun 下为 no-op。
+   * Deno 和 Bun 下均应调用，防止测试运行器将子进程视为 "dangling process" 而误杀。
    */
   unref(): void;
 }
@@ -173,6 +227,9 @@ export function createCommand(
           kill(signo?: number) {
             child.kill(signo);
           },
+          killTree(signo?: number) {
+            killProcessTree(child.pid, signo ?? 9);
+          },
           unref() {
             const c = child as unknown as { unref(): void };
             if (typeof c.unref === "function") c.unref();
@@ -259,8 +316,14 @@ export function createCommand(
           kill(signo?: number) {
             proc.kill(signo);
           },
-          // Bun 下子进程不会阻止父进程退出，保持接口一致即可
-          unref() {},
+          killTree(signo?: number) {
+            killProcessTree(proc.pid, signo ?? 9);
+          },
+          // Bun 下调用 unref() 防止测试运行器将子进程视为 "dangling process" 而误杀
+          unref() {
+            const p = proc as { unref?: () => void };
+            if (typeof p.unref === "function") p.unref();
+          },
         };
       },
 

@@ -647,17 +647,22 @@ export async function getDiskUsage(
       const disk = await getWindowsDiskAsync();
       if (disk) return disk;
     } else {
-      // Linux/macOS: 使用 df 命令
-      const text = await execCommand("df", ["-B1", path]); // -B1 表示以字节为单位
+      // Linux: df -B1（字节）；macOS/BSD: 无 -B，用 -k（1024 字节块）
+      const isDarwin = platform === "darwin";
+      const text = await execCommand(
+        "df",
+        isDarwin ? ["-k", path] : ["-B1", path],
+      );
       const lines = text.split("\n");
 
       // 跳过标题行，解析第二行
       if (lines.length >= 2) {
         const parts = lines[1].split(/\s+/).filter(Boolean);
         if (parts.length >= 4) {
-          const total = parseInt(parts[1]);
-          const used = parseInt(parts[2]);
-          const available = parseInt(parts[3]);
+          const scale = isDarwin ? 1024 : 1;
+          const total = parseInt(parts[1], 10) * scale;
+          const used = parseInt(parts[2], 10) * scale;
+          const available = parseInt(parts[3], 10) * scale;
           const usagePercent = total > 0 ? (used / total) * 100 : 0;
 
           return {

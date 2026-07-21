@@ -4,6 +4,7 @@
  */
 
 import { IS_BUN } from "./detect.ts";
+import { platformLimitationError, unsupportedRuntimeError } from "./errors.ts";
 import { $tr } from "./i18n.ts";
 import { dirname, join, resolve } from "./path.ts";
 import { getBuffer, getBun, getDeno, getProcess } from "./utils.ts";
@@ -12,6 +13,11 @@ import * as nodeCrypto from "node:crypto";
 import * as nodeFs from "node:fs";
 import * as nodeFsPromises from "node:fs/promises";
 import * as nodeOs from "node:os";
+
+/** 统一抛不支持的运行时（减少重复字面量） */
+function throwUnsupported(): never {
+  throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
+}
 
 /**
  * 文件打开选项
@@ -86,7 +92,7 @@ export async function readFile(path: string): Promise<Uint8Array> {
     return new Uint8Array(arrayBuffer);
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -110,7 +116,7 @@ export async function readTextFile(
     return await file.text();
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -159,7 +165,7 @@ export async function writeFile(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -208,7 +214,7 @@ export async function writeTextFile(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -265,7 +271,7 @@ export async function open(
     };
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -329,7 +335,7 @@ export async function mkdir(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -385,7 +391,7 @@ export async function remove(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -440,7 +446,7 @@ export async function stat(path: string): Promise<FileInfo> {
     };
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -758,7 +764,7 @@ export function watchFs(
     };
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -818,7 +824,7 @@ export async function readdir(path: string): Promise<DirEntry[]> {
     }
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -842,7 +848,7 @@ export async function copyFile(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -933,7 +939,7 @@ export async function rename(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -965,7 +971,7 @@ export async function symlink(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -984,7 +990,7 @@ export async function realPath(path: string): Promise<string> {
     return await nodeFsPromises.realpath(path);
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1005,7 +1011,7 @@ export async function chmod(path: string, mode: number): Promise<void> {
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1031,7 +1037,7 @@ export async function chown(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1060,7 +1066,7 @@ export async function makeTempDir(
     return tempDirPath;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1095,7 +1101,7 @@ export async function makeTempFile(
     return tempFile;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1118,7 +1124,7 @@ export function cwd(): string {
     return resolve(".");
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1139,10 +1145,10 @@ export function chdir(path: string): void {
       process.chdir(path);
       return;
     }
-    throw new Error($tr("error.bunChdirNotSupported"));
+    throw platformLimitationError($tr("error.bunChdirNotSupported"));
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1162,7 +1168,7 @@ export async function truncate(path: string, len: number): Promise<void> {
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1299,7 +1305,7 @@ export function statSync(path: string): FileInfo {
     };
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1336,7 +1342,7 @@ export function readTextFileSync(
     }) as string;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1389,7 +1395,7 @@ export function readFileSync(path: string): Uint8Array {
     return new Uint8Array(nodeFs.readFileSync(path));
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1458,7 +1464,7 @@ export function readdirSync(path: string): DirEntry[] {
     }
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1533,7 +1539,7 @@ export function realPathSync(path: string): string {
     return nodeFs.realpathSync(path);
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1591,7 +1597,7 @@ export function mkdirSync(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1662,7 +1668,7 @@ export function removeSync(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1715,7 +1721,7 @@ export function writeFileSync(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
@@ -1757,7 +1763,7 @@ export function writeTextFileSync(
     return;
   }
 
-  throw new Error($tr("error.unsupportedRuntime"));
+  throwUnsupported();
 }
 
 /**
