@@ -40,6 +40,9 @@
 // 导出运行时检测
 export * from "./detect.ts";
 
+// 统一错误类型
+export * from "./errors.ts";
+
 // 导出文件系统 API
 export * from "./file.ts";
 // 显式导出 existsSync，便于 Bun 等运行时正确解析（避免 export * 解析问题）

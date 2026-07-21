@@ -1300,11 +1300,11 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.0.19] - 2026-06-26
+### [1.1.0] - 2026-07-21
 
-**修复**：Deno 下 `serve()` 支持同步返回 WebSocket 101 升级响应；WebSocket
-集成测试 mock 服务器符合 Deno 升级约束。完整历史详见
-[CHANGELOG](./CHANGELOG.md)。
+**新增**：`RuntimeAdapterError`、子路径导出（`/fs` `/path` `/process` `/net`）。
+**修复**：Bun 多 `serve` WebSocket 升级（AsyncLocalStorage）；macOS `df`
+磁盘用量。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
 
 ---
 

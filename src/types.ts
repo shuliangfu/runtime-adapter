@@ -253,6 +253,7 @@ export interface DenoGlobal {
           { code: number; signal: string | null; success: boolean }
         >;
         kill(signo?: number): void;
+        unref(): void;
       };
     };
     // 终端 API

@@ -4,6 +4,7 @@
  */
 
 import { IS_BUN } from "./detect.ts";
+import { unsupportedRuntimeError } from "./errors.ts";
 import { getDeno, getProcess } from "./utils.ts";
 import { $tr } from "./i18n.ts";
 
@@ -45,7 +46,7 @@ function getEnvProvider(): EnvProvider {
       toObject: () => ({ ...env }) as Record<string, string>,
     };
   }
-  throw new Error($tr("error.unsupportedRuntime"));
+  throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
 }
 
 /**

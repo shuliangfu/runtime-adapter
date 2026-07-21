@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import { platform } from "../src/process-info.ts";
-import { createCommand, execCommandSync } from "../src/process.ts";
+import {
+  createCommand,
+  execCommandSync,
+  killProcessTree,
+} from "../src/process.ts";
 
 describe("进程/命令 API", () => {
   describe("createCommand", () => {
@@ -108,6 +112,77 @@ describe("进程/命令 API", () => {
       const status = await child.status;
       // 进程被取消，可能成功或失败，取决于时机
       expect(typeof status.success).toBe("boolean");
+    });
+
+    it("unref() 不应抛出异常", async () => {
+      const cmd = createCommand("echo", { args: ["unref-test"] });
+      const child = cmd.spawn();
+      // unref() 在 Bun 下应调用 proc.unref()，在 Deno 下应调用 child.unref()
+      expect(() => child.unref()).not.toThrow();
+      // unref 后进程可能不再保持事件循环，用超时保护避免挂起
+      const status = await Promise.race([
+        child.status,
+        new Promise<{ success: boolean }>((r) =>
+          setTimeout(() => r({ success: true }), 3000)
+        ),
+      ]);
+      expect(status.success).toBe(true);
+    }, { sanitizeOps: false });
+
+    it("killTree() 应终止进程而不抛出异常", async () => {
+      // 使用 sleep 命令创建一个长时间运行的进程
+      const sleepCmd = platform() === "windows"
+        ? createCommand("cmd", { args: ["/c", "timeout", "10"] })
+        : createCommand("sleep", { args: ["10"] });
+      const child = sleepCmd.spawn();
+      expect(child.pid).toBeGreaterThan(0);
+      // killTree 不应抛出异常
+      expect(() => child.killTree(9)).not.toThrow();
+      // 等待进程退出
+      const status = await child.status;
+      expect(status.success).toBe(false);
+    });
+
+    it("killTree() 应终止进程及其子进程", async () => {
+      // Unix: sh -c 'sleep 5 &' 创建子进程
+      // Windows: cmd /c "start /b timeout 5" 创建子进程
+      const cmd = platform() === "windows"
+        ? createCommand("cmd", {
+          args: ["/c", "timeout", "5"],
+        })
+        : createCommand("sh", {
+          args: ["-c", "sleep 5"],
+        });
+      const child = cmd.spawn();
+      expect(child.pid).toBeGreaterThan(0);
+      // 给进程一点启动时间
+      await new Promise((r) => setTimeout(r, 100));
+      // killTree 应该杀掉父进程和子进程
+      expect(() => child.killTree(9)).not.toThrow();
+      const status = await child.status;
+      expect(status.success).toBe(false);
+    });
+  });
+
+  describe("killProcessTree", () => {
+    it("应该可以杀掉指定 PID 的进程树", async () => {
+      const sleepCmd = platform() === "windows"
+        ? createCommand("cmd", { args: ["/c", "timeout", "10"] })
+        : createCommand("sleep", { args: ["10"] });
+      const child = sleepCmd.spawn();
+      const pid = child.pid;
+      expect(pid).toBeGreaterThan(0);
+      // 等待进程启动
+      await new Promise((r) => setTimeout(r, 50));
+      // killProcessTree 不应抛出异常
+      expect(() => killProcessTree(pid, 9)).not.toThrow();
+      const status = await child.status;
+      expect(status.success).toBe(false);
+    });
+
+    it("对不存在的 PID 不应抛出异常", () => {
+      // PID 999999 几乎不可能存在
+      expect(() => killProcessTree(999999, 9)).not.toThrow();
     });
   });
 

@@ -9,6 +9,36 @@
 
 ---
 
+## [1.1.0] - 2026-07-21
+
+### 新增
+
+- **`RuntimeAdapterError`**：稳定错误码（`UNSUPPORTED_RUNTIME`、
+  `ONLY_BUN_OR_DENO`、`PLATFORM_LIMITATION` 等）与 `isRuntimeAdapterError()`。
+- **`IS_SUPPORTED` / `assertSupportedRuntime()`**：显式支持运行时检查（仅 Deno /
+  Bun，暂不目标 Node）。
+- **子路径导出**：`@dreamer/runtime-adapter/fs`、`/path`、`/process`、`/net`，
+  便于按需引用。
+
+### 修复
+
+- **Bun 多 `serve` WebSocket 升级**：请求处理走 `AsyncLocalStorage`，
+  `upgradeWebSocket` 绑定当前请求的 server，避免全局单例串台。
+- **Bun 无 `process.chdir` 时的 `chdir`**：抛出带 `PLATFORM_LIMITATION` 的
+  `RuntimeAdapterError`。
+
+### 变更
+
+- file / env / process-utils：不支持的运行时统一抛 `RuntimeAdapterError`。
+- 开发依赖 `@dreamer/test` 升至 `^1.1.10`。
+
+### 修复（补充）
+
+- **macOS 磁盘用量**：`getDiskUsage` 在 darwin 上使用 `df -k`（并换算为字节），
+  不再使用 Linux 专用的 `df -B1`。
+
+---
+
 ## [1.0.19] - 2026-06-26
 
 ### 修复

@@ -4,7 +4,12 @@
 
 import { describe, expect, it } from "@dreamer/test";
 import { IS_BUN, IS_DENO } from "../src/detect.ts";
-import { serve, type ServeHandle, upgradeWebSocket } from "../src/network.ts";
+import {
+  serve,
+  type ServeHandle,
+  upgradeWebSocket,
+  WebSocketAdapter,
+} from "../src/network.ts";
 
 /**
  * 使用系统分配端口启动 serve，返回 handle 和实际端口
@@ -620,6 +625,69 @@ describe("WebSocket API", () => {
               ),
             ]);
           } catch (error) { /* ignore */ }
+        }
+      }
+    }, {
+      sanitizeOps: false,
+      sanitizeResources: false,
+    });
+  });
+
+  describe("allAdapters 内存清理", () => {
+    it("WebSocket 关闭后应从 allAdapters 中移除", async () => {
+      if (!IS_BUN) {
+        console.log("跳过 Bun 特定测试");
+        return;
+      }
+
+      let serverHandle: any = null;
+
+      try {
+        const { handle, port: testPort } = await serveWithSystemPort(
+          async (request: Request) => {
+            const url = new URL(request.url);
+            if (url.pathname === "/ws") {
+              const { socket, response } = upgradeWebSocket(request);
+              socket.addEventListener("open", () => {
+                setTimeout(() => {
+                  if (socket.readyState === WebSocket.OPEN) {
+                    socket.send("cleanup-test");
+                  }
+                }, 200);
+              });
+              if (response === undefined) return undefined;
+              return response;
+            }
+            return new Response("Not Found", { status: 404 });
+          },
+        );
+        serverHandle = handle;
+
+        const beforeSize = WebSocketAdapter.allAdapters.size;
+
+        const ws = await createWebSocketClient(`ws://localhost:${testPort}/ws`);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        // 连接建立后 allAdapters 应包含新的 adapter
+        expect(WebSocketAdapter.allAdapters.size).toBeGreaterThan(beforeSize);
+
+        ws.close();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // 关闭后 allAdapters 应清理掉对应的 adapter
+        expect(WebSocketAdapter.allAdapters.size).toBeLessThanOrEqual(
+          beforeSize,
+        );
+      } finally {
+        if (serverHandle) {
+          try {
+            await Promise.race([
+              serverHandle.shutdown(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("shutdown timeout")), 2000)
+              ),
+            ]);
+          } catch { /* ignore */ }
         }
       }
     }, {

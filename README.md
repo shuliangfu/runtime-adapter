@@ -12,12 +12,13 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
 [中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
 
-### [1.0.19] - 2026-06-26
+### [1.1.0] - 2026-07-21
 
-- **Fixed**: Deno `serve()` no longer wraps handlers in `async/await`, enabling
-  synchronous WebSocket 101 upgrade responses. **Fixed**: WebSocket integration
-  test mock server follows Deno upgrade constraints. See
-  [CHANGELOG](./docs/en-US/CHANGELOG.md).
+- **Added**: `RuntimeAdapterError` + codes, `IS_SUPPORTED` /
+  `assertSupportedRuntime()`, subpath exports (`/fs`, `/path`, `/process`,
+  `/net`). **Fixed**: Bun multi-`serve` WebSocket upgrade via
+  `AsyncLocalStorage`; macOS `df` disk usage (`-k` instead of invalid `-B1`).
+  See [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 

@@ -11,6 +11,13 @@ describe("主模块导出", () => {
     expect(runtimeAdapter.IS_BUN).toBeDefined();
     expect(runtimeAdapter.IS_DENO).toBeDefined();
     expect(runtimeAdapter.RUNTIME).toBeDefined();
+    expect(runtimeAdapter.IS_SUPPORTED).toBe(true);
+    expect(runtimeAdapter.assertSupportedRuntime).toBeDefined();
+  });
+
+  it("应该导出 RuntimeAdapterError", () => {
+    expect(runtimeAdapter.RuntimeAdapterError).toBeDefined();
+    expect(runtimeAdapter.isRuntimeAdapterError).toBeDefined();
   });
 
   it("应该导出文件系统 API", () => {
