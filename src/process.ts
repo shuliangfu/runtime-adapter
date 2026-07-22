@@ -579,12 +579,15 @@ export function createCommand(
         // 并发收集 stdout/stderr，避免大输出下管道缓冲背压死锁
         // 【Why】H4：传 maxOutputBytes 限制单流字节数，超限 collectNodeReadable 抛 OUTPUT_SIZE_EXCEEDED
         const maxBytes = options?.maxOutputBytes ?? DEFAULT_OUTPUT_MAX_BYTES;
-        const [stdout, stderr] = await Promise.all([
+        // 【Why】exitPromise 与 stdout/stderr 收集必须并行：spawn ENOENT 时 'error'
+        // 事件立即 reject exitPromise，若先单独 await 流收集再 await exitPromise，reject
+        // 发生在未被 await 的 tick 会触发 unhandledRejection（Node test runner 据此判失败）。
+        // 并入同一 Promise.all 确保 exitPromise reject 即时传播，被上层 try/catch 捕获。
+        const [{ code, signal }, stdout, stderr] = await Promise.all([
+          exitPromise,
           collectNodeReadable(proc.stdout, maxBytes),
           collectNodeReadable(proc.stderr, maxBytes),
         ]);
-
-        const { code, signal } = await exitPromise;
         return {
           code,
           success: code === 0,
