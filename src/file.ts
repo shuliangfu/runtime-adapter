@@ -3,16 +3,17 @@
  * 提供统一的文件系统操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { platformLimitationError, unsupportedRuntimeError } from "./errors.ts";
 import { $tr } from "./i18n.ts";
 import { dirname, join, resolve } from "./path.ts";
 import { getBuffer, getBun, getDeno, getProcess } from "./utils.ts";
-// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
+// 静态导入 Node.js 模块（Deno/Bun/Node 三端均可用，仅 Bun/Node 分支实际调用）
 import * as nodeCrypto from "node:crypto";
 import * as nodeFs from "node:fs";
 import * as nodeFsPromises from "node:fs/promises";
 import * as nodeOs from "node:os";
+import { Readable, Writable } from "node:stream";
 
 /** 统一抛不支持的运行时（减少重复字面量） */
 function throwUnsupported(): never {
@@ -92,6 +93,12 @@ export async function readFile(path: string): Promise<Uint8Array> {
     return new Uint8Array(arrayBuffer);
   }
 
+  if (IS_NODE) {
+    // Node：fs/promises.readFile 返回 Buffer（继承 Uint8Array），直接用
+    const buf = await nodeFsPromises.readFile(path);
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  }
+
   throwUnsupported();
 }
 
@@ -114,6 +121,10 @@ export async function readTextFile(
   if (bun) {
     const file = bun.file(path);
     return await file.text();
+  }
+
+  if (IS_NODE) {
+    return await nodeFsPromises.readFile(path, "utf8");
   }
 
   throwUnsupported();
@@ -165,6 +176,12 @@ export async function writeFile(
     return;
   }
 
+  if (IS_NODE) {
+    // Node：fs/promises.writeFile 已保证落盘，无需 Bun 的重试验证循环
+    await nodeFsPromises.writeFile(path, data, { mode: options?.mode });
+    return;
+  }
+
   throwUnsupported();
 }
 
@@ -211,6 +228,15 @@ export async function writeTextFile(
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
     }
+    return;
+  }
+
+  if (IS_NODE) {
+    // Node：fs/promises.writeFile 已保证落盘，无需 Bun 的重试验证循环
+    await nodeFsPromises.writeFile(path, data, {
+      encoding: "utf8",
+      mode: options?.mode,
+    });
     return;
   }
 
@@ -271,6 +297,59 @@ export async function open(
     };
   }
 
+  if (IS_NODE) {
+    // 构造 Node fs flags：对齐 Deno.open 语义
+    let flags: string;
+    if (options?.createNew) {
+      flags = "wx";
+    } else if (options?.append) {
+      flags = "a";
+    } else if (options?.truncate && options?.create) {
+      flags = "w";
+    } else if (options?.write && !options?.create) {
+      flags = "r+";
+    } else if (options?.write) {
+      flags = "w";
+    } else {
+      flags = "r";
+    }
+
+    const wantRead = options?.read ?? !options?.write;
+    const wantWrite = Boolean(
+      options?.write || options?.append || options?.truncate ||
+        options?.create || options?.createNew,
+    );
+
+    const readStream = wantRead
+      ? nodeFs.createReadStream(path, { flags })
+      : null;
+    const writeStream = wantWrite
+      ? nodeFs.createWriteStream(path, { flags })
+      : null;
+
+    const readable: ReadableStream<Uint8Array> = readStream
+      ? Readable.toWeb(readStream) as ReadableStream<Uint8Array>
+      : new ReadableStream<Uint8Array>({
+        start(c) {
+          c.close();
+        },
+      });
+    const writable: WritableStream<Uint8Array> = writeStream
+      ? Writable.toWeb(writeStream) as WritableStream<Uint8Array>
+      : new WritableStream<Uint8Array>({
+        write() {},
+      });
+
+    return {
+      readable,
+      writable,
+      close() {
+        readStream?.destroy();
+        writeStream?.destroy();
+      },
+    };
+  }
+
   throwUnsupported();
 }
 
@@ -306,7 +385,7 @@ export async function mkdir(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     try {
       await nodeFsPromises.mkdir(path, {
@@ -374,7 +453,7 @@ export async function remove(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     try {
       const stats = await nodeFsPromises.stat(path);
@@ -423,7 +502,7 @@ export async function stat(path: string): Promise<FileInfo> {
     };
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     const info = await nodeFsPromises.stat(path);
     return {
@@ -564,7 +643,7 @@ export function watchFs(
     };
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 环境下的文件监控使用 Node.js 的 fs.watch API
     const pathArray = Array.isArray(paths) ? paths : [paths];
 
@@ -797,7 +876,7 @@ export async function readdir(path: string): Promise<DirEntry[]> {
     return entries;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     try {
       // 先验证目录存在
@@ -842,7 +921,7 @@ export async function copyFile(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     await nodeFsPromises.copyFile(src, dest);
     return;
@@ -866,7 +945,7 @@ export async function rename(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     try {
       // 确保目标目录存在
@@ -965,7 +1044,7 @@ export async function symlink(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     await nodeFsPromises.symlink(target, path, type);
     return;
@@ -985,7 +1064,7 @@ export async function realPath(path: string): Promise<string> {
     return await deno.realPath(path);
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     return await nodeFsPromises.realpath(path);
   }
@@ -1005,7 +1084,7 @@ export async function chmod(path: string, mode: number): Promise<void> {
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     await nodeFsPromises.chmod(path, mode);
     return;
@@ -1031,7 +1110,7 @@ export async function chown(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     await nodeFsPromises.chown(path, uid, gid);
     return;
@@ -1055,7 +1134,7 @@ export async function makeTempDir(
     return await deno.makeTempDir(options);
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     const tmpDir = options?.dir || nodeOs.tmpdir();
     const prefix = options?.prefix || "tmp-";
@@ -1085,7 +1164,7 @@ export async function makeTempFile(
     return await deno.makeTempFile(options);
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 fs API
     const tmpDir = options?.dir || nodeOs.tmpdir();
     const prefix = options?.prefix || "tmp-";
@@ -1114,7 +1193,7 @@ export function cwd(): string {
     return deno.cwd();
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 process API
     const process = getProcess();
     if (process?.cwd) {
@@ -1138,7 +1217,7 @@ export function chdir(path: string): void {
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的 process API
     const process = getProcess();
     if (process?.chdir) {
@@ -1163,7 +1242,7 @@ export async function truncate(path: string, len: number): Promise<void> {
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     await nodeFsPromises.truncate(path, len);
     return;
   }
@@ -1282,7 +1361,7 @@ export function statSync(path: string): FileInfo {
     };
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     const info = nodeFs.statSync(path);
     return {
@@ -1335,7 +1414,7 @@ export function readTextFileSync(
     return deno.readTextFileSync(path);
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     return nodeFs.readFileSync(path, {
       encoding: _encoding as "utf-8" | "utf8",
@@ -1390,7 +1469,7 @@ export function readFileSync(path: string): Uint8Array {
     return deno.readFileSync(path);
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     return new Uint8Array(nodeFs.readFileSync(path));
   }
@@ -1432,7 +1511,7 @@ export function readdirSync(path: string): DirEntry[] {
     return entries;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     try {
       // 先验证目录存在
@@ -1534,7 +1613,7 @@ export function realPathSync(path: string): string {
     return deno.realPathSync(path);
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     return nodeFs.realpathSync(path);
   }
@@ -1569,7 +1648,7 @@ export function mkdirSync(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     try {
       nodeFs.mkdirSync(path, {
@@ -1648,7 +1727,7 @@ export function removeSync(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     try {
       const stats = nodeFs.statSync(path);
@@ -1701,7 +1780,7 @@ export function writeFileSync(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
     const Buffer = getBuffer();
@@ -1753,7 +1832,7 @@ export function writeTextFileSync(
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
     nodeFs.writeFileSync(path, data, {
       encoding: "utf-8",
