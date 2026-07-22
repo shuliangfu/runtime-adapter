@@ -22,6 +22,12 @@ export interface ServeOptions {
   port?: number;
   host?: string;
   onListen?: (params: { host: string; port: number }) => void;
+  /**
+   * WebSocket 升级允许的 Origin 列表（CSWSH 防护）。
+   * 未设置时默认同源校验（Origin hostname+port 比对 Host 头）；
+   * 设置后仅精确匹配列表中的 Origin（含 "null" 字面量）。非浏览器客户端（无 Origin）始终放行。
+   */
+  allowedOrigins?: string[];
 }
 
 /**
@@ -71,6 +77,62 @@ let lastNodeServer: http.Server | null = null;
 let lastNodeWss: WebSocketServer | null = null;
 /** Node 环境下待处理的 WebSocket 适配器（key = request.url） */
 const pendingNodeAdapters = new Map<string, WebSocketAdapter>();
+
+/**
+ * WebSocket 升级 Origin 校验：把 serve() 配置的 allowedOrigins 绑定到具体 Request，
+ * upgradeWebSocket 据此校验。WeakMap 随 Request GC 自动清理，无内存泄漏。
+ */
+const wsAllowedOriginsByReq = new WeakMap<Request, string[] | undefined>();
+
+/**
+ * 判定 WebSocket 升级请求的 Origin 是否被允许（防 CSWSH 跨站劫持）。
+ * 【Why】浏览器在 evil.com 打开 ws://victim.com 时会自动带 Origin: http://evil.com，
+ * 若服务端不校验则被劫持。默认同源校验（Origin hostname+port 归一化后比对 Host 头），
+ * allowedOrigins 显式覆盖。
+ * 【Invariant】fail-closed：无 Origin（非浏览器客户端）放行；有 Origin 但无法验证则拒。
+ */
+function isWsOriginAllowed(
+  origin: string | null | undefined,
+  host: string | null | undefined,
+  allowedOrigins?: string[],
+): boolean {
+  // 无 Origin header → 非浏览器客户端（curl/服务端 WS），放行
+  if (!origin) return true;
+  // allowedOrigins 显式配置：精确匹配（含 "null" 字面量场景）
+  if (allowedOrigins && allowedOrigins.length > 0) {
+    return allowedOrigins.includes(origin);
+  }
+  // 默认同源校验：无 Host 无法验证 → 拒绝；Origin==="null"（沙箱）无可比对源 → 拒绝
+  if (!host || origin === "null") return false;
+  try {
+    const o = new URL(origin);
+    const oHost = o.hostname;
+    // Origin 端口缺省时按协议默认端口归一化
+    const oPort = o.port ||
+      (o.protocol === "https:" || o.protocol === "wss:" ? "443" : "80");
+    // Host 头：hostname[:port]，port 缺省按 80（本适配层 serve 走 http）
+    let hHost: string, hPort: string;
+    const bracket = host.lastIndexOf("]");
+    const colonIdx = bracket > -1
+      ? host.indexOf(":", bracket)
+      : host.lastIndexOf(":");
+    if (colonIdx > -1) {
+      hHost = host.slice(0, colonIdx);
+      hPort = host.slice(colonIdx + 1);
+    } else {
+      hHost = host;
+      hPort = "80";
+    }
+    // 归一化默认端口：80/443 统一视为 80（http 服务）
+    const norm = (
+      p: string,
+    ) => (p === "" || p === "80" || p === "443" ? "80" : p);
+    return oHost === hHost && norm(oPort) === norm(hPort);
+  } catch {
+    // Origin 非合法 URL → 拒绝
+    return false;
+  }
+}
 
 /** 是否输出 WebSocket 调试日志（环境变量 RUNTIME_ADAPTER_DEBUG_WS=1 时启用） */
 function isWsDebug(): boolean {
@@ -598,6 +660,8 @@ export class WebSocketAdapter {
 export interface UpgradeWebSocketOptions {
   protocol?: string;
   idleTimeout?: number;
+  /** WS 升级允许的 Origin 列表，覆盖 serve() 级别配置（CSWSH 防护）。 */
+  allowedOrigins?: string[];
 }
 
 /**
@@ -696,6 +760,8 @@ export function serve(
     const handle = deno.serve(
       newOptions,
       (req: Request): Response | Promise<Response> => {
+        // 【Why】H1：绑定 serve 级别 allowedOrigins 到此 Request，供 upgradeWebSocket 读取
+        wsAllowedOriginsByReq.set(req, serveOptions.allowedOrigins);
         const result = handler!(req);
         // 确保返回 Response，而不是 undefined（勿用 async/await，否则 WebSocket 升级无法同步返回 101）
         if (result === undefined) {
@@ -770,6 +836,8 @@ export function serve(
       fetch: async (req: Request, srv: BunServer) => {
         return await bunServerAls.run(srv, async () => {
           lastBunServer = srv;
+          // 【Why】H1：绑定 serve 级别 allowedOrigins 到此 Request，供 upgradeWebSocket 读取
+          wsAllowedOriginsByReq.set(req, options.allowedOrigins);
           const isWs =
             req.headers.get("Upgrade")?.toLowerCase() === "websocket";
           if (isWs) {
@@ -824,9 +892,11 @@ export function serve(
           await writeResponseToNodeRes(res, result);
         }
       } catch (err) {
+        // 【Why】C2：不向客户端泄露内部错误细节（堆栈/路径/参数），仅记服务端审计日志
+        console.error($tr("error.internalServerError"), err);
         if (!res.headersSent) {
           res.statusCode = 500;
-          res.end(String(err instanceof Error ? err.message : err));
+          res.end($tr("error.internalServerError"));
         } else {
           res.destroy();
         }
@@ -834,6 +904,23 @@ export function serve(
     });
 
     server.on("upgrade", (req, socket, head) => {
+      const webReq = nodeReqToRequest(req);
+      // 【Why】H1：CSWSH 防护咽喉点（Node）。绑定 serve 级别 allowedOrigins 到此 Request，
+      // 供 upgradeWebSocket 读取；同时在进入 handler 前做干净 403 拒绝，避免误升级。
+      wsAllowedOriginsByReq.set(webReq, serveOpts.allowedOrigins);
+      if (
+        !isWsOriginAllowed(
+          req.headers.origin,
+          req.headers.host,
+          serveOpts.allowedOrigins,
+        )
+      ) {
+        console.error($tr("error.wsOriginRejected"));
+        socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+
       const ctx: NodeUpgradeCtx = {
         req,
         socket: socket as net.Socket,
@@ -841,7 +928,6 @@ export function serve(
         wss,
         upgraded: false,
       };
-      const webReq = nodeReqToRequest(req);
       nodeUpgradeAls.run(ctx, async () => {
         try {
           await fetchHandler(webReq);
@@ -908,6 +994,21 @@ export function upgradeWebSocket(
   request: Request,
   options?: UpgradeWebSocketOptions,
 ): UpgradeWebSocketResult {
+  // 【Why】CSWSH 防护：在升级前校验 Origin。三端统一咽喉点。
+  // allowedOrigins 优先取 per-call options，其次 serve() 经 WeakMap 绑定的配置。
+  // Node upgrade handler 已做干净 403 拒绝；此处对 Deno/Bun 抛错使升级被拒（连接不建立）。
+  const allowed = options?.allowedOrigins ?? wsAllowedOriginsByReq.get(request);
+  if (
+    !isWsOriginAllowed(
+      request.headers.get("origin"),
+      request.headers.get("host"),
+      allowed,
+    )
+  ) {
+    console.error($tr("error.wsOriginRejected"));
+    throw new Error($tr("error.wsOriginRejected"));
+  }
+
   const deno = getDeno();
   if (deno) {
     return deno.upgradeWebSocket(request, options);

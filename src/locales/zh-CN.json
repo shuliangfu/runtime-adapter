@@ -17,7 +17,9 @@
     "stdoutUnavailable": "标准输出不可用",
     "stderrUnavailable": "标准错误输出不可用",
     "bunRethrowSubstring1": "require 不可用",
-    "bunRethrowSubstring2": "execFileSync 不可用"
+    "bunRethrowSubstring2": "execFileSync 不可用",
+    "internalServerError": "内部服务器错误",
+    "wsOriginRejected": "WebSocket 升级被拒绝：Origin 不被允许"
   },
   "debug": {
     "wsPrefix": "[runtime-adapter WS]",
@@ -34,5 +36,7 @@
     "upgradeWebSocketUrl": "upgradeWebSocket: url=",
     "upgradeResult": "upgradeWebSocket: upgrade() result="
   },
-  "cron": { "taskExecutionFailed": "Cron 任务执行失败:" }
+  "cron": {
+    "taskExecutionFailed": "Cron 任务执行失败:"
+  }
 }
