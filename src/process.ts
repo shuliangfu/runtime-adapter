@@ -4,12 +4,20 @@
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";
+import { RuntimeAdapterError } from "./errors.ts";
 import { $tr } from "./i18n.ts";
 import { platform } from "./process-info.ts";
 import { getBun, getDeno } from "./utils.ts";
 // 静态导入 Node.js 模块（Deno/Bun/Node 三端均可用，仅 Bun/Node 分支实际调用）
+import { Buffer } from "node:buffer";
 import * as nodeChildProcess from "node:child_process";
 import { Readable, Writable } from "node:stream";
+
+/**
+ * 【Why】H4：子进程 output() 默认输出上限 10MB，防止恶意/失控子进程把 stdout/stderr
+ * 撑爆内存导致 OOM。调用方可经 CommandOptions.maxOutputBytes 覆盖；0/负数禁用。
+ */
+const DEFAULT_OUTPUT_MAX_BYTES = 10 * 1024 * 1024;
 
 /**
  * 杀掉指定 PID 的全部子进程树（递归）。
@@ -121,29 +129,44 @@ function nodeWritableToWeb(stream: Writable): WritableStream<Uint8Array> {
  * proc.stdout 可能在 toWeb 包装后立即 end，undici 的 Response 构造会以
  * "disturbed or locked" 拒绝。改用 Node 原生 async iteration 最稳。
  * spawn() 的公开 stdout/stderr 仍走 toWeb（契约要求返回 Web Stream）。
+ *
+ * 【Why maxBytes】H4 防 OOM：累计字节超限时立即 destroy 流并抛
+ * RuntimeAdapterError(OUTPUT_SIZE_EXCEEDED)，避免失控子进程撑爆内存。
+ * 【Perf】用 Buffer.concat 零拷贝拼接（V8 直接合并底层 ArrayBuffer），替代手动 set 循环。
+ *
+ * @param stream Node Readable 流（proc.stdout/stderr）
+ * @param maxBytes 单流字节上限；0/负数禁用（无限收集）
  */
 async function collectNodeReadable(
   stream: Readable | null,
+  maxBytes?: number,
 ): Promise<Uint8Array> {
   if (!stream) return new Uint8Array();
-  const chunks: Uint8Array[] = [];
+  const limit = maxBytes && maxBytes > 0 ? maxBytes : Infinity;
+  // Buffer 是 Uint8Array 子类，Buffer.concat 直接产出 Buffer（零拷贝合并）
+  const chunks: Buffer[] = [];
   let total = 0;
   for await (const chunk of stream) {
     // Node 字节流 chunk 为 Buffer（继承 Uint8Array）；字符串则编码归一
-    const u8: Uint8Array = chunk instanceof Uint8Array
-      ? chunk
-      : new TextEncoder().encode(String(chunk));
-    chunks.push(u8);
-    total += u8.length;
+    const buf: Buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(
+      chunk instanceof Uint8Array
+        ? chunk
+        : new TextEncoder().encode(String(chunk)),
+    );
+    total += buf.length;
+    // 超限：销毁流释放底层 fd，抛错让上层 Promise.all 中止
+    if (total > limit) {
+      stream.destroy();
+      throw new RuntimeAdapterError(
+        "OUTPUT_SIZE_EXCEEDED",
+        $tr("error.outputSizeExceeded", { maxBytes: String(limit) }),
+      );
+    }
+    chunks.push(buf);
   }
   if (total === 0) return new Uint8Array();
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
-  return out;
+  // Buffer.concat 零拷贝合并所有 chunk；视图共享底层 ArrayBuffer
+  return Buffer.concat(chunks, total);
 }
 
 /**
@@ -156,6 +179,12 @@ export interface CommandOptions {
   stdin?: "inherit" | "piped" | "null";
   stdout?: "inherit" | "piped" | "null";
   stderr?: "inherit" | "piped" | "null";
+  /**
+   * output() 收集 stdout/stderr 的单流字节上限（H4 防 OOM）。
+   * 默认 10MB；超限销毁流并抛 RuntimeAdapterError(OUTPUT_SIZE_EXCEEDED)。
+   * 0/负数禁用（无限收集）。
+   */
+  maxOutputBytes?: number;
 }
 
 /**
@@ -303,6 +332,17 @@ export function createCommand(
           stderr: options?.stderr,
         });
         const output = await cmd.output();
+        // 【Why】H4：Deno cmd.output() 原生全量缓冲，后置长度检查防下游处理超大输出
+        const maxBytes = options?.maxOutputBytes ?? DEFAULT_OUTPUT_MAX_BYTES;
+        if (
+          maxBytes > 0 &&
+          (output.stdout.length > maxBytes || output.stderr.length > maxBytes)
+        ) {
+          throw new RuntimeAdapterError(
+            "OUTPUT_SIZE_EXCEEDED",
+            $tr("error.outputSizeExceeded", { maxBytes: String(maxBytes) }),
+          );
+        }
         return {
           code: output.code,
           success: output.success,
@@ -399,12 +439,23 @@ export function createCommand(
         });
 
         const exitCode = await proc.exited;
+        // 【Why】H4：读 arrayBuffer 后判字节长度，超限抛 OUTPUT_SIZE_EXCEEDED 防 OOM
+        // （Bun 已在 arrayBuffer 期间全量缓冲，此处为后置防御 + 错误信号）
+        const maxBytes = options?.maxOutputBytes ?? DEFAULT_OUTPUT_MAX_BYTES;
         const stdout = proc.stdout
           ? new Uint8Array(await new Response(proc.stdout).arrayBuffer())
           : new Uint8Array();
         const stderr = proc.stderr
           ? new Uint8Array(await new Response(proc.stderr).arrayBuffer())
           : new Uint8Array();
+        if (maxBytes > 0) {
+          if (stdout.length > maxBytes || stderr.length > maxBytes) {
+            throw new RuntimeAdapterError(
+              "OUTPUT_SIZE_EXCEEDED",
+              $tr("error.outputSizeExceeded", { maxBytes: String(maxBytes) }),
+            );
+          }
+        }
 
         return {
           code: exitCode,
@@ -511,9 +562,11 @@ export function createCommand(
         });
 
         // 并发收集 stdout/stderr，避免大输出下管道缓冲背压死锁
+        // 【Why】H4：传 maxOutputBytes 限制单流字节数，超限 collectNodeReadable 抛 OUTPUT_SIZE_EXCEEDED
+        const maxBytes = options?.maxOutputBytes ?? DEFAULT_OUTPUT_MAX_BYTES;
         const [stdout, stderr] = await Promise.all([
-          collectNodeReadable(proc.stdout),
-          collectNodeReadable(proc.stderr),
+          collectNodeReadable(proc.stdout, maxBytes),
+          collectNodeReadable(proc.stderr, maxBytes),
         ]);
 
         const { code, signal } = await exitPromise;
