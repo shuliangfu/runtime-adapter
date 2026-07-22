@@ -22,7 +22,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5
+          deno-version: v2.9
 
       - name: Cache dependencies
         run: deno cache src/mod.ts tests/ 2>/dev/null || true
@@ -44,7 +44,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5
+          deno-version: v2.9
 
       - name: Cache dependencies
         run: deno cache src/mod.ts tests/ 2>/dev/null || true
@@ -66,7 +66,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5
+          deno-version: v2.9
 
       - name: Cache dependencies
         run: deno cache src/mod.ts tests/
@@ -102,7 +102,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5
+          deno-version: v2.9
 
       - name: Cache Deno dependencies
         run: deno cache src/mod.ts tests/ 2>/dev/null || true
@@ -138,7 +138,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5
+          deno-version: v2.9
 
       - name: Cache Deno dependencies
         run: deno cache src/mod.ts tests/ 2>/dev/null || true
@@ -168,7 +168,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5
+          deno-version: v2.9
 
       - name: Cache Deno dependencies
         run: deno cache src/mod.ts tests/
