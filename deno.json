@@ -27,10 +27,10 @@
     ]
   },
   "imports": {
-    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.0.1",
+    "@dreamer/i18n": "jsr:@dreamer/i18n@^1.1.0",
     "@dreamer/test": "../test/src/mod.ts",
     "node-cron": "npm:node-cron@3.0.3",
-    "ws": "npm:ws@^8.18.0"
+    "ws": "npm:ws@^8.21.1"
   },
   "minimumDependencyAge": 0,
   "nodeModulesDir": "auto",

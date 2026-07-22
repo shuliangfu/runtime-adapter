@@ -741,6 +741,14 @@ export function watchFs(
 
           watchers.push(watcher);
 
+          // 【Why】防止 close() 与 initWatchers 的 race：close() 可能在 fs.watch 创建前执行
+          // （initWatchers 是 async，await stat 期间 close() 已设 closed=true 但 watchers 为空）。
+          // 若不检查，新创建的 watcher 永不被关闭，Node 事件循环不退出（进程 hang）。
+          // 【Invariant】closed 标志在 close() 首次调用时置 true 且不可逆
+          if (closed) {
+            watcher.close();
+          }
+
           // 处理 watcher 错误
           watcher.on("error", () => {
             // 错误事件也作为事件处理
