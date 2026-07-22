@@ -1031,7 +1031,13 @@ export function serve(
             socket.destroy();
           }
         } catch (_e) {
-          socket.destroy();
+          // 【Why】upgradeWebSocket 已设 ctx.upgraded=true 并同步调 wss.handleUpgrade 接管
+          // socket；若 fetchHandler 后续代码抛错（如 Response(101) 在 undici 下 RangeError），
+          // 不可 destroy 已升级 socket——否则 wss 创建的 ws 收不到消息，WS 测试静默失败。
+          // 仅未升级时 destroy 拒绝连接。
+          if (!ctx.upgraded) {
+            socket.destroy();
+          }
         }
       });
     });
@@ -1041,38 +1047,45 @@ export function serve(
     const listenPort = serveOpts.port ?? 0;
     const listenHost = serveOpts.host ?? "0.0.0.0";
 
-    server.listen(listenPort, listenHost, () => {
-      if (serveOpts.onListen) {
-        const addr = server.address() as net.AddressInfo;
-        serveOpts.onListen({ host: addr.address, port: addr.port });
-      }
-    });
-
-    return {
-      finished: new Promise<void>((resolve) => {
-        server.on("close", () => resolve());
-      }),
-      get port(): number | undefined {
-        const addr = server.address();
-        return addr && typeof addr === "object" ? addr.port : undefined;
-      },
-      shutdown(shutdownOpts?: { graceful?: boolean }): Promise<void> {
-        // 关闭所有 WS 连接（ws 包无类型声明，WsWebSocket 为 any，显式标注避免 implicit any）
-        wss.clients.forEach((ws: WsWebSocket) => ws.close());
-        wss.close();
-        // 非优雅关闭：立即断开所有 HTTP 连接
-        if (!shutdownOpts?.graceful) {
-          if (typeof server.closeAllConnections === "function") {
-            server.closeAllConnections();
-          }
+    // 【Why】Node 的 server.listen() 异步：端口绑定在事件循环后续 tick 完成，
+    // 若同步返回 handle，handle.port 读 server.address() 得 null → undefined。
+    // Deno/Bun 的原生 serve 同步返回且 port 立即可用；Node 用 Promise 在 listen
+    // 回调（绑定完成）后 resolve handle，对齐语义。调用方须 await serve(...)。
+    // 【Invariant】类型标注 ServeHandle（运行时 Promise<ServeHandle>），适配层
+    // 弥合三端差异——Deno/Bun 分支同步返回 ServeHandle，Node 分支返回 Promise。
+    return new Promise<ServeHandle>((resolve) => {
+      server.listen(listenPort, listenHost, () => {
+        if (serveOpts.onListen) {
+          const addr = server.address() as net.AddressInfo;
+          serveOpts.onListen({ host: addr.address, port: addr.port });
         }
-        if (lastNodeServer === server) lastNodeServer = null;
-        if (lastNodeWss === wss) lastNodeWss = null;
-        return new Promise<void>((resolve) => {
-          server.close(() => resolve());
+        resolve({
+          finished: new Promise<void>((resolveFinished) => {
+            server.on("close", () => resolveFinished());
+          }),
+          get port(): number | undefined {
+            const addr = server.address();
+            return addr && typeof addr === "object" ? addr.port : undefined;
+          },
+          shutdown(shutdownOpts?: { graceful?: boolean }): Promise<void> {
+            // 关闭所有 WS 连接（ws 包无类型声明，WsWebSocket 为 any，显式标注避免 implicit any）
+            wss.clients.forEach((ws: WsWebSocket) => ws.close());
+            wss.close();
+            // 非优雅关闭：立即断开所有 HTTP 连接
+            if (!shutdownOpts?.graceful) {
+              if (typeof server.closeAllConnections === "function") {
+                server.closeAllConnections();
+              }
+            }
+            if (lastNodeServer === server) lastNodeServer = null;
+            if (lastNodeWss === wss) lastNodeWss = null;
+            return new Promise<void>((resolveShutdown) => {
+              server.close(() => resolveShutdown());
+            });
+          },
         });
-      },
-    };
+      });
+    }) as unknown as ServeHandle;
   }
 
   throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));

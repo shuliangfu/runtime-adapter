@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/runtime-adapter",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Runtime adaptation layer providing a unified API abstraction compatible with Deno, Bun, and Node.js runtimes (file, env, path, process, network, cron).",
   "type": "module",
   "license": "Apache-2.0",
@@ -18,11 +18,11 @@
   "scripts": {
     "test": "bun test tests/",
     "test:deno": "deno test -A tests/",
-    "test:node": "tsx --test tests/node/*.test.ts",
-    "test:all": "deno test -A tests/ && bun test tests/ && tsx --test tests/node/*.test.ts"
+    "test:node": "tsx --test --test-force-exit tests/*.test.ts",
+    "test:all": "deno test -A tests/ && bun test tests/ && tsx --test --test-force-exit tests/*.test.ts"
   },
   "dependencies": {
-    "@dreamer/i18n": "npm:@jsr/dreamer__i18n@1.0.1",
+    "@dreamer/i18n": "npm:@jsr/dreamer__i18n@^1.1.0",
     "node-cron": "npm:node-cron@3.0.3",
     "ws": "^8.21.1"
   },

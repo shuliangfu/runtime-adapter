@@ -6,7 +6,9 @@ import { describe, expect, it } from "@dreamer/test";
 import { mkdir, remove, writeTextFile } from "../src/file.ts";
 import { hash, hashFile, hashFileSync, hashSync } from "../src/hash.ts";
 
-const TEST_DIR = "./tests/data";
+// 【Why】独立子目录隔离：Node 默认并行跑测试文件，4 个文件测试若共享 ./tests/data，
+// 并发 mkdir/remove 同一目录会竞争（一个测试删目录时另一个正写文件 → ENOENT）。
+const TEST_DIR = "./tests/data/hash";
 
 describe("文件哈希 API", () => {
   describe("hash", () => {

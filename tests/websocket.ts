@@ -30,7 +30,12 @@
  * ```
  */
 
-import { serve, type ServeHandle, upgradeWebSocket } from "../src/mod.ts";
+import {
+  IS_NODE,
+  serve,
+  type ServeHandle,
+  upgradeWebSocket,
+} from "../src/mod.ts";
 
 /**
  * WebSocket 服务器配置选项
@@ -564,7 +569,13 @@ export class Server {
     if (response !== undefined) {
       return response;
     }
-    // Bun 下 response 可能为 undefined，由运行时处理
+    // 【Why】Node 下 WS 升级走 wss.handleUpgrade（直接操作 socket），HTTP Response 返回值
+    // 被 upgrade 事件忽略；undici 的 Response 构造拒绝 status 101（须 200-599），会抛
+    // RangeError 触发 catch → socket.destroy() 破坏已升级连接。故 Node 返回 200。
+    if (IS_NODE) {
+      return new Response(null, { status: 200 });
+    }
+    // Bun 下 response 可能为 undefined，由运行时处理 101
     return new Response(null, { status: 101 });
   }
 
@@ -678,12 +689,14 @@ export class Server {
    * @param host 主机地址（可选）
    * @param port 端口号（可选，传 0 则使用系统分配端口）
    */
-  listen(host?: string, port?: number): void {
+  async listen(host?: string, port?: number): Promise<void> {
     const serverHost = host || this.options.host || "0.0.0.0";
     const serverPort = port ?? this.options.port ?? 8080;
 
-    // 使用 runtime-adapter 的 serve API，兼容 Deno 和 Bun
-    this.httpServer = serve(
+    // 使用 runtime-adapter 的 serve API，兼容 Deno 和 Bun。
+    // 【Why】Node 分支 serve 返回 Promise（listen 异步），须 await 拿到就绪 handle；
+    // Deno/Bun 分支 serve 同步返回 ServeHandle，await 非 Promise 立即解析。
+    this.httpServer = await serve(
       {
         port: serverPort,
         host: serverHost === "0.0.0.0" ? undefined : serverHost,

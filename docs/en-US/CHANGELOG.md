@@ -10,6 +10,54 @@ and this project adheres to
 
 ---
 
+## [1.2.1] - 2026-07-22
+
+### Fixed
+
+- **`serve()` Node branch returns `Promise<ServeHandle>`**: Node's
+  `server.listen()` is asynchronous — port binding completes on a later
+  event-loop tick. Synchronously returning the handle made `handle.port` read
+  `server.address()` as `null` → `undefined`. The Node branch now resolves the
+  handle inside the listen callback, aligning with Deno/Bun sync semantics
+  (callers must `await serve(...)`).
+- **WebSocket upgrade socket wrongly destroyed**: `upgradeWebSocket`
+  synchronously calls `wss.handleUpgrade` to take over the socket and sets
+  `ctx.upgraded=true`. If `fetchHandler` then threw (e.g. undici's
+  `Response(null,{status:101})` RangeError), the catch block called
+  `socket.destroy()`, killing the already upgraded connection → WS `message`
+  events silently lost. The catch now checks `ctx.upgraded` before destroying.
+- **Node upgrade response status 101 RangeError**: undici's `Response`
+  constructor rejects status 101 (must be 200-599). `toUpgradeResponse` now
+  returns `Response(null,{status:200})` under `IS_NODE` (Node upgrades take over
+  the socket; the Response return value is ignored).
+- **Test parallel race**: `file`/`file-ext`/`file-sync`/`hash` shared
+  `./tests/data`. Node runs test files in parallel by default, so concurrent
+  mkdir/remove on the same directory caused intermittent ENOENT/port failures.
+  Each file now uses a unique subdirectory
+  (`./tests/data/{file,file-ext,file-sync,hash}`).
+- **`websocket.test.ts` / `websocket-test.test.ts` missing `await serve()`**:
+  paired with the serve Promise change, `serveWithSystemPort` / `listen` now
+  `await serve(...)`.
+
+### Changed
+
+- ⚠ **Unified test suite**: removed `tests/node/` (6 `node:test` smoke files);
+  all three runtimes now run the same `tests/*.test.ts`. Node runs the main
+  suite via `@dreamer/test`'s Node backend instead of a separate smoke set.
+- **`test:node` script**: `tsx --test tests/node/*.test.ts` →
+  `tsx --test --test-force-exit tests/*.test.ts` (`--test-force-exit` prevents
+  Node test process hang from stdin/server handles).
+- **`@dreamer/i18n`**: `1.0.1` → `^1.1.0`.
+- **`test:all`**: updated to the unified three-runtime `tests/*.test.ts`.
+
+### Verified
+
+- Deno: 309 passed, 0 failed
+- Bun: 286 passed, 0 failed
+- Node: 286 passed, 0 failed (`tsx --test --test-force-exit tests/*.test.ts`)
+
+---
+
 ## [1.2.0] - 2026-07-22
 
 ### Added

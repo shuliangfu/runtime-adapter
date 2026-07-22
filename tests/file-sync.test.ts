@@ -20,7 +20,8 @@ import {
 } from "../src/file.ts";
 
 describe("文件系统同步 API", () => {
-  const TEST_DIR = "./tests/data";
+  // 【Why】独立子目录隔离：避免与 file/file-ext/hash 测试并行跑时共享 ./tests/data 竞争。
+  const TEST_DIR = "./tests/data/file-sync";
   const TEST_FILE = `${TEST_DIR}/test-sync.txt`;
   const TEST_CONTENT = "Hello, Sync API!";
   const TEST_BINARY = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"

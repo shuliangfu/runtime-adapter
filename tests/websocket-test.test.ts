@@ -17,8 +17,7 @@ async function createServerWithSystemPort(
 ): Promise<{ server: Server; port: number }> {
   const server = new Server({ port: 0, path });
   if (setup) setup(server);
-  server.listen();
-  await delay(50);
+  await server.listen();
   const port = server.port;
   if (!port || port === 0) {
     throw new Error("系统未分配端口，请稍后重试");
@@ -930,8 +929,7 @@ describe("WebSocket Server", () => {
         pingTimeout: 2000,
       });
       server.on("connection", () => {});
-      server.listen();
-      await delay(50);
+      await server.listen();
       const port = server.port!;
 
       await delay(200);
@@ -969,8 +967,7 @@ describe("WebSocket Server", () => {
         pingTimeout: 2000,
       });
       server.on("connection", () => {});
-      server.listen();
-      await delay(50);
+      await server.listen();
       const port = server.port!;
 
       await delay(200);

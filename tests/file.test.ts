@@ -32,7 +32,8 @@ import {
 } from "../src/file.ts";
 
 describe("文件系统 API", () => {
-  const TEST_DIR = "./tests/data";
+  // 【Why】独立子目录隔离：避免与 file-ext/file-sync/hash 测试并行跑时共享 ./tests/data 竞争。
+  const TEST_DIR = "./tests/data/file";
   const TEST_FILE = `${TEST_DIR}/test.txt`;
   const TEST_CONTENT = "Hello, Runtime Adapter!";
   const TEST_BINARY = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
