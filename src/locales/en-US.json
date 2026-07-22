@@ -17,7 +17,9 @@
     "stdoutUnavailable": "Standard output is not available",
     "stderrUnavailable": "Standard error output is not available",
     "bunRethrowSubstring1": "require",
-    "bunRethrowSubstring2": "execFileSync"
+    "bunRethrowSubstring2": "execFileSync",
+    "internalServerError": "Internal Server Error",
+    "wsOriginRejected": "WebSocket upgrade rejected: Origin not allowed"
   },
   "debug": {
     "wsPrefix": "[runtime-adapter WS]",
@@ -34,5 +36,7 @@
     "upgradeWebSocketUrl": "upgradeWebSocket: url=",
     "upgradeResult": "upgradeWebSocket: upgrade() result="
   },
-  "cron": { "taskExecutionFailed": "Cron task execution failed:" }
+  "cron": {
+    "taskExecutionFailed": "Cron task execution failed:"
+  }
 }
