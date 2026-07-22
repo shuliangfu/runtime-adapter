@@ -458,7 +458,14 @@ export async function remove(
     try {
       const stats = await nodeFsPromises.stat(path);
       if (stats.isDirectory()) {
-        await nodeFsPromises.rm(path, { recursive: options?.recursive });
+        // 【Why】与 Deno.remove 语义对齐：空目录无需 recursive 即可删，非空目录须显式
+        // { recursive: true }，否则抛 ENOTEMPTY。Node 的 rm 在 recursive:false/undefined
+        // 下对目录抛 ERR_FS_EISDIR/ERR_INVALID_ARG_TYPE，故非递归路径改用 rmdir。
+        if (options?.recursive) {
+          await nodeFsPromises.rm(path, { recursive: true });
+        } else {
+          await nodeFsPromises.rmdir(path);
+        }
       } else {
         await nodeFsPromises.unlink(path);
       }
@@ -971,7 +978,8 @@ export async function rename(
       }
 
       // 验证源文件/目录存在（重试机制，处理文件系统同步延迟）
-      let retries = 50;
+      // 【Perf】原 50×50ms=2.5s 最坏阻塞；FS 同步延迟通常 <100ms，降至 5×50ms=250ms 足够。
+      let retries = 5;
       let sourceExists = false;
       while (retries > 0 && !sourceExists) {
         try {
@@ -1732,8 +1740,15 @@ export function removeSync(
     try {
       const stats = nodeFs.statSync(path);
       if (stats.isDirectory()) {
-        // 删除目录时，默认使用 recursive: true（如果未指定）
-        nodeFs.rmSync(path, { recursive: options?.recursive !== false });
+        // 【Why】与 Deno.remove 语义对齐：空目录无需 recursive 即可删，非空目录须显式
+        // { recursive: true }，否则抛 ENOTEMPTY。Node 的 rmSync 在 recursive:false/undefined
+        // 下对目录抛 ERR_FS_EISDIR/ERR_INVALID_ARG_TYPE，故非递归路径改用 rmdirSync。
+        // 【Invariant】recursive 仅接受显式 true；其余（undefined/false）一律走 rmdir 路径。
+        if (options?.recursive) {
+          nodeFs.rmSync(path, { recursive: true });
+        } else {
+          nodeFs.rmdirSync(path);
+        }
       } else {
         nodeFs.unlinkSync(path);
       }
