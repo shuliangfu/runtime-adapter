@@ -181,3 +181,59 @@ jobs:
 
       - name: Test (Bun, Windows)
         run: bun test tests/
+
+  # --- Node.js: Linux/macOS/Windows ---
+  # test:node 脚本：tsx --test --test-force-exit tests/*.test.ts
+  #   - tsx 作为 TypeScript loader，驱动 Node 原生 node:test runner
+  #   - --test-force-exit 处理 stdin/server 残留句柄，防挂起
+  #   - @dreamer/test 通过 npm:@jsr 别名解析（.npmrc 指向 JSR npm registry）
+  #   - 不安装 Chromium（runtime-adapter 无浏览器测试）
+  test-linux-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (Node)
+        run: npm install
+
+      - name: Test (Node)
+        run: npm run test:node
+        timeout-minutes: 10
+
+  test-macos-node:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (Node)
+        run: npm install
+
+      - name: Test (Node, macOS)
+        run: npm run test:node
+        timeout-minutes: 10
+
+  test-windows-node:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (Node)
+        run: npm install
+
+      # Node 原生 node:test runner（v21+）支持 glob，tsx 透传 --test 与 tests/*.test.ts，
+      # Windows cmd.exe 不展开 * 亦无影响。
+      - name: Test (Node, Windows)
+        run: npm run test:node
+        timeout-minutes: 10
