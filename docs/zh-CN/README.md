@@ -1,12 +1,14 @@
 # @dreamer/runtime-adapter
 
-> 运行时适配层包，提供统一的运行时 API 抽象层，兼容 Deno、Bun 和 Node.js 运行时环境
+> 运行时适配层包，提供统一的运行时 API 抽象层，兼容 Deno、Bun 和 Node.js
+> 运行时环境
 
 [English](../../README.md) | 中文 (Chinese)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../../LICENSE)
-[![Tests](https://img.shields.io/badge/tests-267%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-Deno%2FBun%2FNode-brightgreen)](./TEST_REPORT.md)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](./NODE_COMPAT.md)
 
 ---
 
@@ -80,7 +82,7 @@
 
 __所有 @dreamer/_ 包都遵循以下原则_*：
 
-- **主包（@dreamer/xxx）**：用于服务端（兼容 Deno 和 Bun 运行时）
+- **主包（@dreamer/xxx）**：用于服务端（兼容 Deno / Bun / Node）
 - **客户端子包（@dreamer/xxx/client）**：用于客户端（浏览器环境）
 
 这样可以：
@@ -94,7 +96,7 @@ __所有 @dreamer/_ 包都遵循以下原则_*：
 
 ## 🎯 使用场景
 
-- **跨运行时包开发**：Bun 和 Deno 兼容的包开发
+- **跨运行时包开发**：Deno / Bun / Node 兼容的包开发
 - **运行时 API 统一抽象**：统一不同运行时的 API 差异
 - **基础依赖包**：其他 `@dreamer/*` 包的基础依赖
 
@@ -114,26 +116,32 @@ deno add jsr:@dreamer/runtime-adapter
 bunx jsr add @dreamer/runtime-adapter
 ```
 
+### Node.js（22+）
+
+```bash
+npx jsr add @dreamer/runtime-adapter
+```
+
 ---
 
 ## 🌍 环境兼容性
 
-| 环境       | 版本要求          | 状态                                  |
-| ---------- | ----------------- | ------------------------------------- |
-| **Deno**   | 2.5+              | ✅ 完全支持                           |
-| **Bun**    | 1.0+              | ✅ 完全支持                           |
-| **Node.js** | 22+              | ✅ Phase A 支持（冒烟测试）           |
-| **服务端** | -                 | ✅ 支持（兼容 Deno、Bun 和 Node.js）  |
-| **客户端** | -                 | ❌ 不支持（浏览器环境）               |
-| **依赖**   | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
+| 环境        | 版本要求          | 状态                                  |
+| ----------- | ----------------- | ------------------------------------- |
+| **Deno**    | 2.5+              | ✅ 完全支持                           |
+| **Bun**     | 1.3+              | ✅ 完全支持                           |
+| **Node.js** | 22+               | ✅ Phase A 支持（冒烟测试）           |
+| **服务端**  | -                 | ✅ 支持（Deno、Bun、Node.js）         |
+| **客户端**  | -                 | ❌ 不支持（浏览器环境）               |
+| **依赖**    | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
 
 ### 平台支持
 
-| 平台        | Deno | Bun | 说明                                    |
-| ----------- | ---- | --- | --------------------------------------- |
-| **Linux**   | ✅   | ✅  | 完全支持                                |
-| **macOS**   | ✅   | ✅  | 完全支持                                |
-| **Windows** | ✅   | ✅  | 完全支持；部分 API 有平台差异（见下方） |
+| 平台        | Deno | Bun | Node | 说明                                    |
+| ----------- | ---- | --- | ---- | --------------------------------------- |
+| **Linux**   | ✅   | ✅  | ✅   | 完全支持                                |
+| **macOS**   | ✅   | ✅  | ✅   | 完全支持                                |
+| **Windows** | ✅   | ✅  | ✅   | 完全支持；部分 API 有平台差异（见下方） |
 
 **Windows 平台说明**：
 
@@ -154,7 +162,19 @@ bunx jsr add @dreamer/runtime-adapter
 
 详细分析见 [WIN_COMPAT.md](./WIN_COMPAT.md)。
 
-**运行时支持**：当前官方为 **Deno + Bun**。Node.js 兼容：Phase A 已实现（file/env/path/process/network/terminal，冒烟测试）；Phase B（测试后端）待定。分析见 [NODE_COMPAT.md](./NODE_COMPAT.md)。
+**运行时支持**：官方目标为 **Deno + Bun + Node.js 22+**。Node Phase A 已实现
+（file/env/path/process/network/terminal/system-info，冒烟测试）。主套件在
+Deno/Bun 上跑；Node 用 `tests/node/*`。详见 [NODE_COMPAT.md](./NODE_COMPAT.md)、
+[TEST_REPORT.md](./TEST_REPORT.md)。
+
+### 测试
+
+```bash
+deno test -A tests/
+bun test tests/
+npm run test:node    # Node 冒烟
+npm run test:all     # 三端
+```
 
 ---
 
@@ -171,7 +191,7 @@ import {
 } from "jsr:@dreamer/runtime-adapter";
 
 // 检测运行时
-const runtime = detectRuntime(); // "deno" | "bun" | "unknown"
+const runtime = detectRuntime(); // "deno" | "bun" | "node" | "unknown"
 
 // 使用常量
 if (IS_BUN) {
@@ -746,13 +766,14 @@ console.log(`平台: ${system.platform}`);
 
 ### 运行时检测 API
 
-| API               | 说明               | 返回值                         |
-| ----------------- | ------------------ | ------------------------------ |
-| `detectRuntime()` | 检测当前运行时环境 | `"deno" \| "bun" \| "unknown"` |
-| `RUNTIME`         | 当前运行时常量     | `"deno" \| "bun"`              |
-| `IS_BUN`          | 是否为 Bun 环境    | `boolean`                      |
-| `IS_DENO`         | 是否为 Deno 环境   | `boolean`                      |
-| `type Runtime`    | 运行时类型定义     | `"deno" \| "bun" \| "unknown"` |
+| API               | 说明               | 返回值                                   |
+| ----------------- | ------------------ | ---------------------------------------- |
+| `detectRuntime()` | 检测当前运行时环境 | `"deno" \| "bun" \| "node" \| "unknown"` |
+| `RUNTIME`         | 当前运行时常量     | `"deno" \| "bun" \| "node"`              |
+| `IS_BUN`          | 是否为 Bun 环境    | `boolean`                                |
+| `IS_DENO`         | 是否为 Deno 环境   | `boolean`                                |
+| `IS_NODE`         | 是否为 Node.js     | `boolean`                                |
+| `type Runtime`    | 运行时类型定义     | `"deno" \| "bun" \| "node" \| "unknown"` |
 
 ### 文件系统 API
 
@@ -1303,11 +1324,15 @@ bun test tests/
 
 ## 📋 变更日志
 
-### [1.1.0] - 2026-07-21
+### [1.2.0] - 2026-07-22
 
-**新增**：`RuntimeAdapterError`、子路径导出（`/fs` `/path` `/process` `/net`）。
-**修复**：Bun 多 `serve` WebSocket 升级（AsyncLocalStorage）；macOS `df`
-磁盘用量。完整历史详见 [CHANGELOG](./CHANGELOG.md)。
+- **Node.js 22+** Phase A：file/env/process/network/terminal/system-info +
+  冒烟测试。
+- 加固：CSWSH `allowedOrigins`、WS `maxPayload`/`idleTimeout`、connect/TLS
+  超时、 子进程 `maxOutputBytes`。
+- 性能：Bun 写文件去轮询、流式 `open`、Node-like 路径零拷贝读。
+- 测试：`deno test` / `bun test` / `npm run test:node` / `npm run test:all`。
+  完整说明见 [CHANGELOG](./CHANGELOG.md) · [TEST_REPORT](./TEST_REPORT.md)。
 
 ---
 

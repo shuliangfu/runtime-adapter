@@ -1,13 +1,13 @@
 /**
  * 文件系统 API 适配模块
- * 提供统一的文件系统操作接口，兼容 Deno 和 Bun
+ * 提供统一的文件系统操作接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";
 import { platformLimitationError, unsupportedRuntimeError } from "./errors.ts";
 import { $tr } from "./i18n.ts";
 import { dirname, join, resolve } from "./path.ts";
-import { getBuffer, getBun, getDeno, getProcess } from "./utils.ts";
+import { getBun, getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（Deno/Bun/Node 三端均可用，仅 Bun/Node 分支实际调用）
 import * as nodeCrypto from "node:crypto";
 import * as nodeFs from "node:fs";
@@ -18,6 +18,85 @@ import { Readable, Writable } from "node:stream";
 /** 统一抛不支持的运行时（减少重复字面量） */
 function throwUnsupported(): never {
   throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
+}
+
+/** node:fs Stats 最小形状（async/sync 共用映射） */
+type NodeFsStatsLike = {
+  isFile(): boolean;
+  isDirectory(): boolean;
+  isSymbolicLink(): boolean;
+  size: number;
+  mtime: Date;
+  atime: Date;
+  birthtime: Date;
+  mode: number;
+  dev: number;
+  ino: number;
+  nlink: number;
+  uid: number;
+  gid: number;
+  rdev: number;
+  blksize: number;
+  blocks: number;
+};
+
+/** 将 node:fs Stats 映射为统一 FileInfo（async/sync 共用） */
+function mapNodeStatsToFileInfo(info: NodeFsStatsLike): FileInfo {
+  return {
+    isFile: info.isFile(),
+    isDirectory: info.isDirectory(),
+    isSymlink: info.isSymbolicLink(),
+    size: info.size,
+    mtime: info.mtime,
+    atime: info.atime,
+    birthtime: info.birthtime,
+    mode: info.mode,
+    dev: info.dev,
+    ino: info.ino,
+    nlink: info.nlink,
+    uid: info.uid,
+    gid: info.gid,
+    rdev: info.rdev,
+    blksize: info.blksize,
+    blocks: info.blocks,
+  };
+}
+
+/**
+ * 将 FileOpenOptions 映射为 node:fs flags，并判定是否需要读/写流。
+ * 对齐 Deno.open 语义，供 Bun/Node 共用。
+ */
+function nodeOpenPlan(options?: FileOpenOptions): {
+  flags: string;
+  wantRead: boolean;
+  wantWrite: boolean;
+} {
+  let flags: string;
+  if (options?.createNew) {
+    flags = "wx";
+  } else if (options?.append) {
+    flags = "a";
+  } else if (options?.truncate && options?.create) {
+    flags = "w";
+  } else if (options?.write && !options?.create) {
+    flags = "r+";
+  } else if (options?.write) {
+    flags = "w";
+  } else {
+    flags = "r";
+  }
+  const wantRead = options?.read ?? !options?.write;
+  const wantWrite = Boolean(
+    options?.write || options?.append || options?.truncate ||
+      options?.create || options?.createNew,
+  );
+  return { flags, wantRead, wantWrite };
+}
+
+/** Buffer / Uint8Array → 可交给 node:fs 的视图（零拷贝优先） */
+function asNodeWritableBytes(data: Uint8Array): Uint8Array {
+  // Buffer 已是 Uint8Array 子类；其它 TypedArray 视图直接交给 node:fs
+  return data;
 }
 
 /**
@@ -94,9 +173,8 @@ export async function readFile(path: string): Promise<Uint8Array> {
   }
 
   if (IS_NODE) {
-    // Node：fs/promises.readFile 返回 Buffer（继承 Uint8Array），直接用
-    const buf = await nodeFsPromises.readFile(path);
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+    // Buffer 继承 Uint8Array，零拷贝返回（避免再 new 一层）
+    return await nodeFsPromises.readFile(path);
   }
 
   throwUnsupported();
@@ -147,37 +225,8 @@ export async function writeFile(
     return;
   }
 
-  const bun = getBun();
-  if (bun) {
-    // Bun 使用原生高性能 API
-    await bun.write(path, data);
-    // 验证文件确实写入成功（处理文件系统同步延迟）
-    // 优化：减少重试次数，提高性能
-    let retries = 5; // 从 10 次减少到 5 次
-    while (retries > 0) {
-      try {
-        const file = bun.file(path);
-        const exists = await file.exists();
-        if (exists) {
-          // 验证文件大小匹配（确保数据完整写入）
-          const arrayBuffer = await file.arrayBuffer();
-          if (arrayBuffer.byteLength === data.byteLength) {
-            return;
-          }
-        }
-      } catch {
-        // 文件可能还没同步，继续等待
-      }
-      retries--;
-      if (retries > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-    }
-    return;
-  }
-
-  if (IS_NODE) {
-    // Node：fs/promises.writeFile 已保证落盘，无需 Bun 的重试验证循环
+  // Bun / Node：统一走 node:fs/promises（保证 mode、落盘语义；去掉历史 Bun 写后轮询 re-read）
+  if (IS_BUN || IS_NODE) {
     await nodeFsPromises.writeFile(path, data, { mode: options?.mode });
     return;
   }
@@ -202,37 +251,8 @@ export async function writeTextFile(
     return;
   }
 
-  const bun = getBun();
-  if (bun) {
-    // Bun 使用原生高性能 API
-    await bun.write(path, data);
-    // 验证文件确实写入成功（处理文件系统同步延迟）
-    // 优化：减少重试次数，提高性能
-    let retries = 5; // 从 10 次减少到 5 次
-    while (retries > 0) {
-      try {
-        const file = bun.file(path);
-        const exists = await file.exists();
-        if (exists) {
-          // 验证文件内容匹配（确保数据完整写入）
-          const text = await file.text();
-          if (text === data) {
-            return;
-          }
-        }
-      } catch {
-        // 文件可能还没同步，继续等待
-      }
-      retries--;
-      if (retries > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-    }
-    return;
-  }
-
-  if (IS_NODE) {
-    // Node：fs/promises.writeFile 已保证落盘，无需 Bun 的重试验证循环
+  // Bun / Node：统一 node:fs（支持 mode；无写后 re-read 轮询）
+  if (IS_BUN || IS_NODE) {
     await nodeFsPromises.writeFile(path, data, {
       encoding: "utf8",
       mode: options?.mode,
@@ -269,59 +289,16 @@ export async function open(
     };
   }
 
-  const bun = getBun();
-  if (bun) {
-    // Bun 使用不同的方式打开文件
-    const file = bun.file(path);
-    return {
-      readable: file.stream(),
-      writable: new WritableStream({
-        async write(chunk) {
-          // Bun 需要追加写入
-          const existing = await file.arrayBuffer().catch(() =>
-            new ArrayBuffer(0)
-          );
-          const combined = new Uint8Array(existing.byteLength + chunk.length);
-          combined.set(new Uint8Array(existing), 0);
-          combined.set(chunk, existing.byteLength);
-          // Bun 使用原生高性能 API
-          await bun.write(path, combined);
-        },
-        close() {
-          // Bun 文件写入完成
-        },
-      }),
-      close: () => {
-        // Bun 不需要显式关闭
-      },
-    };
-  }
-
-  if (IS_NODE) {
-    // 构造 Node fs flags：对齐 Deno.open 语义
-    let flags: string;
-    if (options?.createNew) {
-      flags = "wx";
-    } else if (options?.append) {
-      flags = "a";
-    } else if (options?.truncate && options?.create) {
-      flags = "w";
-    } else if (options?.write && !options?.create) {
-      flags = "r+";
-    } else if (options?.write) {
-      flags = "w";
-    } else {
-      flags = "r";
-    }
-
-    const wantRead = options?.read ?? !options?.write;
-    const wantWrite = Boolean(
-      options?.write || options?.append || options?.truncate ||
-        options?.create || options?.createNew,
-    );
+  // Bun / Node：统一 node:fs 流（避免旧 Bun 实现「每 chunk 整文件重写」的 O(n²) 行为）
+  if (IS_BUN || IS_NODE) {
+    const { flags, wantRead, wantWrite } = nodeOpenPlan(options);
+    // 读写同时打开时，读侧用 a+/r+，写侧保留主 flags，避免双流同 flags 冲突
+    const readFlags = wantWrite && wantRead
+      ? (options?.append ? "a+" : "r+")
+      : flags;
 
     const readStream = wantRead
-      ? nodeFs.createReadStream(path, { flags })
+      ? nodeFs.createReadStream(path, { flags: readFlags })
       : null;
     const writeStream = wantWrite
       ? nodeFs.createWriteStream(path, { flags })
@@ -510,26 +487,7 @@ export async function stat(path: string): Promise<FileInfo> {
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 使用 Node.js 兼容的 fs API
-    const info = await nodeFsPromises.stat(path);
-    return {
-      isFile: info.isFile(),
-      isDirectory: info.isDirectory(),
-      isSymlink: info.isSymbolicLink(),
-      size: info.size,
-      mtime: info.mtime,
-      atime: info.atime,
-      birthtime: info.birthtime,
-      mode: info.mode,
-      dev: info.dev,
-      ino: info.ino,
-      nlink: info.nlink,
-      uid: info.uid,
-      gid: info.gid,
-      rdev: info.rdev,
-      blksize: info.blksize,
-      blocks: info.blocks,
-    };
+    return mapNodeStatsToFileInfo(await nodeFsPromises.stat(path));
   }
 
   throwUnsupported();
@@ -1143,14 +1101,15 @@ export async function makeTempDir(
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 使用 Node.js 兼容的 fs API
+    // Bun / Node：fs.mkdtemp 要求模板以恰好 6 个 X 结尾
     const tmpDir = options?.dir || nodeOs.tmpdir();
-    const prefix = options?.prefix || "tmp-";
-    // mkdtemp 需要 XXXXXX 占位符，会被替换为随机字符
-    const template = join(tmpDir, prefix + "XXXXXX");
-
-    const tempDirPath = await nodeFsPromises.mkdtemp(template);
-    return tempDirPath;
+    let prefix = options?.prefix || "tmp-";
+    // 避免 prefix 已以 X 结尾导致「非可移植模板」告警或占位符合并
+    if (/X+$/i.test(prefix)) {
+      prefix = `${prefix}-`;
+    }
+    const template = join(tmpDir, `${prefix}XXXXXX`);
+    return await nodeFsPromises.mkdtemp(template);
   }
 
   throwUnsupported();
@@ -1370,26 +1329,7 @@ export function statSync(path: string): FileInfo {
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    const info = nodeFs.statSync(path);
-    return {
-      isFile: info.isFile(),
-      isDirectory: info.isDirectory(),
-      isSymlink: info.isSymbolicLink(),
-      size: info.size,
-      mtime: info.mtime,
-      atime: info.atime,
-      birthtime: info.birthtime,
-      mode: info.mode,
-      dev: info.dev,
-      ino: info.ino,
-      nlink: info.nlink,
-      uid: info.uid,
-      gid: info.gid,
-      rdev: info.rdev,
-      blksize: info.blksize,
-      blocks: info.blocks,
-    };
+    return mapNodeStatsToFileInfo(nodeFs.statSync(path));
   }
 
   throwUnsupported();
@@ -1478,8 +1418,8 @@ export function readFileSync(path: string): Uint8Array {
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    return new Uint8Array(nodeFs.readFileSync(path));
+    // Buffer 继承 Uint8Array，零拷贝返回
+    return nodeFs.readFileSync(path);
   }
 
   throwUnsupported();
@@ -1796,22 +1736,11 @@ export function writeFileSync(
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 支持 Node.js 兼容的 fs 模块，使用同步 API
-    // 将 Uint8Array 转换为 Buffer（Bun 支持 Buffer）
-    const Buffer = getBuffer();
-    if (Buffer && typeof Buffer.from === "function") {
-      const buffer = Buffer.from(data);
-      nodeFs.writeFileSync(path, buffer, {
-        mode: options?.mode,
-        flag: options?.create === false ? "r+" : "w",
-      });
-    } else {
-      // 如果没有 Buffer，直接使用 Uint8Array（Bun 的 fs.writeFileSync 应该支持）
-      nodeFs.writeFileSync(path, data, {
-        mode: options?.mode,
-        flag: options?.create === false ? "r+" : "w",
-      });
-    }
+    // node:fs 直接接受 Uint8Array，无需经 Buffer.from 再拷贝一份
+    nodeFs.writeFileSync(path, asNodeWritableBytes(data), {
+      mode: options?.mode,
+      flag: options?.create === false ? "r+" : "w",
+    });
     return;
   }
 

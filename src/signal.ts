@@ -1,6 +1,6 @@
 /**
  * 信号处理 API 适配模块
- * 提供统一的信号处理接口，兼容 Deno 和 Bun
+ * 提供统一的信号处理接口，兼容 Deno / Bun / Node.js
  *
  * 平台兼容性说明：
  * - Deno 在 Windows 上仅支持 SIGINT、SIGBREAK、SIGUP，不支持 SIGTERM

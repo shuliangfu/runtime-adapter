@@ -14,27 +14,58 @@
 ### 新增
 
 - **Node.js 兼容（Phase A）**：`detect`/`env`/`signal`/`process-utils`/
-  `process-info`/`file`/`system-info`/`terminal`/`network` 模块现支持
-  Node.js >= 22（与 Deno、Bun 并列）。
+  `process-info`/`file`/`system-info`/`terminal`/`network` 模块现支持 Node.js >=
+  22（与 Deno、Bun 并列）。
   - **网络**：`serve`（http.createServer）、`upgradeWebSocket`（ws 包 +
-    AsyncLocalStorage 升级上下文传递）、`connect`（node:net）、`startTls`
-   （node:tls）。
-  - **WebSocketAdapter**：合并 `IS_BUN` → `IS_BUN || IS_NODE`
-    （`setWebSocket`/`setupEventHandlers`/`removeEventListener`）；修复 Node
-    `handleUpgrade` 同步回调导致 "open" 事件丢失的时序 bug。
-- **engines.node**：在 package.json 声明 `>=22`。
-- **i18n**：`nodeWsNeedServe` 错误文案（en-US / zh-CN）。
-- **Node 冒烟测试**：`tests/node/` — 基于 `node:test` + `tsx`，以
-  `if (!IS_NODE) return` 守卫（Deno/Bun 上为空操作）。
+    AsyncLocalStorage 升级上下文）、`connect`（node:net）、`startTls`
+    （node:tls）。
+  - **WebSocketAdapter**：合并 `IS_BUN` → `IS_BUN || IS_NODE`；修复 Node
+    `handleUpgrade` 同步回调导致 "open" 事件丢失。
+- **engines.node**：package.json 声明 `>=22`。
+- **Node 冒烟测试**：`tests/node/`（`node:test` +
+  `tsx`；`if (!IS_NODE) return`）。
+- **WebSocket CSWSH 防护**：`ServeOptions.allowedOrigins` — 升级 Origin 校验
+  （默认同源；可显式列表；无 Origin 的非浏览器客户端放行）。
+- **WebSocket 加固**：`websocket.maxPayload`（默认 1MB）、`idleTimeout` （默认
+  120000ms）、以及升级级 `maxPayload` / `allowedOrigins` 覆盖。
+- **connect/startTls 超时**：`ConnectOptions.timeout` /
+  `StartTlsOptions.timeout`（默认 30000ms；0/负数禁用）。
+- **子进程输出上限**：`CommandOptions.maxOutputBytes`（默认 10MB）；超限抛
+  `RuntimeAdapterError(OUTPUT_SIZE_EXCEEDED)`。
+- **错误码**：`OUTPUT_SIZE_EXCEEDED`。
+- **i18n**：`nodeWsNeedServe`、`error.internalServerError`、
+  `error.wsOriginRejected`、`error.connectTimeout`、
+  `error.tlsHandshakeTimeout`、`error.outputSizeExceeded`。
+- **Node `startTls` signal**：types 声明握手超时/取消用第三参。
+- **脚本**：`test:deno` / `test:node` / `test:all`。
 
 ### 变更
 
-- 移除 `@types/ws` devDependency（根源修复：消除 `@types/node` 全局 `Event`
-  类型污染，避免与 `deno.window` 冲突）。
-- `startTls` Node 分支：`caCerts` 经 `Buffer.from()` 转换以符合 `tls.connect`
-  类型。
-- `package.json`/`deno.json`：新增 `ws` 依赖；`tsx` devDependency 以保证
-  `test:node` 脚本可复现。
+- ⚠ **`removeSync` 默认 `recursive` true → false**：与异步 `remove()` / Deno
+  对齐；非空目录须显式 `{ recursive: true }`。
+- ⚠ **WebSocket `maxPayload` 默认 100MB → 1MB**：防大消息 OOM，可配置覆盖。
+- **`rename` 重试**：源路径 stat 预检 50 → 5 次。
+- 移除 `@types/ws`（消除 `@types/node` 对 `Event` 的全局污染）。
+- Node `startTls`：`caCerts` 经 `Buffer.from()` 转换。
+- 增加 `ws` 依赖与 `tsx`（`test:node`）。
+- **文档**：README / CHANGELOG / TEST_REPORT / NODE_COMPAT 对齐三端现状。
+
+### 优化
+
+- Bun `writeFile` / `writeTextFile`：去掉写后 re-read 轮询。
+- Bun `open`：真实流式写入，不再每 chunk 整文件重写。
+- `stat` 映射抽取；`readFile(Sync)` 零拷贝；`writeFileSync` 免多余拷贝。
+- `version` / `execPath` 兜底不再伪装为 `"deno"`。
+- `args`：Bun.argv 优先，再与 Node 共用 `process.argv`。
+- `makeTempDir`：避免 prefix 以 `X` 结尾。
+- `env` provider 懒加载缓存；`readStdin` 命名处理器防监听器泄漏。
+
+### 修复
+
+- Node `serve` 不再向客户端透传 HTTP 500 内部细节。
+- WebSocket 升级 Origin 校验（CSWSH）。
+- `allAdapters` 关闭时从静态集合移除。
+- Node 升级同步回调导致 "open" 丢失。
 
 ## [1.1.0] - 2026-07-21
 

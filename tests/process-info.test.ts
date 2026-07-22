@@ -40,7 +40,7 @@ describe("进程信息 API", () => {
     it("应该返回运行时版本信息", () => {
       const ver = version();
       expect(typeof ver).toBe("object");
-      expect(ver.runtime).toMatch(/^(deno|bun)$/);
+      expect(ver.runtime).toMatch(/^(deno|bun|node)$/);
       expect(typeof ver.version).toBe("string");
       expect(ver.version).not.toBe("");
     });

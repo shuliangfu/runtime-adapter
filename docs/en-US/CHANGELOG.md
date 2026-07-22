@@ -24,18 +24,73 @@ and this project adheres to
     `setWebSocket`/`setupEventHandlers`/`removeEventListener`; fixes Node
     `handleUpgrade` synchronous-callback timing where "open" event was lost.
 - **engines.node**: Declared `>=22` in package.json.
-- **i18n**: `nodeWsNeedServe` error message (en-US / zh-CN).
 - **Node smoke tests**: `tests/node/` — `node:test` + `tsx` based, guarded by
   `if (!IS_NODE) return` (no-op on Deno/Bun).
+- **WebSocket CSWSH protection**: `ServeOptions.allowedOrigins` — WebSocket
+  upgrade Origin validation (same-origin by default; explicit list overrides).
+  Non-browser clients without Origin always pass.
+- **WebSocket hardening options**:
+  - `ServeOptions.websocket.maxPayload` — per-server message byte limit (default
+    1MB).
+  - `ServeOptions.websocket.idleTimeout` — idle timeout in ms (default 120000;
+    0/negative disables).
+  - `UpgradeWebSocketOptions.maxPayload` / `allowedOrigins` — per-upgrade
+    overrides.
+- **connect/startTls timeouts**: `ConnectOptions.timeout` and
+  `StartTlsOptions.timeout` (default 30000ms; 0/negative disables).
+- **Subprocess output cap**: `CommandOptions.maxOutputBytes` (default 10MB;
+  0/negative disables). Exceeding the limit throws
+  `RuntimeAdapterError(OUTPUT_SIZE_EXCEEDED)`.
+- **Error code**: `OUTPUT_SIZE_EXCEEDED` on `RuntimeAdapterErrorCode`.
+- **i18n keys**: `nodeWsNeedServe`, `error.internalServerError`,
+  `error.wsOriginRejected`, `error.connectTimeout`, `error.tlsHandshakeTimeout`,
+  `error.outputSizeExceeded` (en-US / zh-CN).
+- **Node `startTls` signal support**: `Deno.startTls` third parameter
+  `signalOptions?: { signal?: AbortSignal }` declared for handshake
+  timeout/cancellation.
+- **Scripts**: `test:deno` / `test:node` / `test:all` (Deno + Bun + Node smoke).
 
 ### Changed
 
-- Removed `@types/ws` devDependency (root-cause fix: eliminated `@types/node`
-  global `Event` type pollution that conflicted with `deno.window`).
-- `startTls` Node branch: `caCerts` converted via `Buffer.from()` for correct
-  `tls.connect` typing.
-- `package.json`/`deno.json`: added `ws` dependency; `tsx` devDependency for
-  reproducible `test:node` script.
+- ⚠ **`removeSync` default `recursive` true → false**: Aligns with async
+  `remove()` and Deno semantics. Non-empty directories require explicit
+  `{ recursive: true }`.
+- ⚠ **WebSocket `maxPayload` default 100MB → 1MB**: Defense-in-depth against
+  large-message OOM; override via serve/upgrade options.
+- **`rename` retry backoff**: Source-path stat precheck retries 50 → 5 (worst
+  case 2.5s → 250ms).
+- Removed `@types/ws` devDependency (eliminated `@types/node` global `Event`
+  pollution vs `deno.window`).
+- `startTls` Node branch: `caCerts` via `Buffer.from()` for `tls.connect`.
+- `package.json`/`deno.json`: added `ws` dependency; `tsx` for `test:node`.
+- **Docs**: README / CHANGELOG / TEST_REPORT / NODE_COMPAT aligned with
+  three-runtime support.
+
+### Optimized
+
+- **`writeFile` / `writeTextFile` (Bun)**: No post-write re-read polling;
+  Bun/Node share `node:fs/promises.writeFile`.
+- **`open` (Bun)**: Real `node:fs` streams + `nodeOpenPlan` (no rewrite-whole-
+  file-per-chunk).
+- **`stat` / `statSync`**: Shared `mapNodeStatsToFileInfo`.
+- **`readFile` (Node) / `readFileSync` (Bun/Node)**: Zero-copy Buffer return.
+- **`writeFileSync`**: Write `Uint8Array` directly (no `Buffer.from` copy).
+- **`version` / `execPath` fallbacks**: Unknown runtime no longer pretends to be
+  `"deno"`.
+- **`args`**: Prefer `Bun.argv`, then shared `process.argv` with Node.
+- **`makeTempDir`**: Avoid prefixes ending in `X` (Node mkdtemp warning).
+- **`env` provider cache**: `getEnvProvider()` lazy-inits once.
+- **`readStdin`**: Named handlers + `removeListener` to avoid listener leak.
+
+### Fixed
+
+- **HTTP 500 error leakage**: Node `serve` returns generic
+  `error.internalServerError` (no internal detail to clients).
+- **CSWSH Origin validation**: WebSocket upgrades validate `Origin` (same-origin
+  default).
+- **`allAdapters` memory leak**: Remove adapter from static set on close.
+- **Node `handleUpgrade` timing**: "open" event no longer lost when the upgrade
+  callback runs synchronously.
 
 ## [1.1.0] - 2026-07-21
 

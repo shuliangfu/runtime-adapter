@@ -21,8 +21,14 @@ describe("Node 系统信息 API 冒烟", () => {
 
   it("getSystemInfo 应返回有效的主机名/平台/架构", async () => {
     const info = await getSystemInfo();
-    assert.ok(info.hostname && info.hostname !== "unknown", `hostname=${info.hostname}`);
-    assert.ok(info.platform && info.platform !== "unknown", `platform=${info.platform}`);
+    assert.ok(
+      info.hostname && info.hostname !== "unknown",
+      `hostname=${info.hostname}`,
+    );
+    assert.ok(
+      info.platform && info.platform !== "unknown",
+      `platform=${info.platform}`,
+    );
     assert.ok(info.arch && info.arch !== "unknown", `arch=${info.arch}`);
     assert.ok(typeof info.uptime === "number" && info.uptime >= 0);
     // cpus 可选，但有应 > 0

@@ -1,6 +1,6 @@
 /**
  * 网络 API 适配模块
- * 提供统一的网络操作接口，兼容 Deno 和 Bun
+ * 提供统一的网络操作接口，兼容 Deno / Bun / Node.js
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";

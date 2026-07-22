@@ -1,6 +1,6 @@
 /**
  * 环境变量 API 适配模块
- * 提供统一的环境变量操作接口，兼容 Deno 和 Bun
+ * 提供统一的环境变量操作接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";

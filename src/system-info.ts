@@ -1,6 +1,6 @@
 /**
  * 系统信息 API 适配模块
- * 提供统一的系统信息接口，兼容 Deno 和 Bun
+ * 提供统一的系统信息接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";

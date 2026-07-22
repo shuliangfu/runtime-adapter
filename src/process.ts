@@ -1,6 +1,6 @@
 /**
  * 进程/命令 API 适配模块
- * 提供统一的进程和命令执行接口，兼容 Deno 和 Bun
+ * 提供统一的进程和命令执行接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";
@@ -491,6 +491,30 @@ export function createCommand(
           },
         );
 
+        // 【Why 在 spawn 时立即挂 status】短命子进程可能在调用方 await child.status
+        // 之前就 exit；若每次 getter 才 once("exit")，会错过事件并永久挂起。
+        const statusPromise = new Promise<CommandOutput>((resolve, reject) => {
+          const finish = (
+            code: number | null,
+            signal: NodeJS.Signals | null,
+          ) => {
+            resolve({
+              code,
+              success: code === 0,
+              stdout: new Uint8Array(),
+              stderr: new Uint8Array(),
+              signal: signal ?? null,
+            });
+          };
+          // 已退出（极快进程）：同步完成，避免丢事件
+          if (proc.exitCode !== null || proc.signalCode !== null) {
+            finish(proc.exitCode, proc.signalCode);
+            return;
+          }
+          proc.once("error", reject);
+          proc.once("exit", (code, signal) => finish(code, signal));
+        });
+
         return {
           get stdin() {
             const s = proc.stdin;
@@ -507,20 +531,8 @@ export function createCommand(
           get pid() {
             return proc.pid ?? 0;
           },
-          // status：监听 'exit' 事件；'error'（如 ENOENT）则 reject，避免 Node 未处理事件崩溃
           get status(): Promise<CommandOutput> {
-            return new Promise<CommandOutput>((resolve, reject) => {
-              proc.once("error", reject);
-              proc.once("exit", (code, signal) => {
-                resolve({
-                  code: code,
-                  success: code === 0,
-                  stdout: new Uint8Array(),
-                  stderr: new Uint8Array(),
-                  signal: signal ?? null,
-                });
-              });
-            });
+            return statusPromise;
           },
           kill(signo?: number) {
             proc.kill(signo ?? 9);
@@ -534,8 +546,9 @@ export function createCommand(
         };
       },
 
-      // output() - 执行命令并返回输出（与 Bun 分支同模式：Readable.toWeb + Response 消费）
+      // output() - 执行命令并返回输出
       async output(): Promise<CommandOutput> {
+        // output 默认不占 stdin 管道，避免子进程因未 close stdin 而挂起
         const proc = nodeChildProcess.spawn(
           command,
           options?.args ?? [],
@@ -543,7 +556,9 @@ export function createCommand(
             cwd: options?.cwd,
             env: options?.env,
             stdio: [
-              nodeStdio(options?.stdin),
+              options?.stdin !== undefined
+                ? nodeStdio(options.stdin)
+                : "ignore",
               nodeStdio(options?.stdout),
               nodeStdio(options?.stderr),
             ],

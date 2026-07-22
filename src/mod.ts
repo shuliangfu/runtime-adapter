@@ -3,11 +3,11 @@
  *
  * 运行时适配层库
  *
- * 提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境。
+ * 提供统一的运行时 API 抽象层，兼容 Deno、Bun 与 Node.js。
  * 让其他 @dreamer/* 库可以在不同运行时环境中使用相同的 API。
  *
  * 功能特性：
- * - 运行时自动检测（Deno / Bun）
+ * - 运行时自动检测（Deno / Bun / Node）
  * - 文件系统 API 适配
  * - 网络 API 适配
  * - 环境变量 API 适配
@@ -17,13 +17,14 @@
  *
  * 环境兼容性：
  * - ✅ Deno 2.6+
- * - ✅ Bun 1.3.5
+ * - ✅ Bun 1.3+
+ * - ✅ Node.js 22+
  *
  * @example
  * ```typescript
  * import { readFile, writeFile, getEnv, serve } from "jsr:@dreamer/runtime-adapter";
  *
- * // 文件操作（自动适配 Deno 或 Bun）
+ * // 文件操作（自动适配 Deno / Bun / Node）
  * const data = await readFile("./file.txt");
  * await writeFile("./output.txt", data);
  *

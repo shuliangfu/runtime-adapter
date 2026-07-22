@@ -1,6 +1,6 @@
 /**
  * 进程信息 API 适配模块
- * 提供统一的进程信息接口，兼容 Deno 和 Bun
+ * 提供统一的进程信息接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";
@@ -20,8 +20,8 @@ export type Arch = "x86_64" | "aarch64" | "arm64" | "unknown";
  * 运行时版本信息
  */
 export interface RuntimeVersion {
-  /** 运行时名称 */
-  runtime: "deno" | "bun" | "node";
+  /** 运行时名称（正常路径仅为 deno/bun/node；unknown 仅兜底） */
+  runtime: "deno" | "bun" | "node" | "unknown";
   /** 版本号 */
   version: string;
   /** 构建信息（Deno 特有） */
@@ -58,7 +58,11 @@ export function execPath(): string {
   ) {
     return (proc as { execPath: string }).execPath;
   }
-  return "deno"; // fallback
+  // Node/Bun 偶发无 execPath 时退回 argv[0]
+  if (proc?.argv?.[0]) {
+    return proc.argv[0];
+  }
+  return "unknown";
 }
 
 /**
@@ -187,8 +191,9 @@ export function version(): RuntimeVersion {
       version: process?.versions?.node || "unknown",
     };
   }
+  // 理论上 detect 顶层已拒绝 unknown；此处不伪装为 deno
   return {
-    runtime: "deno" as const, // 默认值
+    runtime: "unknown",
     version: "unknown",
   };
 }
