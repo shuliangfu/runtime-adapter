@@ -29,7 +29,8 @@
   "imports": {
     "@dreamer/i18n": "jsr:@dreamer/i18n@^1.0.1",
     "@dreamer/test": "jsr:@dreamer/test@^1.1.10",
-    "node-cron": "npm:node-cron@3.0.3"
+    "node-cron": "npm:node-cron@3.0.3",
+    "ws": "npm:ws@^8.18.0"
   },
   "minimumDependencyAge": 0,
   "nodeModulesDir": "auto",

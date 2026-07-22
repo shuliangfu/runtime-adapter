@@ -10,6 +10,7 @@
     "renameFailed": "Rename failed: source path does not exist \"{oldPath}\" or target directory does not exist \"{newPathDir}\"",
     "bunChdirNotSupported": "chdir is not supported in Bun environment",
     "bunWsNeedServe": "WebSocket upgrade in Bun requires calling serve() first. Ensure serve() is called before upgradeWebSocket().",
+    "nodeWsNeedServe": "WebSocket upgrade in Node requires calling serve() first. Ensure serve() is called before upgradeWebSocket().",
     "wsUpgradeFailed": "WebSocket upgrade failed",
     "wsAdapterMissingAddEventListener": "WebSocketAdapter creation failed: missing addEventListener method",
     "onlyBunOrDeno": "Only Deno, Bun, or Node.js can be used",

@@ -4,7 +4,12 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { IS_BUN } from "./detect.ts";
+import * as http from "node:http";
+import * as net from "node:net";
+import { Readable, Writable } from "node:stream";
+import * as tls from "node:tls";
+import { type WebSocket as WsWebSocket, WebSocketServer } from "ws";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { unsupportedRuntimeError } from "./errors.ts";
 import { $tr } from "./i18n.ts";
 import type { BunServer, BunSocket, BunWebSocket } from "./types.ts";
@@ -44,6 +49,28 @@ function resolveBunServer(): BunServer | null {
 // Bun 环境下，存储待处理的 WebSocket 适配器
 // 当 upgradeWebSocket 被调用时，我们存储适配器，然后在 websocket 处理器中设置实际的 WebSocket
 const pendingBunAdapters = new Map<string, WebSocketAdapter>();
+
+/**
+ * Node：WebSocket 升级上下文（通过 ALS 从 server.on("upgrade") 传递到 upgradeWebSocket）。
+ * Node 的 WS 升级走独立 "upgrade" 事件（不像 Bun/Deno 在 fetch handler 内同步升级），
+ * 故需在 upgrade 事件回调中把 {req, socket, head, wss} 存入 ALS，handler 内调
+ * upgradeWebSocket 时读取并调 wss.handleUpgrade。
+ */
+interface NodeUpgradeCtx {
+  req: http.IncomingMessage;
+  socket: net.Socket;
+  head: Buffer;
+  wss: WebSocketServer;
+  upgraded: boolean; // upgradeWebSocket 调用后置 true，upgrade 事件回调据此判断是否拒绝
+}
+
+const nodeUpgradeAls = new AsyncLocalStorage<NodeUpgradeCtx>();
+/** 最近一次 serve 创建的 http.Server（单服务场景回退） */
+let lastNodeServer: http.Server | null = null;
+/** 最近一次 serve 创建的 WebSocketServer（单服务场景回退） */
+let lastNodeWss: WebSocketServer | null = null;
+/** Node 环境下待处理的 WebSocket 适配器（key = request.url） */
+const pendingNodeAdapters = new Map<string, WebSocketAdapter>();
 
 /** 是否输出 WebSocket 调试日志（环境变量 RUNTIME_ADAPTER_DEBUG_WS=1 时启用） */
 function isWsDebug(): boolean {
@@ -243,6 +270,57 @@ function createBunWebSocketHandlers() {
 }
 
 /**
+ * 将 Node http.IncomingMessage 转换为 Web Request。
+ * URL 从 Host header + req.url 重建；body 用 Readable.toWeb(req) 包装（GET/HEAD 无 body）。
+ */
+function nodeReqToRequest(req: http.IncomingMessage): Request {
+  const host = req.headers.host || "localhost";
+  const url = `http://${host}${req.url || "/"}`;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value !== undefined) {
+      if (Array.isArray(value)) {
+        for (const v of value) headers.append(key, v);
+      } else {
+        headers.set(key, value);
+      }
+    }
+  }
+  const method = req.method || "GET";
+  const hasBody = method !== "GET" && method !== "HEAD";
+  const body = hasBody
+    ? (Readable.toWeb(req) as ReadableStream<Uint8Array>)
+    : null;
+  return new Request(url, {
+    method,
+    headers,
+    body,
+    // @ts-expect-error Node Request 支持 duplex:'half'（TS lib.dom.d.ts 无此字段）
+    duplex: "half",
+  });
+}
+
+/**
+ * 将 Web Response 写入 Node http.ServerResponse。
+ * 状态码 + headers 直接设置；body 若为 ReadableStream 则 pipe 到 res。
+ */
+async function writeResponseToNodeRes(
+  res: http.ServerResponse,
+  response: Response,
+): Promise<void> {
+  res.statusCode = response.status;
+  response.headers.forEach((value, key) => {
+    res.setHeader(key, value);
+  });
+  if (response.body) {
+    const writer = Writable.toWeb(res);
+    await response.body.pipeTo(writer);
+  } else {
+    res.end();
+  }
+}
+
+/**
  * WebSocket 适配器类
  * 在 Bun 环境下提供 addEventListener API，兼容 Deno 的 WebSocket API
  */
@@ -293,7 +371,10 @@ export class WebSocketAdapter {
     // Bun 在 upgrade() 内同步调用 open(ws)，queueMicrotask 仍会在同一任务内执行，此时 handler
     // 尚未执行到 addEventListener("open")，导致 listeners=0。必须推迟到下一宏任务再 emit，
     // 确保 handler 已注册 open 监听器后再触发。
-    if (IS_BUN) {
+    // Node 同理：ws 包 wss.handleUpgrade 回调同步触发（在 upgradeWebSocket 返回前），
+    // handler 的 addEventListener("open") 尚未执行，故 Node 也需 setTimeout(0) 推迟 emit。
+    // Deno 不走此路径（upgradeWebSocket 直接返回原生 socket，不创建 adapter）。
+    if (IS_BUN || IS_NODE) {
       setTimeout(() => {
         wsDebug(
           $tr("debug.setWebSocketEmittingOpen"),
@@ -313,8 +394,9 @@ export class WebSocketAdapter {
     if (!this._ws) return;
     const ws = this._ws; // 保存引用，避免类型检查错误
 
-    // 在 Bun 环境下，将 onmessage、onclose、onerror 转换为 addEventListener
-    if (IS_BUN) {
+    // Bun/Node 环境下，将 onmessage、onclose、onerror 转换为 addEventListener
+    // （ws 包的 WsWebSocket 同样支持 onmessage/onclose/onerror 属性赋值）
+    if (IS_BUN || IS_NODE) {
       // 保存原始的 onmessage、onclose、onerror
       const originalOnMessage = ws.onmessage;
       const originalOnClose = ws.onclose;
@@ -351,7 +433,7 @@ export class WebSocketAdapter {
     type: string,
     listener: (event: WebSocketEvent) => void,
   ): void {
-    if (IS_BUN) {
+    if (IS_BUN || IS_NODE) {
       // Bun 环境下，使用内部事件系统
       if (!this.listeners.has(type)) {
         this.listeners.set(type, new Set());
@@ -372,7 +454,7 @@ export class WebSocketAdapter {
     type: string,
     listener: (event: WebSocketEvent) => void,
   ): void {
-    if (IS_BUN) {
+    if (IS_BUN || IS_NODE) {
       const listeners = this.listeners.get(type);
       if (listeners) {
         listeners.delete(listener);
@@ -720,6 +802,99 @@ export function serve(
     };
   }
 
+  if (IS_NODE) {
+    const fetchHandler = typeof options === "function" ? options : handler!;
+    const serveOpts = typeof options === "function"
+      ? ({} as ServeOptions)
+      : (options as ServeOptions);
+
+    const wss = new WebSocketServer({ noServer: true });
+    lastNodeWss = wss;
+
+    const server = http.createServer(async (req, res) => {
+      try {
+        const webReq = nodeReqToRequest(req);
+        const result = await fetchHandler(webReq);
+        if (result === undefined) {
+          await writeResponseToNodeRes(
+            res,
+            new Response(null, { status: 404 }),
+          );
+        } else {
+          await writeResponseToNodeRes(res, result);
+        }
+      } catch (err) {
+        if (!res.headersSent) {
+          res.statusCode = 500;
+          res.end(String(err instanceof Error ? err.message : err));
+        } else {
+          res.destroy();
+        }
+      }
+    });
+
+    server.on("upgrade", (req, socket, head) => {
+      const ctx: NodeUpgradeCtx = {
+        req,
+        socket: socket as net.Socket,
+        head,
+        wss,
+        upgraded: false,
+      };
+      const webReq = nodeReqToRequest(req);
+      nodeUpgradeAls.run(ctx, async () => {
+        try {
+          await fetchHandler(webReq);
+          // handler 未调 upgradeWebSocket → 拒绝升级
+          if (!ctx.upgraded) {
+            socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+            socket.destroy();
+          }
+        } catch (_e) {
+          socket.destroy();
+        }
+      });
+    });
+
+    lastNodeServer = server;
+
+    const listenPort = serveOpts.port ?? 0;
+    const listenHost = serveOpts.host ?? "0.0.0.0";
+
+    server.listen(listenPort, listenHost, () => {
+      if (serveOpts.onListen) {
+        const addr = server.address() as net.AddressInfo;
+        serveOpts.onListen({ host: addr.address, port: addr.port });
+      }
+    });
+
+    return {
+      finished: new Promise<void>((resolve) => {
+        server.on("close", () => resolve());
+      }),
+      get port(): number | undefined {
+        const addr = server.address();
+        return addr && typeof addr === "object" ? addr.port : undefined;
+      },
+      shutdown(shutdownOpts?: { graceful?: boolean }): Promise<void> {
+        // 关闭所有 WS 连接（ws 包无类型声明，WsWebSocket 为 any，显式标注避免 implicit any）
+        wss.clients.forEach((ws: WsWebSocket) => ws.close());
+        wss.close();
+        // 非优雅关闭：立即断开所有 HTTP 连接
+        if (!shutdownOpts?.graceful) {
+          if (typeof server.closeAllConnections === "function") {
+            server.closeAllConnections();
+          }
+        }
+        if (lastNodeServer === server) lastNodeServer = null;
+        if (lastNodeWss === wss) lastNodeWss = null;
+        return new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
+      },
+    };
+  }
+
   throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
 }
 
@@ -821,6 +996,46 @@ export function upgradeWebSocket(
     return {
       socket: adapter as unknown as WebSocket, // 返回适配器，但类型为 WebSocket
       response: undefined, // Bun 会自动处理 101 响应
+    };
+  }
+
+  if (IS_NODE) {
+    const ctx = nodeUpgradeAls.getStore();
+    if (!ctx) {
+      throw new Error($tr("error.nodeWsNeedServe"));
+    }
+
+    const url = request.url;
+
+    // 沿用 Bun 的 placeholder 模式：upgradeWebSocket 同步返回，
+    // 实际 ws 在 wss.handleUpgrade 回调（异步）中通过 setWebSocket 注入
+    const placeholderWs = new Proxy({} as WebSocket, {
+      get(_target, prop) {
+        if (prop === "readyState") return WebSocket.CONNECTING;
+        if (prop === "protocol" || prop === "url") return "";
+        if (typeof prop === "string" && prop.startsWith("on")) return undefined;
+        return undefined;
+      },
+    });
+
+    const adapter = new WebSocketAdapter(placeholderWs as WebSocket);
+    pendingNodeAdapters.set(url, adapter);
+
+    ctx.upgraded = true;
+
+    ctx.wss.handleUpgrade(
+      ctx.req,
+      ctx.socket,
+      ctx.head,
+      (ws: WsWebSocket) => {
+        adapter.setWebSocket(ws as unknown as WebSocket);
+        pendingNodeAdapters.delete(url);
+      },
+    );
+
+    return {
+      socket: adapter as unknown as WebSocket,
+      response: undefined,
     };
   }
 
@@ -950,6 +1165,41 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
         reject(error);
       }
     });
+  }
+
+  if (IS_NODE) {
+    const socket = net.createConnection({
+      host: options.host,
+      port: options.port,
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      socket.once("connect", resolve);
+      socket.once("error", reject);
+    });
+
+    const addr = socket.address() as net.AddressInfo;
+
+    return {
+      localAddr: {
+        host: addr.address,
+        port: addr.port,
+        transport: "tcp",
+      },
+      remoteAddr: {
+        host: socket.remoteAddress || options.host,
+        port: socket.remotePort || options.port,
+        transport: "tcp",
+      },
+      readable: Readable.toWeb(socket) as ReadableStream<Uint8Array>,
+      writable: Writable.toWeb(socket) as WritableStream<Uint8Array>,
+      close() {
+        socket.destroy();
+      },
+      closeWrite() {
+        socket.end();
+      },
+    };
   }
 
   throw new Error($tr("error.unsupportedRuntime"));
@@ -1095,6 +1345,47 @@ export async function startTls(
         reject(error);
       }
     });
+  }
+
+  if (IS_NODE) {
+    // 与 Bun 同语义：先关原连接，再创建新 TLS 连接
+    conn.close();
+
+    const tlsSocket = tls.connect({
+      host: conn.remoteAddr.host,
+      port: conn.remoteAddr.port,
+      // caCerts 是 Uint8Array[]，tls.connect 的 ca 要 string|Buffer|(string|Buffer)[]
+      // Buffer.from(Uint8Array) 拷贝为 Buffer，类型与语义均正确
+      ca: options?.caCerts?.map((c) => Buffer.from(c)),
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      tlsSocket.once("secureConnect", resolve);
+      tlsSocket.once("error", reject);
+    });
+
+    const addr = tlsSocket.address() as net.AddressInfo;
+
+    return {
+      localAddr: {
+        host: addr.address,
+        port: addr.port,
+        transport: "tcp",
+      },
+      remoteAddr: {
+        host: tlsSocket.remoteAddress || conn.remoteAddr.host,
+        port: tlsSocket.remotePort || conn.remoteAddr.port,
+        transport: "tcp",
+      },
+      readable: Readable.toWeb(tlsSocket) as ReadableStream<Uint8Array>,
+      writable: Writable.toWeb(tlsSocket) as WritableStream<Uint8Array>,
+      close() {
+        tlsSocket.destroy();
+      },
+      closeWrite() {
+        tlsSocket.end();
+      },
+    };
   }
 
   throw new Error($tr("error.unsupportedRuntime"));

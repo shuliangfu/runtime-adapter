@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@dreamer/i18n": "npm:@jsr/dreamer__i18n@1.0.1",
-    "node-cron": "npm:node-cron@3.0.3"
+    "node-cron": "npm:node-cron@3.0.3",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@dreamer/test": "npm:@jsr/dreamer__test@^1.1.10"
