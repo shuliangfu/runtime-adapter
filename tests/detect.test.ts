@@ -7,6 +7,7 @@ import {
   detectRuntime,
   IS_BUN,
   IS_DENO,
+  IS_NODE,
   RUNTIME,
   type Runtime,
 } from "../src/detect.ts";
@@ -15,7 +16,7 @@ describe("运行时检测", () => {
   describe("detectRuntime", () => {
     it("应该返回有效的运行时类型", () => {
       const runtime = detectRuntime();
-      expect(["deno", "bun", "unknown"]).toContain(runtime);
+      expect(["deno", "bun", "node", "unknown"]).toContain(runtime);
     });
 
     it("应该返回 Runtime 类型", () => {
@@ -26,7 +27,7 @@ describe("运行时检测", () => {
 
   describe("RUNTIME", () => {
     it("应该是有效的运行时值", () => {
-      expect(["deno", "bun"]).toContain(RUNTIME);
+      expect(["deno", "bun", "node"]).toContain(RUNTIME);
     });
 
     it("应该是 Runtime 类型", () => {
@@ -48,9 +49,9 @@ describe("运行时检测", () => {
   });
 
   describe("运行时环境检查", () => {
-    it("应该在 Deno 或 Bun 环境下正常运行", () => {
+    it("应该在 Deno、Bun 或 Node 环境下正常运行", () => {
       // 如果代码能执行到这里，说明运行时检查通过了
-      expect(IS_DENO || IS_BUN).toBe(true);
+      expect(IS_DENO || IS_BUN || IS_NODE).toBe(true);
     });
   });
 });

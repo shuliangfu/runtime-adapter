@@ -1,22 +1,25 @@
 /**
  * RuntimeAdapterError 与 detect 增强
  */
+import { describe, expect, it } from "@dreamer/test";
 import {
   assertSupportedRuntime,
   IS_BUN,
   IS_DENO,
+  IS_NODE,
   IS_SUPPORTED,
   isRuntimeAdapterError,
   RUNTIME,
   RuntimeAdapterError,
 } from "../src/mod.ts";
-import { describe, expect, it } from "@dreamer/test";
 
 describe("RuntimeAdapterError / detect enhancements", () => {
-  it("IS_SUPPORTED is true under Deno or Bun", () => {
+  it("IS_SUPPORTED is true under Deno, Bun or Node", () => {
     expect(IS_SUPPORTED).toBe(true);
-    expect(IS_DENO || IS_BUN).toBe(true);
-    expect(RUNTIME === "deno" || RUNTIME === "bun").toBe(true);
+    expect(IS_DENO || IS_BUN || IS_NODE).toBe(true);
+    expect(RUNTIME === "deno" || RUNTIME === "bun" || RUNTIME === "node").toBe(
+      true,
+    );
   });
 
   it("assertSupportedRuntime does not throw on supported runtimes", () => {
