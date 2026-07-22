@@ -3,10 +3,10 @@
  * 提供统一的环境变量操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { unsupportedRuntimeError } from "./errors.ts";
-import { getDeno, getProcess } from "./utils.ts";
 import { $tr } from "./i18n.ts";
+import { getDeno, getProcess } from "./utils.ts";
 
 /** 统一的环境变量提供层，避免各函数重复 Deno/Bun 分支 */
 interface EnvProvider {
@@ -28,7 +28,7 @@ function getEnvProvider(): EnvProvider {
       toObject: () => deno.env.toObject(),
     };
   }
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const proc = getProcess();
     const env = proc?.env ?? {};
     return {

@@ -3,7 +3,7 @@
  * 提供统一的进程工具接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { unsupportedRuntimeError } from "./errors.ts";
 import { getBun, getDeno, getProcess } from "./utils.ts";
 import { $tr } from "./i18n.ts";
@@ -40,6 +40,11 @@ export function args(): string[] {
     const process = getProcess();
     return process?.argv?.slice(2) || [];
   }
+  if (IS_NODE) {
+    // Node：process.argv[0]=node 可执行文件，[1]=脚本路径，[2..]=用户参数
+    const process = getProcess();
+    return process?.argv?.slice(2) ?? [];
+  }
   return [];
 }
 
@@ -62,7 +67,7 @@ export function exit(code: number): never {
   if (deno) {
     deno.exit(code);
   }
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     if (process?.exit) {
       process.exit(code);

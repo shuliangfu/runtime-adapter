@@ -8,7 +8,7 @@
  * @see https://github.com/denoland/deno/issues/9995
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { getDeno, getProcess } from "./utils.ts";
 import { platform } from "./process-info.ts";
 import type { BunSignal, DenoSignal } from "./types.ts";
@@ -47,7 +47,7 @@ export function addSignalListener(
       return; // 静默跳过，不注册
     }
     deno.addSignalListener(signal, handler);
-  } else if (IS_BUN) {
+  } else if (IS_BUN || IS_NODE) {
     const process = getProcess();
     if (process?.on) {
       process.on(signal, handler);
@@ -85,7 +85,7 @@ export function removeSignalListener(
       return;
     }
     deno.removeSignalListener(signal, handler);
-  } else if (IS_BUN) {
+  } else if (IS_BUN || IS_NODE) {
     const process = getProcess();
     if (process?.off) {
       process.off(signal, handler);
