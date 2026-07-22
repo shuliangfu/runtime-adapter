@@ -101,6 +101,30 @@ describe("进程/命令 API", () => {
       expect(output.stdout).toBeTruthy();
     }, { sanitizeResources: true });
 
+    it("output() 超过 maxOutputBytes 应抛 OUTPUT_SIZE_EXCEEDED", async () => {
+      // echo "hello" 输出 ≥6 字节，maxOutputBytes=4 必然超限（跨平台）
+      const cmd = createCommand("echo", {
+        args: ["hello"],
+        maxOutputBytes: 4,
+      });
+      let threw = false;
+      try {
+        await cmd.output();
+      } catch (_err) {
+        threw = true;
+      }
+      expect(threw).toBe(true);
+    });
+
+    it("maxOutputBytes=0 应禁用上限（不抛错）", async () => {
+      const cmd = createCommand("echo", {
+        args: ["hello"],
+        maxOutputBytes: 0,
+      });
+      const output = await cmd.output();
+      expect(output.success).toBe(true);
+    });
+
     it("应该可以取消进程", async () => {
       // 根据系统不同，sleep 命令可能不同
       // Unix: sleep, Windows: timeout

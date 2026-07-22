@@ -21,7 +21,8 @@
     "internalServerError": "Internal Server Error",
     "wsOriginRejected": "WebSocket upgrade rejected: Origin not allowed",
     "connectTimeout": "Connection timed out",
-    "tlsHandshakeTimeout": "TLS handshake timed out"
+    "tlsHandshakeTimeout": "TLS handshake timed out",
+    "outputSizeExceeded": "Subprocess output exceeded size limit ({maxBytes} bytes)"
   },
   "debug": {
     "wsPrefix": "[runtime-adapter WS]",

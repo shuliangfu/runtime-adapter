@@ -12,7 +12,8 @@ export type RuntimeAdapterErrorCode =
   | "INVALID_ARGUMENT"
   | "IO_ERROR"
   | "NETWORK_ERROR"
-  | "PROCESS_ERROR";
+  | "PROCESS_ERROR"
+  | "OUTPUT_SIZE_EXCEEDED";
 
 /**
  * runtime-adapter 标准错误
