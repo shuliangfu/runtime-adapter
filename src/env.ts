@@ -17,21 +17,31 @@ interface EnvProvider {
   toObject(): Record<string, string>;
 }
 
+/**
+ * 【Why】P2：缓存 EnvProvider 实例，避免每次 env 操作重建 5 个闭包对象。
+ * 【Invariant】Deno.env / process.env 均为 live 引用对象，缓存后 set/delete 仍 mutate 同一对象，语义不变。
+ */
+let cachedProvider: EnvProvider | null = null;
+
 function getEnvProvider(): EnvProvider {
+  if (cachedProvider) return cachedProvider;
   const deno = getDeno();
   if (deno) {
-    return {
+    // deno.env 为 live 对象，缓存安全
+    cachedProvider = {
       get: (k) => deno.env.get(k),
       set: (k, v) => deno.env.set(k, v),
       delete: (k) => deno.env.delete(k),
       has: (k) => deno.env.has(k),
       toObject: () => deno.env.toObject(),
     };
+    return cachedProvider;
   }
   if (IS_BUN || IS_NODE) {
     const proc = getProcess();
+    // process.env 为 live 引用，缓存后仍指向同一对象
     const env = proc?.env ?? {};
-    return {
+    cachedProvider = {
       get: (k) => env[k],
       set: (k, v) => {
         if (proc) {
@@ -45,6 +55,7 @@ function getEnvProvider(): EnvProvider {
       has: (k) => k in env,
       toObject: () => ({ ...env }) as Record<string, string>,
     };
+    return cachedProvider;
   }
   throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
 }
