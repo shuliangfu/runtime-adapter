@@ -3,12 +3,13 @@
  * 提供统一的进程和命令执行接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { $tr } from "./i18n.ts";
 import { platform } from "./process-info.ts";
 import { getBun, getDeno } from "./utils.ts";
-// 静态导入 Node.js 模块（仅在 Bun 环境下使用）
+// 静态导入 Node.js 模块（Deno/Bun/Node 三端均可用，仅 Bun/Node 分支实际调用）
 import * as nodeChildProcess from "node:child_process";
+import { Readable, Writable } from "node:stream";
 
 /**
  * 杀掉指定 PID 的全部子进程树（递归）。
@@ -80,15 +81,69 @@ function toWritableStream(sink: {
 }
 
 /**
- * 将 CommandOptions 的 stdio 值映射为 Bun 接受的格式
- * Bun 不接受字符串 "null"，需转为 null 或 "ignore"
+ * 将 CommandOptions 的 stdio 值映射为 Bun/Node 接受的格式。
+ * Bun/Node 均不接受字符串 "null"，需转为 "ignore"；"piped" → "pipe"。
+ *
+ * 【Why 共用】Bun 与 Node 的 stdio 字面量约定一致（inherit/pipe/ignore），
+ * 故抽公共映射，避免两处重复。
  */
-function mapBunStdio(
+function mapStdio(
   v: "inherit" | "piped" | "null" | undefined,
 ): "inherit" | "pipe" | "ignore" | undefined {
   if (v === "null") return "ignore";
   if (v === "piped") return "pipe";
   return v;
+}
+
+/**
+ * Node Readable（node:stream）→ Web ReadableStream<Uint8Array>。
+ * 使用 Node 17+ 的 Readable.toWeb；node:* 静态导入三端可用，运行时仅 Bun/Node 调用。
+ *
+ * 【Why 参数类型用 Readable 而非 NodeJS.ReadableStream】Deno 的 lib 将
+ * `NodeJS.ReadableStream` 别名为全局 Web `ReadableStream`，与 Node 的 `Readable`
+ * 类不兼容；而 node:child_process 的 proc.stdout 即 `Readable`，故直接用该类型。
+ */
+function nodeReadableToWeb(stream: Readable): ReadableStream<Uint8Array> {
+  return Readable.toWeb(stream) as ReadableStream<Uint8Array>;
+}
+
+/**
+ * Node Writable（node:stream）→ Web WritableStream<Uint8Array>。
+ */
+function nodeWritableToWeb(stream: Writable): WritableStream<Uint8Array> {
+  return Writable.toWeb(stream) as WritableStream<Uint8Array>;
+}
+
+/**
+ * 收集 Node Readable 的全部数据为 Uint8Array。
+ *
+ * 【Why 不用 Readable.toWeb + Response】output() 路径下子进程「写完即退出」时，
+ * proc.stdout 可能在 toWeb 包装后立即 end，undici 的 Response 构造会以
+ * "disturbed or locked" 拒绝。改用 Node 原生 async iteration 最稳。
+ * spawn() 的公开 stdout/stderr 仍走 toWeb（契约要求返回 Web Stream）。
+ */
+async function collectNodeReadable(
+  stream: Readable | null,
+): Promise<Uint8Array> {
+  if (!stream) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for await (const chunk of stream) {
+    // Node 字节流 chunk 为 Buffer（继承 Uint8Array）；字符串则编码归一
+    const u8: Uint8Array = chunk instanceof Uint8Array
+      ? chunk
+      : new TextEncoder().encode(String(chunk));
+    chunks.push(u8);
+    total += u8.length;
+  }
+  if (total === 0) return new Uint8Array();
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.length;
+  }
+  return out;
 }
 
 /**
@@ -267,12 +322,12 @@ export function createCommand(
         const proc = bun.spawn([command, ...(options?.args || [])], {
           cwd: options?.cwd,
           env: options?.env,
-          stdin: mapBunStdio(options?.stdin) as "inherit" | "pipe" | undefined,
-          stdout: mapBunStdio(options?.stdout) as
+          stdin: mapStdio(options?.stdin) as "inherit" | "pipe" | undefined,
+          stdout: mapStdio(options?.stdout) as
             | "inherit"
             | "pipe"
             | undefined,
-          stderr: mapBunStdio(options?.stderr) as
+          stderr: mapStdio(options?.stderr) as
             | "inherit"
             | "pipe"
             | undefined,
@@ -332,12 +387,12 @@ export function createCommand(
         const proc = bun.spawn([command, ...(options?.args || [])], {
           cwd: options?.cwd,
           env: options?.env,
-          stdin: mapBunStdio(options?.stdin) as "inherit" | "pipe" | undefined,
-          stdout: mapBunStdio(options?.stdout) as
+          stdin: mapStdio(options?.stdin) as "inherit" | "pipe" | undefined,
+          stdout: mapStdio(options?.stdout) as
             | "inherit"
             | "pipe"
             | undefined,
-          stderr: mapBunStdio(options?.stderr) as
+          stderr: mapStdio(options?.stderr) as
             | "inherit"
             | "pipe"
             | undefined,
@@ -357,6 +412,117 @@ export function createCommand(
           stdout,
           stderr,
           signal: null,
+        };
+      },
+    };
+  }
+
+  if (IS_NODE) {
+    /** Node spawn 的 stdio 数组：undefined 归一为 "pipe"（Node 默认） */
+    const nodeStdio = (
+      v: "inherit" | "piped" | "null" | undefined,
+    ): "inherit" | "pipe" | "ignore" => mapStdio(v) ?? "pipe";
+
+    return {
+      // spawn() - 启动进程并返回子进程句柄（Node 用 node:child_process.spawn）
+      spawn(): SpawnedProcess {
+        const proc = nodeChildProcess.spawn(
+          command,
+          options?.args ?? [],
+          {
+            cwd: options?.cwd,
+            env: options?.env,
+            stdio: [
+              nodeStdio(options?.stdin),
+              nodeStdio(options?.stdout),
+              nodeStdio(options?.stderr),
+            ],
+          },
+        );
+
+        return {
+          get stdin() {
+            const s = proc.stdin;
+            return s ? nodeWritableToWeb(s) : null;
+          },
+          get stdout() {
+            const s = proc.stdout;
+            return s ? nodeReadableToWeb(s) : null;
+          },
+          get stderr() {
+            const s = proc.stderr;
+            return s ? nodeReadableToWeb(s) : null;
+          },
+          get pid() {
+            return proc.pid ?? 0;
+          },
+          // status：监听 'exit' 事件；'error'（如 ENOENT）则 reject，避免 Node 未处理事件崩溃
+          get status(): Promise<CommandOutput> {
+            return new Promise<CommandOutput>((resolve, reject) => {
+              proc.once("error", reject);
+              proc.once("exit", (code, signal) => {
+                resolve({
+                  code: code,
+                  success: code === 0,
+                  stdout: new Uint8Array(),
+                  stderr: new Uint8Array(),
+                  signal: signal ?? null,
+                });
+              });
+            });
+          },
+          kill(signo?: number) {
+            proc.kill(signo ?? 9);
+          },
+          killTree(signo?: number) {
+            if (proc.pid) killProcessTree(proc.pid, signo ?? 9);
+          },
+          unref() {
+            proc.unref?.();
+          },
+        };
+      },
+
+      // output() - 执行命令并返回输出（与 Bun 分支同模式：Readable.toWeb + Response 消费）
+      async output(): Promise<CommandOutput> {
+        const proc = nodeChildProcess.spawn(
+          command,
+          options?.args ?? [],
+          {
+            cwd: options?.cwd,
+            env: options?.env,
+            stdio: [
+              nodeStdio(options?.stdin),
+              nodeStdio(options?.stdout),
+              nodeStdio(options?.stderr),
+            ],
+          },
+        );
+
+        const exitPromise = new Promise<{
+          code: number | null;
+          signal: string | null;
+        }>((resolve, reject) => {
+          proc.once("error", reject);
+          proc.once(
+            "exit",
+            (code, signal) => resolve({ code, signal: signal ?? null }),
+          );
+        });
+
+        // 并发收集 stdout/stderr，避免大输出下管道缓冲背压死锁
+        const [stdout, stderr] = await Promise.all([
+          collectNodeReadable(proc.stdout),
+          collectNodeReadable(proc.stderr),
+        ]);
+
+        const { code, signal } = await exitPromise;
+        return {
+          code,
+          success: code === 0,
+          stdout,
+          stderr,
+          signal,
         };
       },
     };
@@ -414,8 +580,8 @@ export function execCommandSync(
     return new TextDecoder().decode(output.stdout);
   }
 
-  if (IS_BUN) {
-    // Bun 支持 Node.js 兼容的 child_process，使用同步 API
+  if (IS_BUN || IS_NODE) {
+    // Bun/Node 均支持 Node.js 兼容的 child_process，使用同步 API
     try {
       const result = nodeChildProcess.execFileSync(command, args, {
         cwd: options?.cwd,
