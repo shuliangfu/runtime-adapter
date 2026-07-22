@@ -3,7 +3,7 @@
  * 提供统一的进程信息接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { getBun, getDeno, getProcess } from "./utils.ts";
 
 /**
@@ -77,7 +77,7 @@ export function pid(): number {
   if (deno) {
     return deno.pid;
   }
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     return process?.pid || 0;
   }
@@ -104,7 +104,7 @@ export function platform(): Platform {
     if (os === "linux") return "linux";
     return "unknown";
   }
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     const plat = process?.platform;
     if (plat === "darwin") return "darwin";
@@ -134,7 +134,7 @@ export function arch(): Arch {
     if (archValue === "aarch64") return "aarch64";
     return "unknown";
   }
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     const archValue = process?.arch;
     if (archValue === "x64") return "x86_64";
@@ -178,6 +178,13 @@ export function version(): RuntimeVersion {
     return {
       runtime: "bun",
       version: bun.version || "unknown",
+    };
+  }
+  if (IS_NODE) {
+    const process = getProcess();
+    return {
+      runtime: "node",
+      version: process?.versions?.node || "unknown",
     };
   }
   return {

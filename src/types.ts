@@ -467,6 +467,8 @@ export interface ProcessGlobal {
     platform: string;
     arch: string;
     pid: number;
+    /** Node/Bun 版本信息（Node 上含 node 字段） */
+    versions?: { node?: string; bun?: string };
     env: Record<string, string | undefined>;
     argv: string[];
     cwd(): string;
