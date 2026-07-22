@@ -19,7 +19,9 @@
     "bunRethrowSubstring1": "require",
     "bunRethrowSubstring2": "execFileSync",
     "internalServerError": "Internal Server Error",
-    "wsOriginRejected": "WebSocket upgrade rejected: Origin not allowed"
+    "wsOriginRejected": "WebSocket upgrade rejected: Origin not allowed",
+    "connectTimeout": "Connection timed out",
+    "tlsHandshakeTimeout": "TLS handshake timed out"
   },
   "debug": {
     "wsPrefix": "[runtime-adapter WS]",

@@ -19,7 +19,9 @@
     "bunRethrowSubstring1": "require 不可用",
     "bunRethrowSubstring2": "execFileSync 不可用",
     "internalServerError": "内部服务器错误",
-    "wsOriginRejected": "WebSocket 升级被拒绝：Origin 不被允许"
+    "wsOriginRejected": "WebSocket 升级被拒绝：Origin 不被允许",
+    "connectTimeout": "连接超时",
+    "tlsHandshakeTimeout": "TLS 握手超时"
   },
   "debug": {
     "wsPrefix": "[runtime-adapter WS]",
