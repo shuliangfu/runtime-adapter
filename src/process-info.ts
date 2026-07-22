@@ -21,7 +21,7 @@ export type Arch = "x86_64" | "aarch64" | "arm64" | "unknown";
  */
 export interface RuntimeVersion {
   /** 运行时名称 */
-  runtime: "deno" | "bun";
+  runtime: "deno" | "bun" | "node";
   /** 版本号 */
   version: string;
   /** 构建信息（Deno 特有） */
