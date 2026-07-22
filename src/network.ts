@@ -4,6 +4,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import { Buffer } from "node:buffer";
 import * as http from "node:http";
 import * as net from "node:net";
 import { Readable, Writable } from "node:stream";
