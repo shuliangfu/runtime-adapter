@@ -12,7 +12,7 @@
     "bunWsNeedServe": "WebSocket upgrade in Bun requires calling serve() first. Ensure serve() is called before upgradeWebSocket().",
     "wsUpgradeFailed": "WebSocket upgrade failed",
     "wsAdapterMissingAddEventListener": "WebSocketAdapter creation failed: missing addEventListener method",
-    "onlyBunOrDeno": "Only Bun or Deno can be used",
+    "onlyBunOrDeno": "Only Deno, Bun, or Node.js can be used",
     "stdoutUnavailable": "Standard output is not available",
     "stderrUnavailable": "Standard error output is not available",
     "bunRethrowSubstring1": "require",
