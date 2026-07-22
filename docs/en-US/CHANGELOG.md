@@ -10,6 +10,33 @@ and this project adheres to
 
 ---
 
+## [1.2.0] - 2026-07-22
+
+### Added
+
+- **Node.js compatibility (Phase A)**: `detect`/`env`/`signal`/`process-utils`/
+  `process-info`/`file`/`system-info`/`terminal`/`network` modules now support
+  Node.js >= 22 alongside Deno and Bun.
+  - **Network**: `serve` (http.createServer), `upgradeWebSocket` (ws package +
+    AsyncLocalStorage upgrade context), `connect` (node:net), `startTls`
+    (node:tls).
+  - **WebSocketAdapter**: Merged `IS_BUN` → `IS_BUN || IS_NODE` for
+    `setWebSocket`/`setupEventHandlers`/`removeEventListener`; fixes Node
+    `handleUpgrade` synchronous-callback timing where "open" event was lost.
+- **engines.node**: Declared `>=22` in package.json.
+- **i18n**: `nodeWsNeedServe` error message (en-US / zh-CN).
+- **Node smoke tests**: `tests/node/` — `node:test` + `tsx` based, guarded by
+  `if (!IS_NODE) return` (no-op on Deno/Bun).
+
+### Changed
+
+- Removed `@types/ws` devDependency (root-cause fix: eliminated `@types/node`
+  global `Event` type pollution that conflicted with `deno.window`).
+- `startTls` Node branch: `caCerts` converted via `Buffer.from()` for correct
+  `tls.connect` typing.
+- `package.json`/`deno.json`: added `ws` dependency; `tsx` devDependency for
+  reproducible `test:node` script.
+
 ## [1.1.0] - 2026-07-21
 
 ### Added

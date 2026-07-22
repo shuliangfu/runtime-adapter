@@ -1,7 +1,7 @@
 # @dreamer/runtime-adapter
 
 > Runtime adaptation layer providing a unified API abstraction compatible with
-> Deno and Bun runtimes
+> Deno, Bun, and Node.js runtimes
 
 English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
@@ -32,7 +32,7 @@ same API across different runtime environments.
 ## ✨ Features
 
 - **Runtime auto-detection**:
-  - Auto-detect current runtime (Deno / Bun)
+  - Auto-detect current runtime (Deno / Bun / Node)
   - Runtime type definitions and constants
 - **Full type safety**:
   - Complete TypeScript types for all APIs
@@ -135,7 +135,8 @@ bunx jsr add @dreamer/runtime-adapter
 | -------------- | ----------------- | ------------------------------------------- |
 | **Deno**       | 2.5+              | ✅ Fully supported                          |
 | **Bun**        | 1.0+              | ✅ Fully supported                          |
-| **Server**     | -                 | ✅ Supported (Deno and Bun)                 |
+| **Node.js**    | 22+               | ✅ Phase A supported (smoke tests)          |
+| **Server**     | -                 | ✅ Supported (Deno, Bun, and Node.js)       |
 | **Client**     | -                 | ❌ Not supported (browser)                  |
 | **Dependency** | `node-cron@3.0.3` | 📦 For cron tasks, second-level expressions |
 
@@ -167,6 +168,8 @@ bunx jsr add @dreamer/runtime-adapter
   when wmic is unavailable (e.g. Windows 11 24H2+)
 
 For detailed analysis, see [WIN_COMPAT.md](./docs/en-US/WIN_COMPAT.md).
+
+**Runtime support**: Official targets are **Deno + Bun**. Node.js compatibility: Phase A implemented (file/env/path/process/network/terminal APIs, smoke tests); Phase B (test backend) pending. Analysis: [NODE_COMPAT.md](./docs/zh-CN/NODE_COMPAT.md) (Chinese), [NODE_COMPAT_ANALYSIS.md](./docs/NODE_COMPAT_ANALYSIS.md) (index).
 
 ---
 

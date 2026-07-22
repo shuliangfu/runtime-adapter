@@ -1,6 +1,6 @@
 # @dreamer/runtime-adapter
 
-> 运行时适配层包，提供统一的运行时 API 抽象层，兼容 Deno 和 Bun 运行时环境
+> 运行时适配层包，提供统一的运行时 API 抽象层，兼容 Deno、Bun 和 Node.js 运行时环境
 
 [English](../../README.md) | 中文 (Chinese)
 
@@ -19,7 +19,7 @@
 ## ✨ 特性
 
 - **运行时自动检测**：
-  - 自动检测当前运行环境（Deno / Bun）
+  - 自动检测当前运行环境（Deno / Bun / Node）
   - 提供运行时类型定义和常量
 - **完全类型安全**：
   - 所有 API 都有完整的 TypeScript 类型定义
@@ -31,7 +31,7 @@
   - 支持同步和异步操作
   - 文件监控、目录遍历、临时文件/目录
 - **网络 API 适配**：
-  - HTTP 服务器（自动适配 Deno 和 Bun）
+  - HTTP 服务器（自动适配 Deno、Bun 和 Node）
   - WebSocket 升级（统一 API，自动适配）
   - TCP/TLS 连接
 - **环境变量 API 适配**：
@@ -122,7 +122,8 @@ bunx jsr add @dreamer/runtime-adapter
 | ---------- | ----------------- | ------------------------------------- |
 | **Deno**   | 2.5+              | ✅ 完全支持                           |
 | **Bun**    | 1.0+              | ✅ 完全支持                           |
-| **服务端** | -                 | ✅ 支持（兼容 Deno 和 Bun 运行时）    |
+| **Node.js** | 22+              | ✅ Phase A 支持（冒烟测试）           |
+| **服务端** | -                 | ✅ 支持（兼容 Deno、Bun 和 Node.js）  |
 | **客户端** | -                 | ❌ 不支持（浏览器环境）               |
 | **依赖**   | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
 
@@ -152,6 +153,8 @@ bunx jsr add @dreamer/runtime-adapter
   `Get-CimInstance`（如 Windows 11 24H2+）
 
 详细分析见 [WIN_COMPAT.md](./WIN_COMPAT.md)。
+
+**运行时支持**：当前官方为 **Deno + Bun**。Node.js 兼容：Phase A 已实现（file/env/path/process/network/terminal，冒烟测试）；Phase B（测试后端）待定。分析见 [NODE_COMPAT.md](./NODE_COMPAT.md)。
 
 ---
 
