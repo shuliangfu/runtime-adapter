@@ -169,8 +169,12 @@ export async function readStdin(
       return null;
     }
     // Bun 使用 Node.js 兼容的流
+    // 【Why】P3：用命名函数 + removeListener，任一回调触发后立即移除另两个，
+    // 避免 once 监听器在长生命周期 stdin 流上累积残留（每调用一次 readStdin 漏 1-2 个）。
     return new Promise((resolve) => {
-      stdin.once("data", (chunk: Uint8Array) => {
+      const dataHandler = (chunk: Uint8Array) => {
+        stdin.removeListener("end", endHandler);
+        stdin.removeListener("error", errorHandler);
         // chunk 可能是 Buffer 或 Uint8Array
         const data = chunk instanceof Uint8Array
           ? chunk
@@ -178,13 +182,20 @@ export async function readStdin(
         const len = Math.min(data.length, buffer.length);
         buffer.set(data.subarray(0, len));
         resolve(len);
-      });
-      stdin.once("end", () => {
+      };
+      const endHandler = () => {
+        stdin.removeListener("data", dataHandler);
+        stdin.removeListener("error", errorHandler);
         resolve(null);
-      });
-      stdin.once("error", () => {
+      };
+      const errorHandler = () => {
+        stdin.removeListener("data", dataHandler);
+        stdin.removeListener("end", endHandler);
         resolve(null);
-      });
+      };
+      stdin.once("data", dataHandler);
+      stdin.once("end", endHandler);
+      stdin.once("error", errorHandler);
     });
   }
 

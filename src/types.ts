@@ -502,6 +502,12 @@ export interface ProcessGlobal {
       once(event: "data", handler: (chunk: Uint8Array) => void): void;
       once(event: "end", handler: () => void): void;
       once(event: "error", handler: () => void): void;
+      /** 移除指定事件的监听器（readStdin 清理残留监听器用） */
+      removeListener(
+        event: "data",
+        handler: (chunk: Uint8Array) => void,
+      ): void;
+      removeListener(event: "end" | "error", handler: () => void): void;
     };
     on(
       signal: DenoSignal | BunSignal,
