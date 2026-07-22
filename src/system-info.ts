@@ -3,7 +3,7 @@
  * 提供统一的系统信息接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { createCommand, execCommandSync } from "./process.ts";
 import { getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
@@ -400,7 +400,7 @@ export async function getMemoryInfo(): Promise<MemoryInfo> {
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 需要通过系统命令获取内存信息
     try {
       const process = getProcess();
@@ -517,7 +517,7 @@ export async function getCpuUsage(
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 可能需要通过系统命令获取 CPU 使用率
     // 这里返回进程级别的 CPU 使用率（如果可用）
     try {
@@ -591,7 +591,7 @@ export async function getLoadAverage(): Promise<LoadAverage | undefined> {
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 需要通过系统命令获取负载信息
     try {
       const process = getProcess();
@@ -734,7 +734,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     try {
       const process = getProcess();
       // Node/Bun 在 Windows 上返回 "win32"，统一为 "windows" 以与 Deno 及测试断言一致
@@ -846,7 +846,7 @@ export function getMemoryInfoSync(): MemoryInfo {
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 需要通过系统命令获取内存信息
     try {
       const process = getProcess();
@@ -940,7 +940,7 @@ export function getLoadAverageSync(): LoadAverage | undefined {
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 需要通过系统命令获取负载信息
     try {
       const process = getProcess();
@@ -1015,7 +1015,7 @@ export function getSystemInfoSync(): SystemInfo {
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     try {
       const process = getProcess();
       // Bun 支持 Node.js 兼容的 os 模块；Node/Bun 在 Windows 上返回 "win32"，统一为 "windows"
