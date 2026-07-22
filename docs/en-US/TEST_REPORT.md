@@ -6,7 +6,7 @@
 - **Unified suite**: `tests/*.test.ts` (all three runtimes run the same files;
   no separate Node smoke set)
 - **Date**: 2026-07-22
-- **Package version**: 1.2.1
+- **Package version**: 1.2.2
 - **Runtimes**:
   - Deno 2.x
   - Bun 1.3.14

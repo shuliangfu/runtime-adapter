@@ -10,6 +10,47 @@ and this project adheres to
 
 ---
 
+## [1.2.2] - 2026-07-22
+
+### Fixed
+
+- **`spawn ENOENT` unhandledRejection (Node)**: `output()` awaited stream
+  collection (`Promise.all([stdout, stderr])`) before awaiting `exitPromise`. On
+  `spawn` ENOENT (e.g. `wmic` absent on modern Windows Server / GitHub Actions
+  runners), `exitPromise` rejected immediately via
+  `proc.once("error",
+  reject)` but was not being awaited at that tick — Node's
+  test runner flagged the pending rejection as `unhandledRejection`, failing
+  tests. `exitPromise` is now merged into the same `Promise.all` as stream
+  collection so any rejection propagates immediately and is caught by the outer
+  `try/catch`. This also makes the `wmic` → PowerShell `Get-CimInstance`
+  fallback in `system-info.ts` reachable on runners that removed `wmic`.
+- **`Cannot find name 'Buffer'` on Deno 2.5 CI (TS2580)**: `network.ts` used the
+  global `Buffer` (`head: Buffer` type annotation, `Buffer.from(c)`) without
+  importing it. Deno 2.9's lib exposes `Buffer` globally so local checks passed,
+  but CI's Deno 2.5 lib lacked the declaration. Added an explicit
+  `import { Buffer } from "node:buffer"` (matching `process.ts`), working across
+  all Deno versions.
+
+### Changed
+
+- **CI: Deno `v2.5` → `v2.9`** (6 occurrences): aligns CI with the local dev
+  environment and resolves Deno 2.5 type diagnostics (missing global `Buffer`,
+  `process` global discouraged warning).
+- **CI: added 3 Node.js jobs** (`test-linux-node` / `test-macos-node` /
+  `test-windows-node`, Node 22, `npm install` + `npm run test:node`, no Chromium
+  install). runtime-adapter CI now runs 9 jobs (3 Deno + 3 Bun + 3 Node),
+  matching the three-runtime first-class policy.
+- **`@dreamer/test` devDependency**: `^1.2.0` → `^1.2.1`.
+
+### Verified
+
+- Deno: 309 passed, 0 failed
+- Bun: 286 passed, 0 failed
+- Node: 286 passed, 0 failed (`tsx --test --test-force-exit tests/*.test.ts`)
+
+---
+
 ## [1.2.1] - 2026-07-22
 
 ### Fixed
