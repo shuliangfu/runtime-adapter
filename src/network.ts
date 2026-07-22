@@ -16,6 +16,18 @@ import type { BunServer, BunSocket, BunWebSocket } from "./types.ts";
 import { getBun, getDeno } from "./utils.ts";
 
 /**
+ * 【Why】H5：WebSocket 默认 maxPayload 1MB，纵深防御大消息 OOM。可在 ServeOptions.websocket
+ * 或 UpgradeWebSocketOptions.maxPayload 覆盖。
+ * 【Perf】ws 包在收满 maxPayload 字节后立即断开连接，避免无限缓冲。
+ */
+const DEFAULT_WS_MAX_PAYLOAD = 1 << 20; // 1MB
+/**
+ * 【Why】H5：WebSocket 默认空闲超时 120s，超时后服务端主动 close(1001)。
+ * 【Invariant】0/负数禁用（仅 Node per-connection 定时器；Bun/Deno 用原生机制）。
+ */
+const DEFAULT_WS_IDLE_TIMEOUT_MS = 120_000;
+
+/**
  * HTTP 服务器选项
  */
 export interface ServeOptions {
@@ -28,6 +40,12 @@ export interface ServeOptions {
    * 设置后仅精确匹配列表中的 Origin（含 "null" 字面量）。非浏览器客户端（无 Origin）始终放行。
    */
   allowedOrigins?: string[];
+  /**
+   * WebSocket 全局配置（H5 纵深防御）。
+   * - maxPayload：单条消息最大字节数，默认 1MB，超限 ws 包自动断开连接。
+   * - idleTimeout：空闲超时毫秒数，默认 120000，0/负数禁用。
+   */
+  websocket?: { maxPayload?: number; idleTimeout?: number };
 }
 
 /**
@@ -68,6 +86,8 @@ interface NodeUpgradeCtx {
   head: Buffer;
   wss: WebSocketServer;
   upgraded: boolean; // upgradeWebSocket 调用后置 true，upgrade 事件回调据此判断是否拒绝
+  /** serve 级别 idleTimeout（ms），per-call options.idleTimeout 优先覆盖 */
+  idleTimeoutMs: number;
 }
 
 const nodeUpgradeAls = new AsyncLocalStorage<NodeUpgradeCtx>();
@@ -400,6 +420,9 @@ export class WebSocketAdapter {
   public static allAdapters: Set<WebSocketAdapter> = new Set();
   // 唯一标识符（用于调试）
   private readonly id: string;
+  // 【Why】H5：空闲超时定时器（Node ws 无原生 idleTimeout，per-connection 管理）
+  private idleTimeoutMs: number = DEFAULT_WS_IDLE_TIMEOUT_MS;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(ws?: WebSocket) {
     this.id = `adapter_${Date.now()}_${
@@ -473,6 +496,9 @@ export class WebSocketAdapter {
       };
 
       ws.onclose = (event: CloseEvent) => {
+        // 【Why】P1：关闭时从 allAdapters 移除（Set.delete 幂等，与 Bun 路径双重清理安全）。
+        // 定时器清理由 emit("close") 统一处理。
+        WebSocketAdapter.allAdapters.delete(this);
         if (originalOnClose) {
           originalOnClose.call(ws, event);
         }
@@ -485,6 +511,50 @@ export class WebSocketAdapter {
         }
         this.emit("error", event);
       };
+    }
+  }
+
+  /**
+   * 设置空闲超时（H5）。ms <= 0 禁用。
+   * 【Invariant】仅在 ws 就绪后有效；定时器触发时 close(1001) 主动断开空闲连接。
+   */
+  setIdleTimeout(ms: number): void {
+    this.idleTimeoutMs = ms > 0 ? ms : 0;
+    if (this.idleTimeoutMs > 0) {
+      this.startIdleTimer();
+    } else {
+      this.clearIdleTimer();
+    }
+  }
+
+  /** 启动/重启空闲定时器 */
+  private startIdleTimer(): void {
+    this.clearIdleTimer();
+    if (this.idleTimeoutMs <= 0) return;
+    this.idleTimer = setTimeout(() => {
+      // 【Why】空闲超时：主动关闭，防止僵尸连接占资源
+      if (this._ws && typeof this._ws.close === "function") {
+        try {
+          this._ws.close(1001, "idle timeout");
+        } catch {
+          // ws 已关闭则忽略
+        }
+      }
+    }, this.idleTimeoutMs);
+  }
+
+  /** 重置空闲定时器（收到消息时调用） */
+  private resetIdleTimer(): void {
+    if (this.idleTimeoutMs > 0) {
+      this.startIdleTimer();
+    }
+  }
+
+  /** 清除空闲定时器 */
+  private clearIdleTimer(): void {
+    if (this.idleTimer !== null) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
     }
   }
 
@@ -536,6 +606,13 @@ export class WebSocketAdapter {
    * @internal 内部方法，用于触发事件
    */
   emit(type: string, event: WebSocketEvent): void {
+    // 【Why】H5：统一在 emit 咽喉点管理空闲定时器——Bun 走 createBunWebSocketHandlers
+    // 调 emit，Node 走 setupEventHandlers 调 emit，此处覆盖三端消息/关闭/错误。
+    if (type === "message") {
+      this.resetIdleTimer();
+    } else if (type === "close" || type === "error") {
+      this.clearIdleTimer();
+    }
     const listeners = this.listeners.get(type);
     if (listeners) {
       for (const listener of listeners) {
@@ -662,6 +739,8 @@ export interface UpgradeWebSocketOptions {
   idleTimeout?: number;
   /** WS 升级允许的 Origin 列表，覆盖 serve() 级别配置（CSWSH 防护）。 */
   allowedOrigins?: string[];
+  /** 单条消息最大字节数（per-call 覆盖 serve 级别，默认 1MB）。 */
+  maxPayload?: number;
 }
 
 /**
@@ -876,7 +955,11 @@ export function serve(
       ? ({} as ServeOptions)
       : (options as ServeOptions);
 
-    const wss = new WebSocketServer({ noServer: true });
+    // 【Why】H5：wss 级别 maxPayload 限制单条消息大小，超限 ws 包自动断开连接防 OOM
+    const wss = new WebSocketServer({
+      noServer: true,
+      maxPayload: serveOpts.websocket?.maxPayload ?? DEFAULT_WS_MAX_PAYLOAD,
+    });
     lastNodeWss = wss;
 
     const server = http.createServer(async (req, res) => {
@@ -927,6 +1010,8 @@ export function serve(
         head,
         wss,
         upgraded: false,
+        idleTimeoutMs: serveOpts.websocket?.idleTimeout ??
+          DEFAULT_WS_IDLE_TIMEOUT_MS,
       };
       nodeUpgradeAls.run(ctx, async () => {
         try {
@@ -1070,6 +1155,8 @@ export function upgradeWebSocket(
 
     adapter = new WebSocketAdapter(placeholderWs as WebSocket);
     pendingBunAdapters.set(url, adapter);
+    // 【Why】H5：Bun 无 per-connection idleTimeout 原生 API，用适配器定时器管理
+    adapter.setIdleTimeout(options?.idleTimeout ?? DEFAULT_WS_IDLE_TIMEOUT_MS);
     wsDebug(
       $tr("debug.upgradeWebSocketUrl"),
       url,
@@ -1121,6 +1208,8 @@ export function upgradeWebSocket(
 
     const adapter = new WebSocketAdapter(placeholderWs as WebSocket);
     pendingNodeAdapters.set(url, adapter);
+    // 【Why】H5：per-call idleTimeout 优先，回退 serve 级别 ctx.idleTimeoutMs
+    adapter.setIdleTimeout(options?.idleTimeout ?? ctx.idleTimeoutMs);
 
     ctx.upgraded = true;
 
@@ -1129,6 +1218,11 @@ export function upgradeWebSocket(
       ctx.socket,
       ctx.head,
       (ws: WsWebSocket) => {
+        // 【Why】H5：per-call maxPayload 覆盖 wss 级别默认值
+        if (options?.maxPayload !== undefined) {
+          (ws as unknown as { setMaxPayload(n: number): void })
+            .setMaxPayload(options.maxPayload);
+        }
         adapter.setWebSocket(ws as unknown as WebSocket);
         pendingNodeAdapters.delete(url);
       },
