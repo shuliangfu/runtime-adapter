@@ -316,6 +316,7 @@ export interface BunGlobal {
     serve(options: {
       port?: number;
       hostname?: string;
+      idleTimeout?: number;
       fetch: (req: Request, server: BunServer) => Response | Promise<Response>;
       websocket?: {
         message?: (ws: BunWebSocket, message: string | Uint8Array) => void;
