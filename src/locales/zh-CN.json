@@ -10,6 +10,7 @@
     "renameFailed": "重命名失败: 源路径不存在 \"{oldPath}\" 或目标目录不存在 \"{newPathDir}\"",
     "bunChdirNotSupported": "Bun 环境不支持 chdir",
     "bunWsNeedServe": "Bun 环境下的 WebSocket 升级需要先调用 serve() 创建服务器。请确保在调用 upgradeWebSocket() 之前已经调用了 serve()。",
+    "nodeWsNeedServe": "Node 环境下的 WebSocket 升级需要先调用 serve() 创建服务器。请确保在调用 upgradeWebSocket() 之前已经调用了 serve()。",
     "wsUpgradeFailed": "WebSocket 升级失败",
     "wsAdapterMissingAddEventListener": "WebSocketAdapter 创建失败：缺少 addEventListener 方法",
     "onlyBunOrDeno": "仅支持 Deno、Bun 或 Node.js 运行时",
