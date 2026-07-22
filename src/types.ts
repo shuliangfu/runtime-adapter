@@ -197,6 +197,8 @@ export interface DenoGlobal {
     startTls(
       conn: { rid: number },
       options?: { hostname?: string; caCerts?: Uint8Array[] },
+      // 第三参 signal：用于取消/超时握手（Deno 1.x 起 startTls 支持 AbortSignal）
+      signalOptions?: { signal?: AbortSignal },
     ): Promise<
       {
         readable: ReadableStream<Uint8Array>;

@@ -26,6 +26,11 @@ const DEFAULT_WS_MAX_PAYLOAD = 1 << 20; // 1MB
  * 【Invariant】0/负数禁用（仅 Node per-connection 定时器；Bun/Deno 用原生机制）。
  */
 const DEFAULT_WS_IDLE_TIMEOUT_MS = 120_000;
+/**
+ * 【Why】H2/H3：connect/startTls 默认超时 30s，防止不可达主机永久挂起占 fd。
+ * 【Invariant】0/负数禁用（无限等待）。
+ */
+const DEFAULT_CONNECT_TIMEOUT_MS = 30_000;
 
 /**
  * HTTP 服务器选项
@@ -758,6 +763,8 @@ export interface ConnectOptions {
   host: string;
   port: number;
   transport?: "tcp";
+  /** 连接超时毫秒数，默认 30000；0/负数禁用。 */
+  timeout?: number;
 }
 
 /**
@@ -767,6 +774,8 @@ export interface StartTlsOptions {
   host?: string;
   caCerts?: Uint8Array[];
   alpnProtocols?: string[];
+  /** TLS 握手超时毫秒数，默认 30000；0/负数禁用。 */
+  timeout?: number;
 }
 
 /**
@@ -1245,22 +1254,57 @@ export function upgradeWebSocket(
 export async function connect(options: ConnectOptions): Promise<TcpConn> {
   const deno = getDeno();
   if (deno) {
-    // Deno.connect 使用 hostname，需要转换
-    return await deno.connect({
-      hostname: options.host,
-      port: options.port,
-      transport: options.transport,
-    });
+    const timeoutMs = options.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
+    // 【Why】H2：AbortSignal.timeout 超时后 abort Deno.connect，释放 fd
+    try {
+      return await deno.connect({
+        hostname: options.host,
+        port: options.port,
+        transport: options.transport,
+        ...(timeoutMs > 0 ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "TimeoutError") {
+        throw new Error($tr("error.connectTimeout"));
+      }
+      throw err;
+    }
   }
 
   const bun = getBun();
   if (bun) {
+    // 【Why】H2：超时阈值；0/负数禁用（与 Deno/Node 分支一致）
+    const timeoutMs = options.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
     return new Promise<TcpConn>((resolve, reject) => {
       // 创建 ReadableStream 和 WritableStream 的控制器
       let readableController:
         | ReadableStreamDefaultController<Uint8Array>
         | null = null;
       let socket: BunSocket | null = null;
+      // 【Why】H2：settled 防止超时后 open 回调重复 resolve；timer 超时 terminate socket 释放 fd
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
+      const done = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        fn();
+      };
+
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          done(() => {
+            if (socket && typeof socket.terminate === "function") {
+              socket.terminate();
+            }
+            reject(new Error($tr("error.connectTimeout")));
+          });
+        }, timeoutMs);
+      }
 
       const readable = new ReadableStream({
         start(controller) {
@@ -1304,31 +1348,33 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
           socket: {
             open(sock: BunSocket) {
               socket = sock;
-              // 连接成功，解析 Promise
-              resolve({
-                localAddr: {
-                  host: sock.localAddress || "0.0.0.0",
-                  port: sock.localPort || 0,
-                  transport: "tcp",
-                },
-                remoteAddr: {
-                  host: sock.remoteAddress || options.host,
-                  port: sock.remotePort || options.port,
-                  transport: "tcp",
-                },
-                rid: sock.fd || 0,
-                readable,
-                writable,
-                close() {
-                  if (typeof sock.terminate === "function") {
-                    sock.terminate();
-                  }
-                },
-                closeWrite() {
-                  if (typeof sock.end === "function") {
-                    sock.end();
-                  }
-                },
+              // 连接成功，解析 Promise（done 确保超时后不再重复 resolve）
+              done(() => {
+                resolve({
+                  localAddr: {
+                    host: sock.localAddress || "0.0.0.0",
+                    port: sock.localPort || 0,
+                    transport: "tcp",
+                  },
+                  remoteAddr: {
+                    host: sock.remoteAddress || options.host,
+                    port: sock.remotePort || options.port,
+                    transport: "tcp",
+                  },
+                  rid: sock.fd || 0,
+                  readable,
+                  writable,
+                  close() {
+                    if (typeof sock.terminate === "function") {
+                      sock.terminate();
+                    }
+                  },
+                  closeWrite() {
+                    if (typeof sock.end === "function") {
+                      sock.end();
+                    }
+                  },
+                });
               });
             },
             data(_sock: BunSocket, data: Uint8Array) {
@@ -1348,16 +1394,16 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
               if (readableController) {
                 readableController.error(error);
               }
-              reject(error);
+              done(() => reject(error));
             },
             connectError(_sock: BunSocket, error: Error) {
               // 连接错误
-              reject(error);
+              done(() => reject(error));
             },
           },
         });
       } catch (error) {
-        reject(error);
+        done(() => reject(error));
       }
     });
   }
@@ -1367,10 +1413,25 @@ export async function connect(options: ConnectOptions): Promise<TcpConn> {
       host: options.host,
       port: options.port,
     });
+    const timeoutMs = options.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
 
+    // 【Why】H2：超时 destroy socket 释放 fd，clearTimeout 防泄漏
     await new Promise<void>((resolve, reject) => {
-      socket.once("connect", resolve);
-      socket.once("error", reject);
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          socket.destroy();
+          reject(new Error($tr("error.connectTimeout")));
+        }, timeoutMs);
+      }
+      socket.once("connect", () => {
+        if (timer) clearTimeout(timer);
+        resolve();
+      });
+      socket.once("error", (err) => {
+        if (timer) clearTimeout(timer);
+        reject(err);
+      });
     });
 
     const addr = socket.address() as net.AddressInfo;
@@ -1423,10 +1484,28 @@ export async function startTls(
         alpnProtocols: options.alpnProtocols,
       }
       : undefined;
-    return (await deno.startTls(
-      conn as unknown as Parameters<typeof deno.startTls>[0],
-      tlsOptions,
-    )) as TcpConn;
+    // 【Why】H3：TLS 握手超时，防止恶意对端永久挂起握手占 fd
+    const timeoutMs = options?.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
+    const signalOpts = timeoutMs > 0
+      ? { signal: AbortSignal.timeout(timeoutMs) }
+      : undefined;
+    try {
+      return (await deno.startTls(
+        conn as unknown as Parameters<typeof deno.startTls>[0],
+        tlsOptions,
+        signalOpts,
+      )) as TcpConn;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "TimeoutError") {
+        try {
+          conn.close();
+        } catch {
+          // 忽略关闭错误
+        }
+        throw new Error($tr("error.tlsHandshakeTimeout"));
+      }
+      throw err;
+    }
   }
 
   const bun = getBun();
@@ -1478,8 +1557,32 @@ export async function startTls(
     const tlsOptions: { ca?: Uint8Array[] } | undefined = options?.caCerts
       ? { ca: options.caCerts }
       : undefined;
+    // 【Why】H3：TLS 握手超时阈值；0/负数禁用
+    const timeoutMs = options?.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
 
     return new Promise((resolve, reject) => {
+      // 【Why】H3：settled 防止超时后 open 回调重复 resolve；timer 超时 terminate socket 释放 fd
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const done = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        fn();
+      };
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          done(() => {
+            if (socket && typeof socket.terminate === "function") {
+              socket.terminate();
+            }
+            reject(new Error($tr("error.tlsHandshakeTimeout")));
+          });
+        }, timeoutMs);
+      }
       // Bun.connect 使用 hostname，需要转换
       try {
         bun.connect({
@@ -1489,30 +1592,32 @@ export async function startTls(
           socket: {
             open(sock: BunSocket) {
               socket = sock;
-              resolve({
-                localAddr: {
-                  host: sock.localAddress || "0.0.0.0",
-                  port: sock.localPort || 0,
-                  transport: "tcp",
-                },
-                remoteAddr: {
-                  host: sock.remoteAddress || conn.remoteAddr.host,
-                  port: sock.remotePort || conn.remoteAddr.port,
-                  transport: "tcp",
-                },
-                rid: sock.fd || 0,
-                readable,
-                writable,
-                close() {
-                  if (typeof sock.terminate === "function") {
-                    sock.terminate();
-                  }
-                },
-                closeWrite() {
-                  if (typeof sock.end === "function") {
-                    sock.end();
-                  }
-                },
+              done(() => {
+                resolve({
+                  localAddr: {
+                    host: sock.localAddress || "0.0.0.0",
+                    port: sock.localPort || 0,
+                    transport: "tcp",
+                  },
+                  remoteAddr: {
+                    host: sock.remoteAddress || conn.remoteAddr.host,
+                    port: sock.remotePort || conn.remoteAddr.port,
+                    transport: "tcp",
+                  },
+                  rid: sock.fd || 0,
+                  readable,
+                  writable,
+                  close() {
+                    if (typeof sock.terminate === "function") {
+                      sock.terminate();
+                    }
+                  },
+                  closeWrite() {
+                    if (typeof sock.end === "function") {
+                      sock.end();
+                    }
+                  },
+                });
               });
             },
             data(_sock: BunSocket, data: Uint8Array) {
@@ -1529,15 +1634,15 @@ export async function startTls(
               if (readableController) {
                 readableController.error(error);
               }
-              reject(error);
+              done(() => reject(error));
             },
             connectError(_sock: BunSocket, error: Error) {
-              reject(error);
+              done(() => reject(error));
             },
           },
         });
       } catch (error) {
-        reject(error);
+        done(() => reject(error));
       }
     });
   }
@@ -1554,9 +1659,24 @@ export async function startTls(
       ca: options?.caCerts?.map((c) => Buffer.from(c)),
     });
 
+    // 【Why】H3：TLS 握手超时，防止恶意对端永久挂起握手占 fd
+    const timeoutMs = options?.timeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
     await new Promise<void>((resolve, reject) => {
-      tlsSocket.once("secureConnect", resolve);
-      tlsSocket.once("error", reject);
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          tlsSocket.destroy();
+          reject(new Error($tr("error.tlsHandshakeTimeout")));
+        }, timeoutMs);
+      }
+      tlsSocket.once("secureConnect", () => {
+        if (timer) clearTimeout(timer);
+        resolve();
+      });
+      tlsSocket.once("error", (err) => {
+        if (timer) clearTimeout(timer);
+        reject(err);
+      });
     });
 
     const addr = tlsSocket.address() as net.AddressInfo;
