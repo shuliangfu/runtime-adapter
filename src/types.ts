@@ -1,7 +1,7 @@
 /**
  * @fileoverview 运行时 API 类型定义
  *
- * 定义 Deno 和 Bun 运行时的 API 接口类型，用于类型安全的适配
+ * 定义 Deno / Bun 运行时的 API 接口类型，以及 Node 侧 process/Buffer 等，用于类型安全的适配
  */
 
 /**

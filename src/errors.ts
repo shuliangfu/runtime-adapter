@@ -1,5 +1,5 @@
 /**
- * 统一错误类型：跨 Deno/Bun 调用方可 `instanceof` 或按 code 分支。
+ * 统一错误类型：跨 Deno/Bun/Node 调用方可 `instanceof` 或按 code 分支。
  */
 
 /**
@@ -65,7 +65,7 @@ export function unsupportedRuntimeError(message: string): RuntimeAdapterError {
 }
 
 /**
- * 快捷：仅支持 Deno/Bun
+ * 快捷：仅支持 Deno/Bun/Node（错误码 `ONLY_BUN_OR_DENO` 为历史对外契约，勿改名）
  */
 export function onlyBunOrDenoError(message: string): RuntimeAdapterError {
   return new RuntimeAdapterError("ONLY_BUN_OR_DENO", message);

@@ -17,7 +17,9 @@
   },
   "scripts": {
     "test": "bun test tests/",
-    "test:node": "tsx --test tests/node/*.test.ts"
+    "test:deno": "deno test -A tests/",
+    "test:node": "tsx --test tests/node/*.test.ts",
+    "test:all": "deno test -A tests/ && bun test tests/ && tsx --test tests/node/*.test.ts"
   },
   "dependencies": {
     "@dreamer/i18n": "npm:@jsr/dreamer__i18n@1.0.1",
@@ -25,7 +27,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@dreamer/test": "npm:@jsr/dreamer__test@^1.1.10",
+    "@dreamer/test": "file:../test",
     "tsx": "^4.19.0"
   },
   "engines": {

@@ -1,6 +1,6 @@
 /**
  * 进程工具 API 适配模块
- * 提供统一的进程工具接口，兼容 Deno 和 Bun
+ * 提供统一的进程工具接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";
@@ -28,6 +28,7 @@ export function args(): string[] {
   if (deno) {
     return deno.args;
   }
+  // Bun：优先 Bun.argv（Windows 上比 process.argv 更可靠）
   if (IS_BUN) {
     const bun = getBun();
     const bunArgv =
@@ -37,11 +38,9 @@ export function args(): string[] {
     if (bunArgv && bunArgv.length > 2) {
       return bunArgv.slice(2);
     }
-    const process = getProcess();
-    return process?.argv?.slice(2) || [];
   }
-  if (IS_NODE) {
-    // Node：process.argv[0]=node 可执行文件，[1]=脚本路径，[2..]=用户参数
+  // Bun 回退 / Node：process.argv[0]=runtime，[1]=脚本，[2..]=用户参数
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     return process?.argv?.slice(2) ?? [];
   }

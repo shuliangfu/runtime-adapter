@@ -7,18 +7,24 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/runtime-adapter)](https://jsr.io/@dreamer/runtime-adapter)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-267%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-Deno%2FBun%2FNode-brightgreen)](./docs/en-US/TEST_REPORT.md)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](./docs/zh-CN/NODE_COMPAT.md)
 
 **Changelog**: [English](./docs/en-US/CHANGELOG.md) |
-[中文 (Chinese)](./docs/zh-CN/CHANGELOG.md)
+[中文 (Chinese)](./docs/zh-CN/CHANGELOG.md) · **Node**:
+[NODE_COMPAT](./docs/zh-CN/NODE_COMPAT.md) · **Test report**:
+[en](./docs/en-US/TEST_REPORT.md) / [zh](./docs/zh-CN/TEST_REPORT.md)
 
-### [1.1.0] - 2026-07-21
+### [1.2.0] - 2026-07-22
 
-- **Added**: `RuntimeAdapterError` + codes, `IS_SUPPORTED` /
-  `assertSupportedRuntime()`, subpath exports (`/fs`, `/path`, `/process`,
-  `/net`). **Fixed**: Bun multi-`serve` WebSocket upgrade via
-  `AsyncLocalStorage`; macOS `df` disk usage (`-k` instead of invalid `-B1`).
-  See [CHANGELOG](./docs/en-US/CHANGELOG.md).
+- **Node.js 22+** Phase A: file/env/process/network/terminal/system-info + smoke
+  tests.
+- Hardening: CSWSH `allowedOrigins`, WS `maxPayload`/`idleTimeout`, connect/TLS
+  timeouts, subprocess `maxOutputBytes`.
+- **Perf**: Bun write without re-read polling; stream-based `open`; zero-copy
+  `readFile(Sync)` on Node-like paths.
+- Tests: `deno test` / `bun test` / `npm run test:node` / `npm run test:all`.
+  Full notes: [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 
@@ -38,15 +44,15 @@ same API across different runtime environments.
   - Complete TypeScript types for all APIs
   - Zero `any` types, using type guards and explicit interfaces
   - Type-safe runtime API access via utility functions
-  - Comprehensive types covering Deno and Bun runtime APIs
+  - Comprehensive types covering Deno / Bun (and Node process/fs shapes)
 - **File system API**:
   - Unified file read/write and directory operations
   - Sync and async support
   - File watching, directory traversal, temp files/dirs
 - **Network API**:
-  - HTTP server (auto-adapts Deno and Bun)
-  - WebSocket upgrade (unified API, auto-adapts)
-  - TCP/TLS connections
+  - HTTP server (auto-adapts Deno / Bun / Node)
+  - WebSocket upgrade (unified API, auto-adapts; CSWSH Origin checks)
+  - TCP/TLS connections with optional timeouts
 - **Environment variable API**:
   - Unified env var operations
   - Get, set, delete, check
@@ -93,7 +99,7 @@ same API across different runtime environments.
 
 All `@dreamer/*` libraries follow:
 
-- **Main package (@dreamer/xxx)**: Server-side (Deno and Bun)
+- **Main package (@dreamer/xxx)**: Server-side (Deno / Bun / Node)
 - **Client sub-package (@dreamer/xxx/client)**: Browser environment
 
 Benefits:
@@ -107,7 +113,7 @@ Benefits:
 
 ## 🎯 Use Cases
 
-- **Cross-runtime library development**: Bun and Deno compatible libraries
+- **Cross-runtime library development**: Deno / Bun / Node compatible libraries
 - **Unified runtime API abstraction**: Unify API differences across runtimes
 - **Base dependency**: Foundation for other `@dreamer/*` libraries
 
@@ -127,6 +133,13 @@ deno add jsr:@dreamer/runtime-adapter
 bunx jsr add @dreamer/runtime-adapter
 ```
 
+### Node.js (22+)
+
+```bash
+# via npm JSR registry or monorepo file: link
+npx jsr add @dreamer/runtime-adapter
+```
+
 ---
 
 ## 🌍 Compatibility
@@ -134,7 +147,7 @@ bunx jsr add @dreamer/runtime-adapter
 | Environment    | Version           | Status                                      |
 | -------------- | ----------------- | ------------------------------------------- |
 | **Deno**       | 2.5+              | ✅ Fully supported                          |
-| **Bun**        | 1.0+              | ✅ Fully supported                          |
+| **Bun**        | 1.3+              | ✅ Fully supported                          |
 | **Node.js**    | 22+               | ✅ Phase A supported (smoke tests)          |
 | **Server**     | -                 | ✅ Supported (Deno, Bun, and Node.js)       |
 | **Client**     | -                 | ❌ Not supported (browser)                  |
@@ -142,11 +155,11 @@ bunx jsr add @dreamer/runtime-adapter
 
 ### Platform Support
 
-| Platform    | Deno | Bun | Notes                                                         |
-| ----------- | ---- | --- | ------------------------------------------------------------- |
-| **Linux**   | ✅   | ✅  | Full support                                                  |
-| **macOS**   | ✅   | ✅  | Full support                                                  |
-| **Windows** | ✅   | ✅  | Full support; some APIs have platform differences (see below) |
+| Platform    | Deno | Bun | Node | Notes                                                         |
+| ----------- | ---- | --- | ---- | ------------------------------------------------------------- |
+| **Linux**   | ✅   | ✅  | ✅   | Full support                                                  |
+| **macOS**   | ✅   | ✅  | ✅   | Full support                                                  |
+| **Windows** | ✅   | ✅  | ✅   | Full support; some APIs have platform differences (see below) |
 
 **Windows platform notes**:
 
@@ -169,7 +182,24 @@ bunx jsr add @dreamer/runtime-adapter
 
 For detailed analysis, see [WIN_COMPAT.md](./docs/en-US/WIN_COMPAT.md).
 
-**Runtime support**: Official targets are **Deno + Bun**. Node.js compatibility: Phase A implemented (file/env/path/process/network/terminal APIs, smoke tests); Phase B (test backend) pending. Analysis: [NODE_COMPAT.md](./docs/zh-CN/NODE_COMPAT.md) (Chinese), [NODE_COMPAT_ANALYSIS.md](./docs/NODE_COMPAT_ANALYSIS.md) (index).
+**Runtime support**: Official targets are **Deno + Bun + Node.js 22+**. Node
+Phase A is implemented (file/env/path/process/network/terminal/system-info,
+smoke tests). Main suite runs on Deno/Bun; Node uses `tests/node/*`. Details:
+[NODE_COMPAT.md](./docs/zh-CN/NODE_COMPAT.md),
+[NODE_COMPAT_ANALYSIS.md](./docs/NODE_COMPAT_ANALYSIS.md).
+
+### Testing
+
+```bash
+deno test -A tests/          # or: npm run test:deno
+bun test tests/              # or: npm test
+npm run test:node            # Node smoke (tsx + node:test)
+npm run test:all             # all three
+```
+
+**Monorepo Bun note**: if you see
+`ENOENT .../logger/node_modules/@dreamer/runtime-adapter`, fix the local symlink
+to `../../../runtime-adapter` (not `../../runtime-adapter`).
 
 ---
 
@@ -186,7 +216,7 @@ import {
 } from "jsr:@dreamer/runtime-adapter";
 
 // Detect runtime
-const runtime = detectRuntime(); // "deno" | "bun" | "unknown"
+const runtime = detectRuntime(); // "deno" | "bun" | "node" | "unknown"
 
 // Use constants
 if (IS_BUN) {
@@ -744,13 +774,14 @@ console.log(`Platform: ${system.platform}`);
 
 ### Runtime Detection API
 
-| API               | Description              | Returns                        |
-| ----------------- | ------------------------ | ------------------------------ |
-| `detectRuntime()` | Detect current runtime   | `"deno" \| "bun" \| "unknown"` |
-| `RUNTIME`         | Current runtime constant | `"deno" \| "bun"`              |
-| `IS_BUN`          | Is Bun                   | `boolean`                      |
-| `IS_DENO`         | Is Deno                  | `boolean`                      |
-| `type Runtime`    | Runtime type             | `"deno" \| "bun" \| "unknown"` |
+| API               | Description              | Returns                                  |
+| ----------------- | ------------------------ | ---------------------------------------- |
+| `detectRuntime()` | Detect current runtime   | `"deno" \| "bun" \| "node" \| "unknown"` |
+| `RUNTIME`         | Current runtime constant | `"deno" \| "bun" \| "node"`              |
+| `IS_BUN`          | Is Bun                   | `boolean`                                |
+| `IS_DENO`         | Is Deno                  | `boolean`                                |
+| `IS_NODE`         | Is Node.js               | `boolean`                                |
+| `type Runtime`    | Runtime type             | `"deno" \| "bun" \| "node" \| "unknown"` |
 
 ### File System API
 

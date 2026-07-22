@@ -1,6 +1,6 @@
 /**
  * 终端/标准输出 API 适配模块
- * 提供统一的终端操作接口，兼容 Deno 和 Bun
+ * 提供统一的终端操作接口，兼容 Deno / Bun / Node.js
  */
 
 import { IS_BUN, IS_NODE } from "./detect.ts";
@@ -56,10 +56,10 @@ export function getStdout(): WritableStream<Uint8Array> {
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 使用 Node.js 兼容的流
+    // Bun/Node：WritableStream.write 须返回 void | PromiseLike<void>
     return new WritableStream({
       write(chunk) {
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const process = getProcess();
           const stdout = process?.stdout;
           if (!stdout) {
@@ -89,10 +89,9 @@ export function getStderr(): WritableStream<Uint8Array> {
   }
 
   if (IS_BUN || IS_NODE) {
-    // Bun 使用 Node.js 兼容的流
     return new WritableStream({
       write(chunk) {
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const process = getProcess();
           const stderr = process?.stderr;
           if (!stderr) {
