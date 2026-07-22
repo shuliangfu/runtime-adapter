@@ -130,7 +130,7 @@ npx jsr add @dreamer/runtime-adapter
 | ----------- | ----------------- | ------------------------------------- |
 | **Deno**    | 2.5+              | ✅ 完全支持                           |
 | **Bun**     | 1.3+              | ✅ 完全支持                           |
-| **Node.js** | 22+               | ✅ Phase A 支持（冒烟测试）           |
+| **Node.js** | 22+               | ✅ 完全支持（统一套件）               |
 | **服务端**  | -                 | ✅ 支持（Deno、Bun、Node.js）         |
 | **客户端**  | -                 | ❌ 不支持（浏览器环境）               |
 | **依赖**    | `node-cron@3.0.3` | 📦 用于定时任务，支持秒级 Cron 表达式 |
@@ -162,9 +162,9 @@ npx jsr add @dreamer/runtime-adapter
 
 详细分析见 [WIN_COMPAT.md](./WIN_COMPAT.md)。
 
-**运行时支持**：官方目标为 **Deno + Bun + Node.js 22+**。Node Phase A 已实现
-（file/env/path/process/network/terminal/system-info，冒烟测试）。主套件在
-Deno/Bun 上跑；Node 用 `tests/node/*`。详见 [NODE_COMPAT.md](./NODE_COMPAT.md)、
+**运行时支持**：官方目标为 **Deno + Bun + Node.js 22+**。三端跑同一套
+`tests/*.test.ts`（Node 经 `@dreamer/test` 的 Node 后端；`--test-force-exit`
+处理 stdin/server handle）。详见 [NODE_COMPAT.md](./NODE_COMPAT.md)、
 [TEST_REPORT.md](./TEST_REPORT.md)。
 
 ### 测试
@@ -172,8 +172,8 @@ Deno/Bun 上跑；Node 用 `tests/node/*`。详见 [NODE_COMPAT.md](./NODE_COMPA
 ```bash
 deno test -A tests/
 bun test tests/
-npm run test:node    # Node 冒烟
-npm run test:all     # 三端
+npm run test:node    # Node 统一套件（tsx --test）
+npm run test:all     # 三端同一套件
 ```
 
 ---
@@ -1323,6 +1323,16 @@ bun test tests/
 ---
 
 ## 📋 变更日志
+
+### [1.2.1] - 2026-07-22
+
+- **统一测试套件**：删除 `tests/node/` 冒烟集；Deno / Bun / Node 现跑同一套
+  `tests/*.test.ts`（Node 经 `@dreamer/test` 的 Node 后端）。
+- **修复**：`serve()` Node 分支返回 `Promise<ServeHandle>`（listen 异步）；
+  WebSocket 升级 socket 误销毁；undici `Response(101)` RangeError；测试并行竞争
+  （各文件独立 `tests/data/<file>` 子目录）。
+- **`test:node`**：`tsx --test --test-force-exit tests/*.test.ts`。
+- 完整说明见 [CHANGELOG](./CHANGELOG.md) · [TEST_REPORT](./TEST_REPORT.md)。
 
 ### [1.2.0] - 2026-07-22
 

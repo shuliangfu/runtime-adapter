@@ -9,6 +9,50 @@
 
 ---
 
+## [1.2.1] - 2026-07-22
+
+### 修复
+
+- **`serve()` Node 分支返回 `Promise<ServeHandle>`**：Node 的 `server.listen()`
+  异步，端口绑定在事件循环后续 tick 完成；原先同步返回 handle 导致 `handle.port`
+  读 `server.address()` 得 `null` → `undefined`。现 Node 分支在 listen 回调内
+  resolve handle，对齐 Deno/Bun 同步语义（调用方须 `await serve(...)`）。
+- **WebSocket 升级 socket 误销毁**：`upgradeWebSocket` 已同步调
+  `wss.handleUpgrade` 接管 socket 并置 `ctx.upgraded=true`；若 `fetchHandler`
+  后续抛错（如 undici 下 `Response(null,{status:101})` 触发 RangeError），catch
+  块原会 `socket.destroy()` 杀死已升级连接 → WS `message` 事件静默丢失。现 catch
+  内先检查 `ctx.upgraded`， 已升级则不销毁。
+- **Node 升级响应 status 101 RangeError**：undici 的 `Response` 构造拒绝 status
+  101（须 200-599）。`toUpgradeResponse` 在 `IS_NODE` 下返回
+  `Response(null,{status:200})` （Node 升级走 socket 接管，Response
+  返回值被忽略）。
+- **测试并行竞争**：`file`/`file-ext`/`file-sync`/`hash` 四个测试文件共享
+  `./tests/data`，Node 默认并行跑测试文件时并发 mkdir/remove 同一目录 → 偶发
+  ENOENT
+  /端口失败。各文件改用独立子目录（`./tests/data/{file,file-ext,file-sync,hash}`）。
+- **`websocket.test.ts` / `websocket-test.test.ts` 未 await `serve()`**：与
+  serve Promise 化配套，`serveWithSystemPort` / `listen` 改为
+  `await serve(...)`。
+
+### 变更
+
+- ⚠ **统一测试套件**：删除 `tests/node/`（6 个 `node:test` smoke 文件），三端
+  统一跑 `tests/*.test.ts`。Node 经 `@dreamer/test` 的 Node 后端跑同一批主套件，
+  不再维护独立冒烟集。
+- **`test:node` 脚本**：`tsx --test tests/node/*.test.ts` →
+  `tsx --test --test-force-exit tests/*.test.ts`（`--test-force-exit` 解决
+  stdin/ server handle 导致 Node 测试进程挂起）。
+- **`@dreamer/i18n`**：`1.0.1` → `^1.1.0`。
+- **`test:all`**：同步更新为三端统一 `tests/*.test.ts`。
+
+### 验证
+
+- Deno：309 通过，0 失败
+- Bun：286 通过，0 失败
+- Node：286 通过，0 失败（`tsx --test --test-force-exit tests/*.test.ts`）
+
+---
+
 ## [1.2.0] - 2026-07-22
 
 ### 新增

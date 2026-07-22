@@ -14,7 +14,8 @@ import {
   writeTextFile,
 } from "../src/file.ts";
 
-const TEST_DIR = "./tests/data";
+// 【Why】独立子目录隔离：避免与 file/file-sync/hash 测试并行跑时共享 ./tests/data 竞争。
+const TEST_DIR = "./tests/data/file-ext";
 
 describe("文件扩展功能", () => {
   describe("exists", () => {

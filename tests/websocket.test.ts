@@ -19,8 +19,9 @@ async function serveWithSystemPort(
     req: Request,
   ) => Response | Promise<Response> | Promise<Response | undefined> | undefined,
 ): Promise<{ handle: ServeHandle; port: number }> {
-  const handle = serve({ port: 0 }, handler);
-  await new Promise((r) => setTimeout(r, 100));
+  // 【Why】Node 分支 serve 返回 Promise（listen 异步），须 await 拿到就绪 handle；
+  // Deno/Bun 分支 serve 同步返回 ServeHandle，await 非 Promise 立即解析。
+  const handle = await serve({ port: 0 }, handler);
   const port = handle.port;
   if (!port || port === 0) {
     throw new Error("系统未分配端口");

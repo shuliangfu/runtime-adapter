@@ -15,6 +15,16 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 [NODE_COMPAT](./docs/zh-CN/NODE_COMPAT.md) · **Test report**:
 [en](./docs/en-US/TEST_REPORT.md) / [zh](./docs/zh-CN/TEST_REPORT.md)
 
+### [1.2.1] - 2026-07-22
+
+- **Unified test suite**: removed `tests/node/` smoke set; Deno / Bun / Node now
+  all run the same `tests/*.test.ts` (Node via `@dreamer/test`'s Node backend).
+- **Fixes**: `serve()` Node branch returns `Promise<ServeHandle>` (listen async);
+  WebSocket upgrade socket wrongly destroyed on post-upgrade throw; undici
+  `Response(101)` RangeError; test parallel race via per-file `tests/data/<file>`.
+- **`test:node`**: `tsx --test --test-force-exit tests/*.test.ts`.
+- Full notes: [CHANGELOG](./docs/en-US/CHANGELOG.md).
+
 ### [1.2.0] - 2026-07-22
 
 - **Node.js 22+** Phase A: file/env/process/network/terminal/system-info + smoke
@@ -148,7 +158,7 @@ npx jsr add @dreamer/runtime-adapter
 | -------------- | ----------------- | ------------------------------------------- |
 | **Deno**       | 2.5+              | ✅ Fully supported                          |
 | **Bun**        | 1.3+              | ✅ Fully supported                          |
-| **Node.js**    | 22+               | ✅ Phase A supported (smoke tests)          |
+| **Node.js**    | 22+               | ✅ Fully supported (unified suite)          |
 | **Server**     | -                 | ✅ Supported (Deno, Bun, and Node.js)       |
 | **Client**     | -                 | ❌ Not supported (browser)                  |
 | **Dependency** | `node-cron@3.0.3` | 📦 For cron tasks, second-level expressions |
@@ -182,9 +192,9 @@ npx jsr add @dreamer/runtime-adapter
 
 For detailed analysis, see [WIN_COMPAT.md](./docs/en-US/WIN_COMPAT.md).
 
-**Runtime support**: Official targets are **Deno + Bun + Node.js 22+**. Node
-Phase A is implemented (file/env/path/process/network/terminal/system-info,
-smoke tests). Main suite runs on Deno/Bun; Node uses `tests/node/*`. Details:
+**Runtime support**: Official targets are **Deno + Bun + Node.js 22+**. All three
+runtimes run the same `tests/*.test.ts` suite (Node via `@dreamer/test`'s Node
+backend; `--test-force-exit` handles stdin/server handles). Details:
 [NODE_COMPAT.md](./docs/zh-CN/NODE_COMPAT.md),
 [NODE_COMPAT_ANALYSIS.md](./docs/NODE_COMPAT_ANALYSIS.md).
 
@@ -193,8 +203,8 @@ smoke tests). Main suite runs on Deno/Bun; Node uses `tests/node/*`. Details:
 ```bash
 deno test -A tests/          # or: npm run test:deno
 bun test tests/              # or: npm test
-npm run test:node            # Node smoke (tsx + node:test)
-npm run test:all             # all three
+npm run test:node            # Node unified suite (tsx --test)
+npm run test:all             # all three (same suite)
 ```
 
 **Monorepo Bun note**: if you see

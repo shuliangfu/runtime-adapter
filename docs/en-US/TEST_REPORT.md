@@ -2,10 +2,11 @@
 
 ## Overview
 
-- **Test library**: @dreamer/test@^1.1.10 (Deno / Bun main suite)
-- **Node smoke**: `node:test` + `tsx` (`tests/node/*`)
+- **Test library**: @dreamer/test (shared across Deno / Bun / Node)
+- **Unified suite**: `tests/*.test.ts` (all three runtimes run the same files;
+  no separate Node smoke set)
 - **Date**: 2026-07-22
-- **Package version**: 1.2.0
+- **Package version**: 1.2.1
 - **Runtimes**:
   - Deno 2.x
   - Bun 1.3.14
@@ -15,22 +16,21 @@
 
 ### Summary
 
-| Runtime  | Command               | Result                                |
-| -------- | --------------------- | ------------------------------------- |
-| **Deno** | `deno test -A tests/` | **315 passed**, 0 failed (~43s)       |
-| **Bun**  | `bun test tests/`     | **286 passed**, 0 failed (~52s)       |
-| **Node** | `npm run test:node`   | **29 passed**, 0 failed (~5.5s smoke) |
+| Runtime  | Command                                        | Result                          |
+| -------- | ---------------------------------------------- | ------------------------------- |
+| **Deno** | `deno test -A tests/`                          | **309 passed**, 0 failed (~41s) |
+| **Bun**  | `bun test tests/`                              | **286 passed**, 0 failed (~50s) |
+| **Node** | `tsx --test --test-force-exit tests/*.test.ts` | **286 passed**, 0 failed (~45s) |
 
 - **Pass rate**: 100% on all three runtimes ✅
-- **One-shot**: `npm run test:all` (Deno + Bun + Node smoke)
+- **One-shot**: `npm run test:all` (Deno + Bun + Node, same suite)
 
-> **Count note**: Deno still registers empty suites for `tests/node/*` when
-> `if (!IS_NODE) return` (about +29). Bun does not collect `node:test` cases.
-> Main suite coverage is equivalent on Deno/Bun. Node currently runs Phase A
-> smoke only; full suite on Node waits for `@dreamer/test` Node backend usage
-> against the same `tests/*.test.ts` files.
+> **Count note**: all three runtimes run the same `tests/*.test.ts`. Deno's 309
+> includes Deno-specific case branches (e.g. `upgradeWebSocket` Deno/Bun
+> branches, Deno-native API cases); Bun/Node skip non-native cases and both
+> report 286. Main business coverage is equivalent across all three.
 
-### Main suite (Deno / Bun)
+### Main suite (shared across all three runtimes)
 
 | File                     | Status | Area                            |
 | ------------------------ | ------ | ------------------------------- |
@@ -53,26 +53,17 @@
 | `system-info.test.ts`    | ✅     | Memory / CPU / disk             |
 | `mod.test.ts`            | ✅     | Public exports                  |
 
-### Node smoke (`tests/node/`)
+## Static checks
 
-| File                        | Status | Area                     |
-| --------------------------- | ------ | ------------------------ |
-| `smoke-detect.test.ts`      | ✅     | RUNTIME / IS_NODE        |
-| `smoke-file.test.ts`        | ✅     | IO / open / mkdir / temp |
-| `smoke-network.test.ts`     | ✅     | serve / TCP / WebSocket  |
-| `smoke-process.test.ts`     | ✅     | exec / createCommand     |
-| `smoke-system-info.test.ts` | ✅     | system / memory / cpu    |
-| `smoke-terminal.test.ts`    | ✅     | TTY helpers              |
-
-## Post-optimization verification (1.2.0)
-
-- `deno check src/mod.ts`: pass
-- Local monorepo Bun: keep `@dreamer/test` → `logger` → this package links
-  healthy (see README)
+- `deno check src/`: pass (0 errors)
+- `deno lint src/`: pass (22 files, 0 issues)
+- `deno fmt --check src/ tests/`: pass (46 files formatted)
 
 ## Conclusion
 
-- **Deno / Bun**: first-class; full main suite green.
-- **Node.js 22+**: import gate open; core API smoke green. Treat smoke +
-  downstream package tests as the Node gate until the main suite runs fully
-  under Node.
+- **Three-runtimes first-class**: Deno / Bun / Node run the same
+  `tests/*.test.ts`, all green.
+- **Node.js 22+**: main suite wired in via `@dreamer/test`'s Node backend; no
+  separate smoke set maintained.
+- **Test isolation**: filesystem tests use unique `tests/data/<file>`
+  subdirectories, eliminating parallel races.
