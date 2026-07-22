@@ -3,9 +3,9 @@
  * 提供统一的终端操作接口，兼容 Deno 和 Bun
  */
 
-import { IS_BUN } from "./detect.ts";
-import { getDeno, getProcess } from "./utils.ts";
+import { IS_BUN, IS_NODE } from "./detect.ts";
 import { $tr } from "./i18n.ts";
+import { getDeno, getProcess } from "./utils.ts";
 // 静态导入 Node.js 模块（仅在 Bun 环境下使用）
 import * as nodeFs from "node:fs";
 
@@ -19,7 +19,7 @@ export function isTerminal(): boolean {
     return deno.stdout.isTerminal();
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     return process?.stdout?.isTTY ?? false;
   }
@@ -37,7 +37,7 @@ export function isStderrTerminal(): boolean {
     return deno.stderr.isTerminal();
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     return process?.stderr?.isTTY ?? false;
   }
@@ -55,7 +55,7 @@ export function getStdout(): WritableStream<Uint8Array> {
     return deno.stdout.writable;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的流
     return new WritableStream({
       write(chunk) {
@@ -88,7 +88,7 @@ export function getStderr(): WritableStream<Uint8Array> {
     return deno.stderr.writable;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     // Bun 使用 Node.js 兼容的流
     return new WritableStream({
       write(chunk) {
@@ -122,7 +122,7 @@ export function writeStdoutSync(data: Uint8Array): void {
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     const stdout = process?.stdout;
     if (stdout) {
@@ -162,7 +162,7 @@ export async function readStdin(
     }
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     const stdin = process?.stdin;
     if (!stdin) {
@@ -223,6 +223,23 @@ export function setStdinRaw(
     return false;
   }
 
+  if (IS_NODE) {
+    // Node TTY 原生支持 setRawMode；非 TTY（如 CI/管道）返回 false
+    const process = getProcess();
+    const stdin = process?.stdin as
+      | { isTTY?: boolean; setRawMode?: (mode: boolean) => void }
+      | undefined;
+    if (stdin?.isTTY && typeof stdin.setRawMode === "function") {
+      try {
+        stdin.setRawMode(mode);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
   if (IS_BUN) {
     // Bun 可能不支持原始模式
     return false;
@@ -242,7 +259,7 @@ export function writeStderrSync(data: Uint8Array): void {
     return;
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     const stderr = process?.stderr;
     if (stderr) {
@@ -267,7 +284,7 @@ export function isStdinTerminal(): boolean {
     return deno.stdin.isTerminal();
   }
 
-  if (IS_BUN) {
+  if (IS_BUN || IS_NODE) {
     const process = getProcess();
     return process?.stdin?.isTTY ?? false;
   }
