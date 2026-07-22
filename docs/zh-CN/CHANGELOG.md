@@ -9,6 +9,42 @@
 
 ---
 
+## [1.2.2] - 2026-07-22
+
+### 修复
+
+- **Node `spawn ENOENT` unhandledRejection**：`output()` 先 `await` 流收集
+  （`Promise.all([stdout, stderr])`）再 `await exitPromise`。当 `spawn` 触发
+  ENOENT（如现代 Windows Server / GitHub Actions runner 已移除 `wmic`）时，
+  `exitPromise` 经 `proc.once("error", reject)` 立即 reject，但该 tick 未被
+  await —— Node 测试运行器将此未捕获拒绝判为 `unhandledRejection` 导致测试失败。
+  现将 `exitPromise` 并入与流收集同一个 `Promise.all`，任一 reject
+  即时传播并被外层 `try/catch` 捕获。这也使 `system-info.ts` 中 `wmic` →
+  PowerShell `Get-CimInstance` 备选路径在已移除 `wmic` 的 runner 上可达。
+- **Deno 2.5 CI `Cannot find name 'Buffer'`（TS2580）**：`network.ts` 使用全局
+  `Buffer`（`head: Buffer` 类型标注、`Buffer.from(c)`）却未导入。Deno 2.9 的 lib
+  全局暴露 `Buffer` 故本地检查通过，但 CI 的 Deno 2.5 lib 缺少该声明。显式
+  `import { Buffer } from "node:buffer"`（与 `process.ts` 一致），兼容所有 Deno
+  版本。
+
+### 变更
+
+- **CI：Deno `v2.5` → `v2.9`**（6 处）：对齐本地开发环境，解决 Deno 2.5 类型诊断
+  （全局 `Buffer` 缺失、`process` 全局 discouraged 警告）。
+- **CI：新增 3 个 Node.js 任务**（`test-linux-node` / `test-macos-node` /
+  `test-windows-node`，Node 22，`npm install` + `npm run test:node`，不装
+  Chromium）。runtime-adapter CI 现为 9 任务（3 Deno + 3 Bun + 3
+  Node），落实三端 一等公民策略。
+- **`@dreamer/test` devDependency**：`^1.2.0` → `^1.2.1`。
+
+### 验证
+
+- Deno：309 通过，0 失败
+- Bun：286 通过，0 失败
+- Node：286 通过，0 失败（`tsx --test --test-force-exit tests/*.test.ts`）
+
+---
+
 ## [1.2.1] - 2026-07-22
 
 ### 修复
