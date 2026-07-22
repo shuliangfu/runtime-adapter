@@ -19,9 +19,10 @@ English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 - **Unified test suite**: removed `tests/node/` smoke set; Deno / Bun / Node now
   all run the same `tests/*.test.ts` (Node via `@dreamer/test`'s Node backend).
-- **Fixes**: `serve()` Node branch returns `Promise<ServeHandle>` (listen async);
-  WebSocket upgrade socket wrongly destroyed on post-upgrade throw; undici
-  `Response(101)` RangeError; test parallel race via per-file `tests/data/<file>`.
+- **Fixes**: `serve()` Node branch returns `Promise<ServeHandle>` (listen
+  async); WebSocket upgrade socket wrongly destroyed on post-upgrade throw;
+  undici `Response(101)` RangeError; test parallel race via per-file
+  `tests/data/<file>`.
 - **`test:node`**: `tsx --test --test-force-exit tests/*.test.ts`.
 - Full notes: [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
@@ -192,9 +193,9 @@ npx jsr add @dreamer/runtime-adapter
 
 For detailed analysis, see [WIN_COMPAT.md](./docs/en-US/WIN_COMPAT.md).
 
-**Runtime support**: Official targets are **Deno + Bun + Node.js 22+**. All three
-runtimes run the same `tests/*.test.ts` suite (Node via `@dreamer/test`'s Node
-backend; `--test-force-exit` handles stdin/server handles). Details:
+**Runtime support**: Official targets are **Deno + Bun + Node.js 22+**. All
+three runtimes run the same `tests/*.test.ts` suite (Node via `@dreamer/test`'s
+Node backend; `--test-force-exit` handles stdin/server handles). Details:
 [NODE_COMPAT.md](./docs/zh-CN/NODE_COMPAT.md),
 [NODE_COMPAT_ANALYSIS.md](./docs/NODE_COMPAT_ANALYSIS.md).
 
