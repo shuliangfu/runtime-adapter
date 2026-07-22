@@ -9,6 +9,33 @@
 
 ---
 
+## [1.2.0] - 2026-07-22
+
+### 新增
+
+- **Node.js 兼容（Phase A）**：`detect`/`env`/`signal`/`process-utils`/
+  `process-info`/`file`/`system-info`/`terminal`/`network` 模块现支持
+  Node.js >= 22（与 Deno、Bun 并列）。
+  - **网络**：`serve`（http.createServer）、`upgradeWebSocket`（ws 包 +
+    AsyncLocalStorage 升级上下文传递）、`connect`（node:net）、`startTls`
+   （node:tls）。
+  - **WebSocketAdapter**：合并 `IS_BUN` → `IS_BUN || IS_NODE`
+    （`setWebSocket`/`setupEventHandlers`/`removeEventListener`）；修复 Node
+    `handleUpgrade` 同步回调导致 "open" 事件丢失的时序 bug。
+- **engines.node**：在 package.json 声明 `>=22`。
+- **i18n**：`nodeWsNeedServe` 错误文案（en-US / zh-CN）。
+- **Node 冒烟测试**：`tests/node/` — 基于 `node:test` + `tsx`，以
+  `if (!IS_NODE) return` 守卫（Deno/Bun 上为空操作）。
+
+### 变更
+
+- 移除 `@types/ws` devDependency（根源修复：消除 `@types/node` 全局 `Event`
+  类型污染，避免与 `deno.window` 冲突）。
+- `startTls` Node 分支：`caCerts` 经 `Buffer.from()` 转换以符合 `tls.connect`
+  类型。
+- `package.json`/`deno.json`：新增 `ws` 依赖；`tsx` devDependency 以保证
+  `test:node` 脚本可复现。
+
 ## [1.1.0] - 2026-07-21
 
 ### 新增
