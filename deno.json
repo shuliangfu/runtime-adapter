@@ -28,7 +28,7 @@
   },
   "imports": {
     "@dreamer/i18n": "jsr:@dreamer/i18n@^1.1.0",
-    "@dreamer/test": "jsr:@dreamer/test@^1.2.0",
+    "@dreamer/test": "jsr:@dreamer/test@^1.2.1",
     "node-cron": "npm:node-cron@3.0.3",
     "ws": "npm:ws@^8.21.1"
   },
