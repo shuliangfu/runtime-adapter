@@ -13,6 +13,28 @@
 
 ---
 
+## [1.2.4] - 2026-11-23
+
+### 修复
+
+- **Node 流式响应 `writeResponseToNodeRes`**：原先用
+  `Writable.toWeb(res).pipeTo` 写入，客户端中途断开时可能往已关闭的
+  WritableStream 写入。在 Node 24/26 上会触发 `ERR_INTERNAL_ASSERTION`
+  并把进程打崩。现改为 `pipeline(Readable.fromWeb(response.body), res)`，
+  并忽略客户端提前断开类错误，服务器可继续服务。
+
+### 验证
+
+- Deno：319 通过，0 失败
+- Bun：294 通过，0 失败
+- Node 22.23.5 / 24.22.3 / 26.13.1：各 294 通过，0 失败
+  （`tsx --test --test-force-exit tests/*.test.ts`）
+- CI
+  [#45169634490](https://github.com/shuliangfu/runtime-adapter/actions/runs/45169634490)
+  全绿（9/9）
+
+---
+
 ## [1.2.3] - 2026-11-23
 
 ### 性能

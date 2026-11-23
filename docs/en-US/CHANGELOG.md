@@ -14,6 +14,29 @@ and this project adheres to
 
 ---
 
+## [1.2.4] - 2026-11-23
+
+### Fixed
+
+- **Node streaming `writeResponseToNodeRes`**: writing with
+  `Writable.toWeb(res).pipeTo` could hit a closed WritableStream when the client
+  disconnects mid-response. On Node 24/26 that triggered
+  `ERR_INTERNAL_ASSERTION` and killed the process. The body is now written with
+  Node `pipeline(Readable.fromWeb(response.body), res)`, and client-closed
+  stream errors are ignored so the server can keep serving.
+
+### Verified
+
+- Deno: 319 passed, 0 failed
+- Bun: 294 passed, 0 failed
+- Node 22.23.5 / 24.22.3 / 26.13.1: 294 passed, 0 failed each
+  (`tsx --test --test-force-exit tests/*.test.ts`)
+- CI
+  [#45169634490](https://github.com/shuliangfu/runtime-adapter/actions/runs/45169634490)
+  green (9/9)
+
+---
+
 ## [1.2.3] - 2026-11-23
 
 ### Performance
