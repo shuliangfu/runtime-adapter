@@ -8,6 +8,7 @@ import { Buffer } from "node:buffer";
 import * as http from "node:http";
 import * as net from "node:net";
 import { Readable, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import * as tls from "node:tls";
 import { type WebSocket as WsWebSocket, WebSocketServer } from "ws";
 import { IS_BUN, IS_NODE } from "./detect.ts";
@@ -442,9 +443,20 @@ function nodeReqToRequest(req: http.IncomingMessage): Request {
   });
 }
 
+function isClientClosedStreamError(err: unknown): boolean {
+  if (err == null || typeof err !== "object") return false;
+  const e = err as { code?: string; name?: string };
+  return e.code === "ERR_STREAM_PREMATURE_CLOSE" ||
+    e.code === "ERR_INVALID_STATE" ||
+    e.code === "ERR_STREAM_DESTROYED" ||
+    e.name === "AbortError";
+}
+
 /**
  * 将 Web Response 写入 Node http.ServerResponse。
- * 状态码 + headers 直接设置；body 若为 ReadableStream 则 pipe 到 res。
+ * 状态码 + headers 直接设置；body 用 Node pipeline 写入 res。
+ * 【Why】不可用 Writable.toWeb(res).pipeTo：客户端提前断开时，Node 24/26
+ * 会在 WritableStream 关闭窗口写入并触发 ERR_INTERNAL_ASSERTION 把进程打崩。
  */
 async function writeResponseToNodeRes(
   res: http.ServerResponse,
@@ -454,11 +466,25 @@ async function writeResponseToNodeRes(
   response.headers.forEach((value, key) => {
     res.setHeader(key, value);
   });
-  if (response.body) {
-    const writer = Writable.toWeb(res);
-    await response.body.pipeTo(writer);
-  } else {
+  if (!response.body) {
     res.end();
+    return;
+  }
+  if (res.destroyed || res.writableEnded) {
+    try {
+      await response.body.cancel();
+    } catch {
+      // already cancelled or closed
+    }
+    return;
+  }
+  try {
+    await pipeline(Readable.fromWeb(response.body), res);
+  } catch (err) {
+    if (isClientClosedStreamError(err) || res.destroyed || res.writableEnded) {
+      return;
+    }
+    throw err;
   }
 }
 

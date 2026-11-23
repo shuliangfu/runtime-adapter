@@ -92,6 +92,52 @@ describe("网络 API", () => {
       expect(handle).toBeTruthy();
       await handle.shutdown();
     });
+
+    it("客户端中途断开流式响应后服务器仍可继续服务", async () => {
+      const encoder = new TextEncoder();
+      const handle = await serve({ port: 0 }, (req) => {
+        const url = new URL(req.url);
+        if (url.pathname === "/ok") return new Response("ok");
+        let i = 0;
+        const body = new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            if (i++ >= 200) {
+              controller.close();
+              return;
+            }
+            controller.enqueue(encoder.encode("x".repeat(16 * 1024)));
+            await new Promise((r) => setTimeout(r, 5));
+          },
+        });
+        return new Response(body);
+      });
+      try {
+        const ac = new AbortController();
+        try {
+          const res = await fetch(`http://127.0.0.1:${handle.port}/stream`, {
+            signal: ac.signal,
+          });
+          const reader = res.body?.getReader();
+          if (reader) {
+            await reader.read();
+            ac.abort();
+            try {
+              await reader.cancel();
+            } catch {
+              // aborted
+            }
+          }
+        } catch {
+          // AbortError from fetch is expected
+        }
+        await new Promise((r) => setTimeout(r, 50));
+        const ok = await fetch(`http://127.0.0.1:${handle.port}/ok`);
+        expect(ok.status).toBe(200);
+        expect(await ok.text()).toBe("ok");
+      } finally {
+        await handle.shutdown();
+      }
+    });
   });
 
   describe("handle.finished", () => {
