@@ -4,12 +4,12 @@
 
 - **测试库版本**：@dreamer/test（Deno / Bun / Node 三端共用同一套件）
 - **统一套件**：`tests/*.test.ts`（三端跑同一批文件，不再有 Node 专用冒烟集）
-- **测试日期**：2026-07-22
-- **包版本**：1.2.2
+- **测试日期**：2026-11-23
+- **包版本**：1.2.3
 - **测试环境**：
-  - Deno 2.x
-  - Bun 1.3.14
-  - Node.js 22+
+  - Deno 2.9.8
+  - Bun 1.4.5
+  - Node.js 22.22.2
 
 ## 测试结果
 
@@ -17,16 +17,16 @@
 
 | 运行时   | 命令                                           | 结果                         |
 | -------- | ---------------------------------------------- | ---------------------------- |
-| **Deno** | `deno test -A tests/`                          | **309 通过**，0 失败（~41s） |
-| **Bun**  | `bun test tests/`                              | **286 通过**，0 失败（~50s） |
-| **Node** | `tsx --test --test-force-exit tests/*.test.ts` | **286 通过**，0 失败（~45s） |
+| **Deno** | `deno test -A tests/`                          | **318 通过**，0 失败（~41s） |
+| **Bun**  | `bun test tests/`                              | **293 通过**，0 失败（~41s） |
+| **Node** | `tsx --test --test-force-exit tests/*.test.ts` | **293 通过**，0 失败（~25s） |
 
 - **通过率**：三端均为 100% ✅
 - **一键**：`npm run test:all`（Deno + Bun + Node 同一套件）
 
-> **计数说明**：三端跑同一批 `tests/*.test.ts`。Deno 309 含 Deno 专属用例分支
+> **计数说明**：三端跑同一批 `tests/*.test.ts`。Deno 318 含 Deno 专属用例分支
 > （如 `upgradeWebSocket` 的 Deno/Bun 分支、Deno 原生 API 用例）；Bun/Node 跳过
-> 非 本端用例，均为 286。主业务覆盖三端一致。
+> 非本端用例，均为 293。主业务覆盖三端一致。
 
 ### 主套件文件（三端共用）
 
@@ -37,7 +37,10 @@
 | `file-sync.test.ts`      | ✅   | 同步文件系统                    |
 | `file-ext.test.ts`       | ✅   | exists / isFile / truncate 等   |
 | `network.test.ts`        | ✅   | HTTP serve                      |
+| `remote-addr.test.ts`    | ✅   | 请求远端地址 WeakMap            |
+| `errors.test.ts`         | ✅   | 错误类型                        |
 | `websocket.test.ts`      | ✅   | upgradeWebSocket                |
+| `ws-concurrent.test.ts`  | ✅   | 并发 WebSocket 升级             |
 | `websocket-test.test.ts` | ✅   | 自研 WS Server 集成             |
 | `env.test.ts`            | ✅   | 环境变量                        |
 | `process.test.ts`        | ✅   | 命令执行                        |

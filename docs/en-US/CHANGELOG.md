@@ -12,6 +12,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+---
+
+## [1.2.3] - 2026-11-23
+
 ### Performance
 
 - **Request remote address WeakMap**: `serve()` records the real remote host on
@@ -49,7 +53,12 @@ and this project adheres to
 
 - **Dependencies**: `@dreamer/i18n` `^1.1.0` → `^1.1.3`, `@dreamer/test`
   `^1.2.1` → `^1.2.5`, `ws` `^8.21.1` → `^8.23.0`, `tsx` `^4.23.1` → `^4.23.15`.
-  Package version remains 1.2.2; not published to JSR.
+
+### Verified
+
+- Deno: 318 passed, 0 failed
+- Bun: 293 passed, 0 failed
+- Node: 293 passed, 0 failed (`tsx --test --test-force-exit tests/*.test.ts`)
 
 ---
 

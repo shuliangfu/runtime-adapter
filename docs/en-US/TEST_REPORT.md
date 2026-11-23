@@ -5,12 +5,12 @@
 - **Test library**: @dreamer/test (shared across Deno / Bun / Node)
 - **Unified suite**: `tests/*.test.ts` (all three runtimes run the same files;
   no separate Node smoke set)
-- **Date**: 2026-07-22
-- **Package version**: 1.2.2
+- **Date**: 2026-11-23
+- **Package version**: 1.2.3
 - **Runtimes**:
-  - Deno 2.x
-  - Bun 1.3.14
-  - Node.js 22+
+  - Deno 2.9.8
+  - Bun 1.4.5
+  - Node.js 22.22.2
 
 ## Results
 
@@ -18,17 +18,17 @@
 
 | Runtime  | Command                                        | Result                          |
 | -------- | ---------------------------------------------- | ------------------------------- |
-| **Deno** | `deno test -A tests/`                          | **309 passed**, 0 failed (~41s) |
-| **Bun**  | `bun test tests/`                              | **286 passed**, 0 failed (~50s) |
-| **Node** | `tsx --test --test-force-exit tests/*.test.ts` | **286 passed**, 0 failed (~45s) |
+| **Deno** | `deno test -A tests/`                          | **318 passed**, 0 failed (~41s) |
+| **Bun**  | `bun test tests/`                              | **293 passed**, 0 failed (~41s) |
+| **Node** | `tsx --test --test-force-exit tests/*.test.ts` | **293 passed**, 0 failed (~25s) |
 
 - **Pass rate**: 100% on all three runtimes ✅
 - **One-shot**: `npm run test:all` (Deno + Bun + Node, same suite)
 
-> **Count note**: all three runtimes run the same `tests/*.test.ts`. Deno's 309
+> **Count note**: all three runtimes run the same `tests/*.test.ts`. Deno's 318
 > includes Deno-specific case branches (e.g. `upgradeWebSocket` Deno/Bun
 > branches, Deno-native API cases); Bun/Node skip non-native cases and both
-> report 286. Main business coverage is equivalent across all three.
+> report 293. Main business coverage is equivalent across all three.
 
 ### Main suite (shared across all three runtimes)
 
@@ -39,7 +39,10 @@
 | `file-sync.test.ts`      | ✅     | Sync filesystem                 |
 | `file-ext.test.ts`       | ✅     | exists / isFile / truncate      |
 | `network.test.ts`        | ✅     | HTTP serve                      |
+| `remote-addr.test.ts`    | ✅     | Request remote-address WeakMap  |
+| `errors.test.ts`         | ✅     | Error types                     |
 | `websocket.test.ts`      | ✅     | upgradeWebSocket                |
+| `ws-concurrent.test.ts`  | ✅     | Concurrent WebSocket upgrades   |
 | `websocket-test.test.ts` | ✅     | In-repo WS server               |
 | `env.test.ts`            | ✅     | Environment                     |
 | `process.test.ts`        | ✅     | Commands                        |
