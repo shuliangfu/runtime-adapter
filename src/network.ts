@@ -108,7 +108,68 @@ const pendingNodeAdapters = new Map<string, WebSocketAdapter>();
  * WebSocket 升级 Origin 校验：把 serve() 配置的 allowedOrigins 绑定到具体 Request，
  * upgradeWebSocket 据此校验。WeakMap 随 Request GC 自动清理，无内存泄漏。
  */
-const wsAllowedOriginsByReq = new WeakMap<Request, string[] | undefined>();
+const wsAllowedOriginsByReq = new WeakMap<
+  Request,
+  ReadonlySet<string> | undefined
+>();
+
+/** Bun 原生 WebSocket / 套接字 → 适配器，message/open/close O(1) 反查 */
+const adapterByNativeSocket = new WeakMap<object, WebSocketAdapter>();
+
+/** 同一 Request 重复调用 upgradeWebSocket 时复用已创建的适配器（不按 URL 去重） */
+const bunAdapterByRequest = new WeakMap<Request, WebSocketAdapter>();
+
+/** 将 allowedOrigins 列表预建成 Set；空列表视为未配置，回退默认同源校验 */
+function originSetFromList(
+  origins?: string[],
+): ReadonlySet<string> | undefined {
+  if (origins && origins.length > 0) {
+    return new Set(origins);
+  }
+  return undefined;
+}
+
+/** 跨包读取真实远端地址（不依赖未发布的具名导出）。 */
+export const REQUEST_REMOTE_ADDR_MAP = Symbol.for(
+  "@dreamer/runtime-adapter.remoteAddrMap",
+);
+
+function remoteAddrMap(): WeakMap<Request, string> {
+  const g = globalThis as unknown as Record<
+    symbol,
+    WeakMap<Request, string>
+  >;
+  if (!g[REQUEST_REMOTE_ADDR_MAP]) {
+    g[REQUEST_REMOTE_ADDR_MAP] = new WeakMap();
+  }
+  return g[REQUEST_REMOTE_ADDR_MAP];
+}
+
+/** 记录某次请求的远端主机地址（serve 内部调用）。 */
+export function rememberRequestRemoteAddress(
+  req: Request,
+  host: string | undefined | null,
+): void {
+  if (host && host.length > 0) {
+    remoteAddrMap().set(req, host);
+  }
+}
+
+/** 读取 serve 记录的远端主机地址。 */
+export function getRequestRemoteAddress(req: Request): string | undefined {
+  return remoteAddrMap().get(req);
+}
+
+function bunRequestAddress(srv: unknown, req: Request): string | undefined {
+  const requestIP = (srv as {
+    requestIP?: (r: Request) => { address?: string } | null;
+  }).requestIP;
+  try {
+    return requestIP?.(req)?.address;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * 判定 WebSocket 升级请求的 Origin 是否被允许（防 CSWSH 跨站劫持）。
@@ -117,16 +178,16 @@ const wsAllowedOriginsByReq = new WeakMap<Request, string[] | undefined>();
  * allowedOrigins 显式覆盖。
  * 【Invariant】fail-closed：无 Origin（非浏览器客户端）放行；有 Origin 但无法验证则拒。
  */
-function isWsOriginAllowed(
+export function isWsOriginAllowed(
   origin: string | null | undefined,
   host: string | null | undefined,
-  allowedOrigins?: string[],
+  allowedOrigins?: ReadonlySet<string>,
 ): boolean {
   // 无 Origin header → 非浏览器客户端（curl/服务端 WS），放行
   if (!origin) return true;
   // allowedOrigins 显式配置：精确匹配（含 "null" 字面量场景）
-  if (allowedOrigins && allowedOrigins.length > 0) {
-    return allowedOrigins.includes(origin);
+  if (allowedOrigins && allowedOrigins.size > 0) {
+    return allowedOrigins.has(origin);
   }
   // 默认同源校验：无 Host 无法验证 → 拒绝；Origin==="null"（沙箱）无可比对源 → 拒绝
   if (!host || origin === "null") return false;
@@ -260,22 +321,16 @@ function findAndRemovePendingAdapter(
 function createBunWebSocketHandlers() {
   return {
     message(ws: BunWebSocket, message: string | Uint8Array) {
-      let adapter = Array.from(WebSocketAdapter.allAdapters).find(
-        (a) => a.getWebSocket() === ws,
-      );
+      let adapter = adapterByNativeSocket.get(ws);
       if (!adapter && pendingBunAdapters.size > 0) {
-        const { adapter: found } = findAndRemovePendingAdapter(ws);
+        const { adapter: found, matchedKey } = findAndRemovePendingAdapter(ws);
         adapter = found;
         if (adapter && !adapter.isWebSocketReady()) {
           adapter.setWebSocket(ws);
-          const wsUrl = ws.url || "";
-          const wsData = ws.data as { adapterId?: string } | undefined;
-          if (wsUrl && pendingBunAdapters.has(wsUrl)) {
-            pendingBunAdapters.delete(wsUrl);
-          } else if (
-            wsData?.adapterId && pendingBunAdapters.has(wsData.adapterId)
-          ) {
-            pendingBunAdapters.delete(wsData.adapterId);
+        }
+        if (adapter) {
+          if (matchedKey) {
+            pendingBunAdapters.delete(matchedKey);
           } else {
             for (const [key, value] of pendingBunAdapters.entries()) {
               if (value === adapter) {
@@ -335,12 +390,11 @@ function createBunWebSocketHandlers() {
     },
 
     close(ws: BunWebSocket, code?: number, reason?: string) {
-      let adapter = Array.from(WebSocketAdapter.allAdapters).find(
-        (a) => a.getWebSocket() === ws,
-      );
+      let adapter = adapterByNativeSocket.get(ws);
       if (!adapter) {
-        const { adapter: found } = findAndRemovePendingAdapter(ws);
+        const { adapter: found, matchedKey } = findAndRemovePendingAdapter(ws);
         adapter = found;
+        if (matchedKey) pendingBunAdapters.delete(matchedKey);
       }
       if (adapter) {
         adapter.emit(
@@ -453,6 +507,7 @@ export class WebSocketAdapter {
       this.listeners.get("open")?.size ?? 0,
     );
     this._ws = ws;
+    adapterByNativeSocket.set(ws, this);
     this.setupEventHandlers();
     // 执行所有待处理的操作
     for (const op of this.pendingOperations) {
@@ -793,6 +848,38 @@ export interface TcpConn {
 }
 
 /**
+ * Bun serve 句柄：finished 在 server.stop()/shutdown 完成后 resolve。
+ * 【Why】原先永不结算的 Promise 使调用方无法等待关服。
+ */
+function createBunServeHandle(
+  server: BunServer,
+  port: number | undefined,
+): ServeHandle {
+  let resolveFinished = () => {};
+  let settled = false;
+  const finished = new Promise<void>((resolve) => {
+    resolveFinished = resolve;
+  });
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    resolveFinished();
+  };
+  return {
+    finished,
+    port,
+    async shutdown(): Promise<void> {
+      if (lastBunServer === server) lastBunServer = null;
+      try {
+        await Promise.resolve(server.stop());
+      } finally {
+        settle();
+      }
+    },
+  };
+}
+
+/**
  * 启动 HTTP 服务器
  * @param options 服务器选项
  * @param handler 请求处理器
@@ -816,8 +903,14 @@ export function serve(
   if (deno) {
     // Deno.serve 的签名
     if (typeof options === "function") {
+      const userHandler = options as (
+        req: Request,
+      ) => Response | Promise<Response>;
       const handle = deno.serve(
-        options as (req: Request) => Response | Promise<Response>,
+        (req: Request, info?: { remoteAddr?: { hostname?: string } }) => {
+          rememberRequestRemoteAddress(req, info?.remoteAddr?.hostname);
+          return userHandler(req);
+        },
       );
       // Deno.serve 返回的 handle 可能没有 port 属性，需要从 onListen 回调中获取
       // 但为了兼容性，我们尝试从 handle 中获取
@@ -846,11 +939,17 @@ export function serve(
       },
     };
 
+    const allowedOriginSet = originSetFromList(serveOptions.allowedOrigins);
+
     const handle = deno.serve(
       newOptions,
-      (req: Request): Response | Promise<Response> => {
-        // 【Why】H1：绑定 serve 级别 allowedOrigins 到此 Request，供 upgradeWebSocket 读取
-        wsAllowedOriginsByReq.set(req, serveOptions.allowedOrigins);
+      (
+        req: Request,
+        info?: { remoteAddr?: { hostname?: string } },
+      ): Response | Promise<Response> => {
+        rememberRequestRemoteAddress(req, info?.remoteAddr?.hostname);
+        // 【Why】H1：绑定 serve 级别 allowedOrigins（预建 Set）到此 Request，供 upgradeWebSocket 读取
+        wsAllowedOriginsByReq.set(req, allowedOriginSet);
         const result = handler!(req);
         // 确保返回 Response，而不是 undefined（勿用 async/await，否则 WebSocket 升级无法同步返回 101）
         if (result === undefined) {
@@ -897,6 +996,7 @@ export function serve(
         fetch: async (req: Request, srv: BunServer) => {
           return await bunServerAls.run(srv, async () => {
             lastBunServer = srv;
+            rememberRequestRemoteAddress(req, bunRequestAddress(srv, req));
             const isWs =
               req.headers.get("Upgrade")?.toLowerCase() === "websocket";
             if (isWs) {
@@ -909,15 +1009,10 @@ export function serve(
         websocket: createBunWebSocketHandlers(),
       });
       lastBunServer = server;
-      return {
-        finished: new Promise(() => {}),
-        port: server.port,
-        shutdown() {
-          if (lastBunServer === server) lastBunServer = null;
-          return Promise.resolve(server.stop());
-        },
-      };
+      return createBunServeHandle(server, server.port);
     }
+
+    const allowedOriginSet = originSetFromList(options.allowedOrigins);
 
     const server = bun.serve({
       port: options.port ?? 3000,
@@ -925,8 +1020,9 @@ export function serve(
       fetch: async (req: Request, srv: BunServer) => {
         return await bunServerAls.run(srv, async () => {
           lastBunServer = srv;
-          // 【Why】H1：绑定 serve 级别 allowedOrigins 到此 Request，供 upgradeWebSocket 读取
-          wsAllowedOriginsByReq.set(req, options.allowedOrigins);
+          rememberRequestRemoteAddress(req, bunRequestAddress(srv, req));
+          // 【Why】H1：绑定 serve 级别 allowedOrigins（预建 Set）到此 Request，供 upgradeWebSocket 读取
+          wsAllowedOriginsByReq.set(req, allowedOriginSet);
           const isWs =
             req.headers.get("Upgrade")?.toLowerCase() === "websocket";
           if (isWs) {
@@ -949,14 +1045,10 @@ export function serve(
       });
     }
 
-    return {
-      finished: new Promise(() => {}),
-      port: server.port || options.port || 3000,
-      shutdown() {
-        if (lastBunServer === server) lastBunServer = null;
-        return Promise.resolve(server.stop());
-      },
-    };
+    return createBunServeHandle(
+      server,
+      server.port || options.port || 3000,
+    );
   }
 
   if (IS_NODE) {
@@ -971,10 +1063,12 @@ export function serve(
       maxPayload: serveOpts.websocket?.maxPayload ?? DEFAULT_WS_MAX_PAYLOAD,
     });
     lastNodeWss = wss;
+    const allowedOriginSet = originSetFromList(serveOpts.allowedOrigins);
 
     const server = http.createServer(async (req, res) => {
       try {
         const webReq = nodeReqToRequest(req);
+        rememberRequestRemoteAddress(webReq, req.socket?.remoteAddress);
         const result = await fetchHandler(webReq);
         if (result === undefined) {
           await writeResponseToNodeRes(
@@ -998,14 +1092,15 @@ export function serve(
 
     server.on("upgrade", (req, socket, head) => {
       const webReq = nodeReqToRequest(req);
-      // 【Why】H1：CSWSH 防护咽喉点（Node）。绑定 serve 级别 allowedOrigins 到此 Request，
+      rememberRequestRemoteAddress(webReq, req.socket?.remoteAddress);
+      // 【Why】H1：CSWSH 防护咽喉点（Node）。绑定 serve 级别 allowedOrigins（预建 Set）到此 Request，
       // 供 upgradeWebSocket 读取；同时在进入 handler 前做干净 403 拒绝，避免误升级。
-      wsAllowedOriginsByReq.set(webReq, serveOpts.allowedOrigins);
+      wsAllowedOriginsByReq.set(webReq, allowedOriginSet);
       if (
         !isWsOriginAllowed(
           req.headers.origin,
           req.headers.host,
-          serveOpts.allowedOrigins,
+          allowedOriginSet,
         )
       ) {
         console.error($tr("error.wsOriginRejected"));
@@ -1105,7 +1200,9 @@ export function upgradeWebSocket(
   // 【Why】CSWSH 防护：在升级前校验 Origin。三端统一咽喉点。
   // allowedOrigins 优先取 per-call options，其次 serve() 经 WeakMap 绑定的配置。
   // Node upgrade handler 已做干净 403 拒绝；此处对 Deno/Bun 抛错使升级被拒（连接不建立）。
-  const allowed = options?.allowedOrigins ?? wsAllowedOriginsByReq.get(request);
+  const allowed = options?.allowedOrigins
+    ? originSetFromList(options.allowedOrigins)
+    : wsAllowedOriginsByReq.get(request);
   if (
     !isWsOriginAllowed(
       request.headers.get("origin"),
@@ -1129,15 +1226,24 @@ export function upgradeWebSocket(
       throw unsupportedRuntimeError($tr("error.bunWsNeedServe"));
     }
 
+    // 同一 Request 重复调用时复用已有适配器；并发同路径升级必须各自独立 id，不能按 URL 去重。
+    const existingForRequest = bunAdapterByRequest.get(request);
+    if (existingForRequest) {
+      return {
+        socket: existingForRequest as unknown as WebSocket,
+        response: undefined,
+      };
+    }
+
     // 构建升级选项
     // 在 Bun 中，可以通过 data 参数传递自定义数据，在 websocket.open 中通过 ws.data 访问
-    const adapterId = request.url; // 使用 URL 作为适配器标识
+    const adapterId = crypto.randomUUID();
     const upgradeOptions: {
       data: { adapterId: string };
       headers?: Record<string, string>;
     } = {
       data: {
-        adapterId: adapterId, // 传递适配器 ID，用于在 open 事件中匹配
+        adapterId: adapterId, // 传递唯一适配器 ID，用于在 open 事件中 O(1) 匹配
       },
     };
     if (options?.protocol) {
@@ -1146,18 +1252,7 @@ export function upgradeWebSocket(
       };
     }
 
-    // 检查是否已经为这个请求 URL 创建了适配器（避免重复创建）
-    const url = request.url;
-    let adapter = pendingBunAdapters.get(url);
-    if (adapter) {
-      // 如果已经存在，直接返回（避免重复升级）
-      return {
-        socket: adapter as unknown as WebSocket,
-        response: undefined,
-      };
-    }
-
-    // 先创建适配器并注册，再调用 upgrade()。
+    // 先创建适配器并按唯一 id 注册，再调用 upgrade()。
     // Bun 可能在 upgrade() 内同步调用 websocket.open(ws)，若 adapter 在 upgrade 之后才放入
     // pendingBunAdapters，open(ws) 时找不到 adapter，setWebSocket(ws) 不会被调用，服务端
     // send() 会一直留在 pendingOperations，客户端收不到消息（如批量心跳 ping）。
@@ -1176,13 +1271,14 @@ export function upgradeWebSocket(
       },
     });
 
-    adapter = new WebSocketAdapter(placeholderWs as WebSocket);
-    pendingBunAdapters.set(url, adapter);
+    const adapter = new WebSocketAdapter(placeholderWs as WebSocket);
+    pendingBunAdapters.set(adapterId, adapter);
+    bunAdapterByRequest.set(request, adapter);
     // 【Why】H5：Bun 无 per-connection idleTimeout 原生 API，用适配器定时器管理
     adapter.setIdleTimeout(options?.idleTimeout ?? DEFAULT_WS_IDLE_TIMEOUT_MS);
     wsDebug(
       $tr("debug.upgradeWebSocketUrl"),
-      url,
+      request.url,
       $tr("debug.pendingSize"),
       pendingBunAdapters.size,
     );
@@ -1192,7 +1288,7 @@ export function upgradeWebSocket(
     wsDebug($tr("debug.upgradeResult"), upgraded);
 
     if (!upgraded) {
-      pendingBunAdapters.delete(url);
+      pendingBunAdapters.delete(adapterId);
       throw new Error($tr("error.wsUpgradeFailed"));
     }
 

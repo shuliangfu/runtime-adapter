@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import { mkdir, remove, writeTextFile } from "../src/file.ts";
+import { mkdir, remove, writeFile, writeTextFile } from "../src/file.ts";
 import { hash, hashFile, hashFileSync, hashSync } from "../src/hash.ts";
 
 // 【Why】独立子目录隔离：Node 默认并行跑测试文件，4 个文件测试若共享 ./tests/data，
@@ -42,6 +42,7 @@ describe("文件哈希 API", () => {
         const hashValue = await hashFile(testFile);
         expect(typeof hashValue).toBe("string");
         expect(hashValue.length).toBeGreaterThan(0);
+        expect(hashValue).toBe(hashSync("Hello, World!"));
       } finally {
         await remove(testFile).catch(() => {});
       }
@@ -95,6 +96,7 @@ describe("文件哈希 API", () => {
         const hashValue = hashFileSync(testFile);
         expect(typeof hashValue).toBe("string");
         expect(hashValue.length).toBeGreaterThan(0);
+        expect(hashValue).toBe(hashSync("Hello, World!"));
       } finally {
         await remove(testFile).catch(() => {});
       }
@@ -113,6 +115,32 @@ describe("文件哈希 API", () => {
       } finally {
         await remove(testFile1).catch(() => {});
         await remove(testFile2).catch(() => {});
+      }
+    });
+  });
+
+  describe("流式文件哈希", () => {
+    it("hashFile / hashFileSync 应与同字节的 hashSync 一致（跨块）", async () => {
+      await mkdir(TEST_DIR, { recursive: true });
+      const testFile = `${TEST_DIR}/hash-stream.bin`;
+      const bytes = new Uint8Array(256 * 1024);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = i % 256;
+      }
+      try {
+        await writeFile(testFile, bytes);
+        const streamed = await hashFile(testFile);
+        const streamedSync = hashFileSync(testFile);
+        const inMemory = hashSync(bytes);
+        const inMemoryAsync = await hash(bytes);
+        expect(streamed).toBe(inMemory);
+        expect(streamedSync).toBe(inMemory);
+        expect(inMemoryAsync).toBe(inMemory);
+        const sha512 = await hashFile(testFile, "SHA-512");
+        expect(sha512).toBe(hashSync(bytes, "SHA-512"));
+        expect(sha512).not.toBe(streamed);
+      } finally {
+        await remove(testFile).catch(() => {});
       }
     });
   });

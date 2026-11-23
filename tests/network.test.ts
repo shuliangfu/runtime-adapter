@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
-import { serve, type ServeHandle } from "../src/network.ts";
+import { isWsOriginAllowed, serve, type ServeHandle } from "../src/network.ts";
 
 describe("网络 API", () => {
   describe("serve", () => {
@@ -92,5 +92,60 @@ describe("网络 API", () => {
       expect(handle).toBeTruthy();
       await handle.shutdown();
     });
+  });
+
+  describe("handle.finished", () => {
+    it("shutdown 后 finished 应 resolve", async () => {
+      const handle = await serve(
+        { port: 0 },
+        () => new Response("OK"),
+      );
+      let resolved = false;
+      const finished = handle.finished.then(() => {
+        resolved = true;
+      });
+      expect(resolved).toBe(false);
+      await handle.shutdown();
+      await Promise.race([
+        finished,
+        new Promise((_, reject) => {
+          setTimeout(
+            () => reject(new Error("finished 未在 shutdown 后 resolve")),
+            5000,
+          );
+        }),
+      ]);
+      expect(resolved).toBe(true);
+    });
+  });
+});
+
+describe("WebSocket Origin 校验", () => {
+  it("无 Origin 应放行（非浏览器客户端）", () => {
+    expect(isWsOriginAllowed(null, "localhost:3000")).toBe(true);
+    expect(isWsOriginAllowed(undefined, "localhost:3000")).toBe(true);
+    expect(isWsOriginAllowed("", "localhost:3000")).toBe(true);
+  });
+
+  it("allowedOrigins Set 精确匹配，未列出的 Origin 拒绝，无 Origin 仍放行", () => {
+    const allowed = new Set(["http://a.example", "null"]);
+    expect(isWsOriginAllowed("http://a.example", "victim.example", allowed))
+      .toBe(true);
+    expect(isWsOriginAllowed("null", "victim.example", allowed)).toBe(true);
+    expect(isWsOriginAllowed("http://evil.example", "victim.example", allowed))
+      .toBe(false);
+    expect(isWsOriginAllowed(null, "victim.example", allowed)).toBe(true);
+  });
+
+  it("未配置 allowedOrigins 时默认同源校验不变", () => {
+    expect(isWsOriginAllowed("http://localhost:3000", "localhost:3000")).toBe(
+      true,
+    );
+    expect(isWsOriginAllowed("http://localhost", "localhost")).toBe(true);
+    expect(isWsOriginAllowed("http://evil.example", "localhost:3000")).toBe(
+      false,
+    );
+    expect(isWsOriginAllowed("null", "localhost:3000")).toBe(false);
+    expect(isWsOriginAllowed("http://localhost:3000", null)).toBe(false);
   });
 });

@@ -15,6 +15,13 @@ import * as nodeFsPromises from "node:fs/promises";
 import * as nodeOs from "node:os";
 import { Readable, Writable } from "node:stream";
 
+/**
+ * 【Why】P2：模块加载时绑死 Deno/Bun 句柄，避免每个文件 API 再调用 getDeno()/getBun()。
+ * 【Invariant】运行时在 import 时已确定；句柄为 live 引用，语义与每次查询相同。
+ */
+const denoFs = getDeno();
+const bunFs = getBun();
+
 /** 统一抛不支持的运行时（减少重复字面量） */
 function throwUnsupported(): never {
   throw unsupportedRuntimeError($tr("error.unsupportedRuntime"));
@@ -160,12 +167,12 @@ export interface FileWatcher {
  * @returns 文件内容（Uint8Array）
  */
 export async function readFile(path: string): Promise<Uint8Array> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return await deno.readFile(path);
   }
 
-  const bun = getBun();
+  const bun = bunFs;
   if (bun) {
     const file = bun.file(path);
     const arrayBuffer = await file.arrayBuffer();
@@ -190,12 +197,12 @@ export async function readTextFile(
   path: string,
   _encoding = "utf-8",
 ): Promise<string> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return await deno.readTextFile(path, { encoding: _encoding });
   }
 
-  const bun = getBun();
+  const bun = bunFs;
   if (bun) {
     const file = bun.file(path);
     return await file.text();
@@ -219,7 +226,7 @@ export async function writeFile(
   data: Uint8Array,
   options?: { create?: boolean; mode?: number },
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.writeFile(path, data, options);
     return;
@@ -245,7 +252,7 @@ export async function writeTextFile(
   data: string,
   options?: { create?: boolean; mode?: number },
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.writeTextFile(path, data, options);
     return;
@@ -279,7 +286,7 @@ export async function open(
     close(): void;
   }
 > {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     const file = await deno.open(path, options);
     return {
@@ -356,7 +363,7 @@ export async function mkdir(
   path: string,
   options?: { recursive?: boolean; mode?: number },
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.mkdir(path, options);
     return;
@@ -424,7 +431,7 @@ export async function remove(
   path: string,
   options?: { recursive?: boolean },
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.remove(path, options);
     return;
@@ -463,7 +470,7 @@ export async function remove(
  * @returns 文件信息
  */
 export async function stat(path: string): Promise<FileInfo> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     const info = await deno.stat(path);
     return {
@@ -546,7 +553,7 @@ export function watchFs(
   paths: string | string[],
   options?: WatchFsOptions,
 ): FileWatcher {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     const pathArray = Array.isArray(paths) ? paths : [paths];
     const watcher = deno.watchFs(pathArray, {
@@ -835,7 +842,7 @@ export interface DirEntry {
  * @returns 目录项数组
  */
 export async function readdir(path: string): Promise<DirEntry[]> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     const entries: DirEntry[] = [];
     for await (const entry of deno.readDir(path)) {
@@ -888,7 +895,7 @@ export async function copyFile(
   src: string,
   dest: string,
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.copyFile(src, dest);
     return;
@@ -912,7 +919,7 @@ export async function rename(
   oldPath: string,
   newPath: string,
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.rename(oldPath, newPath);
     return;
@@ -1006,7 +1013,7 @@ export async function symlink(
   path: string,
   type?: "file" | "dir",
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     // Deno.symlink 的签名：symlink(target, path, options?)
     // options 可以是 { type: "file" | "dir" } 或直接是 type 字符串
@@ -1033,7 +1040,7 @@ export async function symlink(
  * @returns 真实路径
  */
 export async function realPath(path: string): Promise<string> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return await deno.realPath(path);
   }
@@ -1052,7 +1059,7 @@ export async function realPath(path: string): Promise<string> {
  * @param mode 权限模式（八进制数字，如 0o755）
  */
 export async function chmod(path: string, mode: number): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.chmod(path, mode);
     return;
@@ -1078,7 +1085,7 @@ export async function chown(
   uid: number,
   gid: number,
 ): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.chown(path, uid, gid);
     return;
@@ -1103,7 +1110,7 @@ export async function chown(
 export async function makeTempDir(
   options?: { prefix?: string; dir?: string },
 ): Promise<string> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return await deno.makeTempDir(options);
   }
@@ -1134,7 +1141,7 @@ export async function makeTempDir(
 export async function makeTempFile(
   options?: { prefix?: string; suffix?: string; dir?: string },
 ): Promise<string> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return await deno.makeTempFile(options);
   }
@@ -1163,7 +1170,7 @@ export async function makeTempFile(
  * @returns 当前工作目录路径
  */
 export function cwd(): string {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return deno.cwd();
   }
@@ -1186,7 +1193,7 @@ export function cwd(): string {
  * @param path 目标目录路径
  */
 export function chdir(path: string): void {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     deno.chdir(path);
     return;
@@ -1211,7 +1218,7 @@ export function chdir(path: string): void {
  * @param len 截断后的文件长度（字节）
  */
 export async function truncate(path: string, len: number): Promise<void> {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     await deno.truncate(path, len);
     return;
@@ -1313,7 +1320,7 @@ export async function isDirectory(path: string): Promise<boolean> {
  * ```
  */
 export function statSync(path: string): FileInfo {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     const info = deno.statSync(path);
     return {
@@ -1365,7 +1372,7 @@ export function readTextFileSync(
   path: string,
   _encoding = "utf-8",
 ): string {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return deno.readTextFileSync(path);
   }
@@ -1420,7 +1427,7 @@ export function existsSync(path: string): boolean {
  * ```
  */
 export function readFileSync(path: string): Uint8Array {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return deno.readFileSync(path);
   }
@@ -1453,7 +1460,7 @@ export function readFileSync(path: string): Uint8Array {
  * ```
  */
 export function readdirSync(path: string): DirEntry[] {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     const entries: DirEntry[] = [];
     for (const entry of deno.readDirSync(path)) {
@@ -1564,7 +1571,7 @@ export function isDirectorySync(path: string): boolean {
  * ```
  */
 export function realPathSync(path: string): string {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     return deno.realPathSync(path);
   }
@@ -1598,7 +1605,7 @@ export function mkdirSync(
   path: string,
   options?: { recursive?: boolean; mode?: number },
 ): void {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     deno.mkdirSync(path, options);
     return;
@@ -1677,7 +1684,7 @@ export function removeSync(
   path: string,
   options?: { recursive?: boolean },
 ): void {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     deno.removeSync(path, options);
     return;
@@ -1737,7 +1744,7 @@ export function writeFileSync(
   data: Uint8Array,
   options?: { create?: boolean; mode?: number },
 ): void {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     deno.writeFileSync(path, data, options);
     return;
@@ -1778,7 +1785,7 @@ export function writeTextFileSync(
   data: string,
   options?: { create?: boolean; mode?: number },
 ): void {
-  const deno = getDeno();
+  const deno = denoFs;
   if (deno) {
     deno.writeTextFileSync(path, data, options);
     return;

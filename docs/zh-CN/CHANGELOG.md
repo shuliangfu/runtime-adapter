@@ -9,6 +9,46 @@
 
 ---
 
+## [Unreleased]
+
+### 性能
+
+- **请求远端地址 WeakMap**：`serve()` 在 Deno / Bun / Node
+  上将真实远端主机地址记入
+  `Symbol.for("@dreamer/runtime-adapter.remoteAddrMap")` 全局 WeakMap，可通过
+  `rememberRequestRemoteAddress` / `getRequestRemoteAddress`
+  读取，不依赖未发布的具名导出。
+- **WebSocket `allowedOrigins` 预建 Set**：`serve()` 启动时（以及
+  `upgradeWebSocket` 的 per-call 列表）把允许源编译为 `Set`，`isWsOriginAllowed`
+  用 `Set.has` 替代数组 `includes`。默认同源校验不变；无 Origin
+  仍放行（非浏览器客户端）。
+- **Bun WebSocket 适配器 O(1) 反查**：在 `setWebSocket` 时把原生套接字绑定到
+  `WeakMap`，`message` / `open` / `close` 不再对 `allAdapters` 做
+  `Array.from().find`。
+- **文件 API 启动绑死实现**：`src/file.ts` 在模块加载时缓存 Deno / Bun
+  句柄，避免每个 API 再调用 `getDeno()` / `getBun()` 分支。Windows
+  路径与错误映射语义不变。
+- **流式文件哈希**：`hashFile` 用 `createReadStream` + `createHash` 流式计算；
+  `hashFileSync` 用 `openSync` / `readSync` 分块计算。内存中的 `hash` /
+  `hashSync` 不变。
+
+### 修复
+
+- **Bun `serve` 的 `handle.finished`**：原先是永不 resolve 的 Promise。现于
+  `server.stop()` / `shutdown()` 完成后 resolve，对齐 Node 的 `server.close`。
+- **Bun 待升级适配器键**：不再仅以 `request.url` 为
+  key（同一路径并发升级会串台）。 升级 data 与 Map 主键改为唯一
+  `adapterId`；同一 `Request` 重复调用仍复用已有适配器。 仍保留 URL
+  回退匹配以兼容既有路径。
+
+### 变更
+
+- **依赖**：`@dreamer/i18n` `^1.1.0` → `^1.1.3`，`@dreamer/test` `^1.2.1` →
+  `^1.2.5`，`ws` `^8.21.1` → `^8.23.0`，`tsx` `^4.23.1` → `^4.23.15`。包版本仍为
+  1.2.2，未发 JSR。
+
+---
+
 ## [1.2.2] - 2026-07-22
 
 ### 修复

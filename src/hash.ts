@@ -3,16 +3,39 @@
  * 统一使用 node:crypto，Deno 与 Bun 均兼容
  */
 
-import { readFile, readFileSync } from "./file.ts";
+import { Buffer } from "node:buffer";
 import * as nodeCrypto from "node:crypto";
+import { closeSync, createReadStream, openSync, readSync } from "node:fs";
+import { pipeline } from "node:stream/promises";
 
 /**
  * 哈希算法类型
  */
 export type HashAlgorithm = "SHA-256" | "SHA-512" | "SHA-1" | "MD5";
 
+/** 流式/分块读取文件时的块大小，避免大文件整文件进内存 */
+const HASH_FILE_CHUNK_SIZE = 64 * 1024;
+
+/** 将 HashAlgorithm 映射为 node:crypto 的算法名 */
+function toNodeAlgorithm(
+  algorithm: HashAlgorithm,
+): "md5" | "sha1" | "sha256" | "sha512" {
+  switch (algorithm) {
+    case "MD5":
+      return "md5";
+    case "SHA-1":
+      return "sha1";
+    case "SHA-256":
+      return "sha256";
+    case "SHA-512":
+      return "sha512";
+    default:
+      return "sha256";
+  }
+}
+
 /**
- * 计算文件哈希值
+ * 计算文件哈希值（流式读取，峰值内存为块大小而非整个文件）
  * @param path 文件路径
  * @param algorithm 哈希算法（默认：SHA-256）
  * @returns 文件的十六进制哈希值
@@ -33,8 +56,9 @@ export async function hashFile(
   path: string,
   algorithm: HashAlgorithm = "SHA-256",
 ): Promise<string> {
-  const data = await readFile(path);
-  return hash(data, algorithm);
+  const h = nodeCrypto.createHash(toNodeAlgorithm(algorithm));
+  await pipeline(createReadStream(path), h);
+  return h.digest("hex");
 }
 
 /**
@@ -80,24 +104,6 @@ export function hash(
  * console.log("哈希值:", hash);
  * ```
  */
-/** 将 HashAlgorithm 映射为 node:crypto 的算法名 */
-function toNodeAlgorithm(
-  algorithm: HashAlgorithm,
-): "md5" | "sha1" | "sha256" | "sha512" {
-  switch (algorithm) {
-    case "MD5":
-      return "md5";
-    case "SHA-1":
-      return "sha1";
-    case "SHA-256":
-      return "sha256";
-    case "SHA-512":
-      return "sha512";
-    default:
-      return "sha256";
-  }
-}
-
 export function hashSync(
   data: Uint8Array | string,
   algorithm: HashAlgorithm = "SHA-256",
@@ -112,7 +118,7 @@ export function hashSync(
 }
 
 /**
- * 同步计算文件哈希值（内部使用 node:crypto，Deno/Bun 均兼容）
+ * 同步计算文件哈希值（分块读取，峰值内存为块大小而非整个文件）
  * @param path 文件路径
  * @param algorithm 哈希算法（默认：SHA-256）
  * @returns 文件的十六进制哈希值
@@ -129,9 +135,17 @@ export function hashFileSync(
   path: string,
   algorithm: HashAlgorithm = "SHA-256",
 ): string {
-  // 使用同步读取文件
-  const data = readFileSync(path);
-
-  // 使用同步哈希计算
-  return hashSync(data, algorithm);
+  const h = nodeCrypto.createHash(toNodeAlgorithm(algorithm));
+  const fd = openSync(path, "r");
+  try {
+    const buf = Buffer.alloc(HASH_FILE_CHUNK_SIZE);
+    while (true) {
+      const bytesRead = readSync(fd, buf, 0, buf.length, null);
+      if (bytesRead === 0) break;
+      h.update(buf.subarray(0, bytesRead));
+    }
+    return h.digest("hex");
+  } finally {
+    closeSync(fd);
+  }
 }

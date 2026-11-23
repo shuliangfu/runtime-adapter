@@ -10,6 +10,49 @@ and this project adheres to
 
 ---
 
+## [Unreleased]
+
+### Performance
+
+- **Request remote address WeakMap**: `serve()` records the real remote host on
+  Deno / Bun / Node in a global WeakMap keyed by
+  `Symbol.for("@dreamer/runtime-adapter.remoteAddrMap")`. Read it with
+  `rememberRequestRemoteAddress` / `getRequestRemoteAddress` without depending
+  on an unpublished named export.
+- **Precomputed WebSocket `allowedOrigins` Set**: when `serve()` starts (and
+  when `upgradeWebSocket` is given a per-call list), allowed origins are
+  compiled into a `Set`. `isWsOriginAllowed` uses `Set.has` instead of
+  `Array.includes`. The same-origin default is unchanged; requests with no
+  Origin are still allowed (non-browser clients).
+- **O(1) Bun WebSocket adapter lookup**: `setWebSocket` binds the native socket
+  in a `WeakMap`. `message` / `open` / `close` no longer do
+  `Array.from(allAdapters).find`.
+- **File APIs bind runtime handles at load**: `src/file.ts` caches the Deno /
+  Bun handles once at module load so each API does not re-call `getDeno()` /
+  `getBun()`. Windows path and error-mapping behavior is unchanged.
+- **Streaming file hashes**: `hashFile` hashes via `createReadStream` +
+  `createHash`; `hashFileSync` hashes in chunks with `openSync` / `readSync`.
+  In-memory `hash` / `hashSync` are unchanged.
+
+### Fixed
+
+- **Bun `serve` `handle.finished`**: it was a Promise that never resolved. It
+  now resolves after `server.stop()` / `shutdown()`, analogous to Node's
+  `server.close`.
+- **Bun pending adapter keys**: adapters are no longer keyed only by
+  `request.url` (concurrent upgrades to the same path could collide). The
+  upgrade `data` and Map key are now a unique `adapterId`. Repeated
+  `upgradeWebSocket` calls on the same `Request` still reuse the existing
+  adapter. URL fallback matching is kept for compatibility.
+
+### Changed
+
+- **Dependencies**: `@dreamer/i18n` `^1.1.0` → `^1.1.3`, `@dreamer/test`
+  `^1.2.1` → `^1.2.5`, `ws` `^8.21.1` → `^8.23.0`, `tsx` `^4.23.1` → `^4.23.15`.
+  Package version remains 1.2.2; not published to JSR.
+
+---
+
 ## [1.2.2] - 2026-07-22
 
 ### Fixed
